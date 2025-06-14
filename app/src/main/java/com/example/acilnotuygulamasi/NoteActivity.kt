@@ -1,42 +1,65 @@
-
 package com.example.acilnotuygulamasi
+
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class NoteActivity : AppCompatActivity() {
+
+    private lateinit var noteDao: NoteDao
+    private var currentNoteId: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note)
-
-        // Activity'yi diyalog gibi göstermek için pencere boyutunu ayarla
         window.setLayout(
-            (resources.displayMetrics.widthPixels * 0.9).toInt(), // Genişlik %90
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT // Yükseklik içeriğe göre
+            (resources.displayMetrics.widthPixels * 0.9).toInt(),
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        this.title = "Notu Düzenle"
 
-
+        noteDao = NoteDatabase.getDatabase(this).noteDao()
         val noteInput: EditText = findViewById(R.id.et_note_input)
         val saveButton: Button = findViewById(R.id.btn_save_note)
 
-        // Mevcut notu EditText'e yükle
-        noteInput.setText(NoteStorage.loadNote(this))
+        // Düzenleme için mi yoksa yeni not için mi açıldığını kontrol et
+        if (intent.hasExtra("NOTE_ID")) {
+            currentNoteId = intent.getIntExtra("NOTE_ID", 0)
+            this.title = "Notu Düzenle"
+            lifecycleScope.launch {
+                val note = noteDao.getNoteById(currentNoteId!!)
+                note?.let {
+                    noteInput.setText(it.content)
+                }
+            }
+        } else {
+            this.title = "Yeni Not Ekle"
+        }
 
         saveButton.setOnClickListener {
-            val newNote = noteInput.text.toString()
-            // Notu kaydet
-            NoteStorage.saveNote(this, newNote)
+            val noteText = noteInput.text.toString()
+            if (noteText.isBlank()) {
+                Toast.makeText(this, "Not boş olamaz!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-            // Widget'ı güncellemek için bir broadcast gönder
-            updateAllWidgets()
-
-            // Activity'yi kapat
-            finish()
+            lifecycleScope.launch {
+                if (currentNoteId == null) {
+                    // Yeni notu ekle
+                    noteDao.insert(Note(content = noteText))
+                } else {
+                    // Mevcut notu güncelle
+                    val updatedNote = Note(id = currentNoteId!!, content = noteText)
+                    noteDao.update(updatedNote)
+                }
+                updateAllWidgets()
+                finish()
+            }
         }
     }
 
@@ -45,8 +68,10 @@ class NoteActivity : AppCompatActivity() {
         val componentName = ComponentName(this, NoteWidgetProvider::class.java)
         val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
 
-        for (appWidgetId in appWidgetIds) {
-            NoteWidgetProvider.updateAppWidget(this, appWidgetManager, appWidgetId)
+        lifecycleScope.launch {
+            for (appWidgetId in appWidgetIds) {
+                NoteWidgetProvider.updateAppWidget(this@NoteActivity, appWidgetManager, appWidgetId)
+            }
         }
     }
 }

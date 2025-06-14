@@ -1,3 +1,4 @@
+package com.example.acilnotuygulamasi
 import android.content.Context
 
 object NoteStorage {
