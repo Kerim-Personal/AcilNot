@@ -27,7 +27,6 @@ class NoteActivity : AppCompatActivity() {
         val noteInput: EditText = findViewById(R.id.et_note_input)
         val saveButton: Button = findViewById(R.id.btn_save_note)
 
-        // Düzenleme için mi yoksa yeni not için mi açıldığını kontrol et
         if (intent.hasExtra("NOTE_ID")) {
             currentNoteId = intent.getIntExtra("NOTE_ID", 0)
             this.title = "Notu Düzenle"
@@ -50,28 +49,25 @@ class NoteActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 if (currentNoteId == null) {
-                    // Yeni notu ekle
                     noteDao.insert(Note(content = noteText))
                 } else {
-                    // Mevcut notu güncelle
                     val updatedNote = Note(id = currentNoteId!!, content = noteText)
                     noteDao.update(updatedNote)
                 }
+                // Widget'ı doğru yöntemle güncelle
                 updateAllWidgets()
                 finish()
             }
         }
     }
 
+    // BU FONKSİYON DÜZELTİLDİ
     private fun updateAllWidgets() {
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, NoteWidgetProvider::class.java)
         val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-
-        lifecycleScope.launch {
-            for (appWidgetId in appWidgetIds) {
-                NoteWidgetProvider.updateAppWidget(this@NoteActivity, appWidgetManager, appWidgetId)
-            }
-        }
+        // Bu komut, widget'ın listesini sağlayan Factory'yi yeniden çalıştırır.
+        // Bu, widget'ı güncellemenin doğru ve en güvenli yoludur.
+        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.lv_widget_notes)
     }
 }

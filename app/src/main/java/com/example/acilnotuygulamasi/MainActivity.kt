@@ -3,11 +3,12 @@ package com.example.acilnotuygulamasi
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -24,9 +25,9 @@ class MainActivity : AppCompatActivity() {
         val recyclerView: RecyclerView = findViewById(R.id.rv_notes)
         val fab: FloatingActionButton = findViewById(R.id.fab_add_note)
 
-        // Adapter'ı başlat
+        // Adapter'ı basit tıklama dinleyicisi ile başlat
         noteAdapter = NoteAdapter(emptyList()) { note ->
-            // Bir nota tıklandığında NoteActivity'yi düzenleme modunda aç
+            // Tıklanan notu düzenlemek için NoteActivity'yi aç
             val intent = Intent(this, NoteActivity::class.java).apply {
                 putExtra("NOTE_ID", note.id)
             }
@@ -36,17 +37,15 @@ class MainActivity : AppCompatActivity() {
         recyclerView.adapter = noteAdapter
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // Yeni not ekle butonu
         fab.setOnClickListener {
-            // NoteActivity'yi yeni not modunda aç
-            val intent = Intent(this, NoteActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, NoteActivity::class.java))
         }
 
-        // Veritabanındaki notları dinle ve arayüzü güncelle
         lifecycleScope.launch {
-            noteDao.getAllNotes().collectLatest { notes ->
-                noteAdapter.updateNotes(notes)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                noteDao.getAllNotes().collect { notes ->
+                    noteAdapter.updateNotes(notes)
+                }
             }
         }
     }

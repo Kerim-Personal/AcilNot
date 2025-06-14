@@ -20,7 +20,10 @@ abstract class NoteDatabase : RoomDatabase() {
                     context.applicationContext,
                     NoteDatabase::class.java,
                     "note_database"
-                ).build()
+                )
+                    // Migration'ı kaldırıyoruz.
+                    .fallbackToDestructiveMigration() // Şema değişirse veritabanını yeniden oluşturur.
+                    .build()
                 INSTANCE = instance
                 instance
             }

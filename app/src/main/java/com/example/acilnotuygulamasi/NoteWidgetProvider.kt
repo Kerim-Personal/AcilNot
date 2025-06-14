@@ -5,8 +5,9 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.RemoteViews
-import kotlinx.coroutines.runBlocking
+import androidx.core.net.toUri
 
 class NoteWidgetProvider : AppWidgetProvider() {
 
@@ -26,41 +27,27 @@ class NoteWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            val noteDao = NoteDatabase.getDatabase(context).noteDao()
             val views = RemoteViews(context.packageName, R.layout.note_widget_layout)
 
-            // runBlocking burada geçici bir çözüm. İdealde widget güncellemeleri
-            // WorkManager gibi bir yapıyla yönetilmelidir.
-            runBlocking {
-                val latestNote = noteDao.getLatestNote()
-                if (latestNote != null) {
-                    views.setTextViewText(R.id.tv_widget_note, latestNote.content)
-
-                    // Düzenle butonuna tıklandığında NoteActivity'yi doğru not ID'si ile aç
-                    val intent = Intent(context, NoteActivity::class.java).apply {
-                        putExtra("NOTE_ID", latestNote.id)
-                    }
-                    val pendingIntent = PendingIntent.getActivity(
-                        context,
-                        appWidgetId, // Her widget için benzersiz bir request code
-                        intent,
-                        Pendingent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                    views.setOnClickPendingIntent(R.id.btn_widget_edit, pendingIntent)
-                } else {
-                    views.setTextViewText(R.id.tv_widget_note, "Henüz not yok.")
-                    // Not yoksa, yeni not ekleme ekranını aç (ID göndermeden)
-                    val intent = Intent(context, NoteActivity::class.java)
-                    val pendingIntent = PendingIntent.getActivity(
-                        context,
-                        appWidgetId, // Her widget için benzersiz bir request code
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                    views.setOnClickPendingIntent(R.id.btn_widget_edit, pendingIntent)
-                }
+            val intent = Intent(context, NoteWidgetService::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                data = this.toUri(Intent.URI_INTENT_SCHEME).toUri()
             }
+            views.setRemoteAdapter(R.id.lv_widget_notes, intent)
+            views.setEmptyView(R.id.lv_widget_notes, R.id.tv_widget_empty)
+
+            // "Yeni Not Ekle" butonu için intent
+            val newNoteIntent = Intent(context, NoteActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            val newNotePendingIntent = PendingIntent.getActivity(
+                context, 0, // Bu sabit kalabilir
+                newNoteIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.btn_widget_new, newNotePendingIntent)
+
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
-    } // <-- EKSİK OLAN PARANTEZ BURADAYDI
+    }
 }
