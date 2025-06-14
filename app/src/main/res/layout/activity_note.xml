@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@android:color/white"
+    tools:context=".NoteActivity">
+
+    <EditText
+        android:id="@+id/et_note_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Notunuzu buraya yazın..."
+        android:inputType="textMultiLine"
+        android:minLines="4"
+        android:gravity="top"/>
+
+    <Button
+        android:id="@+id/btn_save_note"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="16dp"
+        android:text="Kaydet"/>
+</LinearLayout>
