@@ -3,6 +3,7 @@ package com.example.acilnotuygulamasi
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import androidx.core.net.toUri
@@ -15,7 +16,9 @@ class NoteWidgetItemFactory(
     private var notes: List<Note> = emptyList()
     private val noteDao = NoteDatabase.getDatabase(context).noteDao()
 
-    override fun onCreate() {}
+    override fun onCreate() {
+        // Gerekli değil
+    }
 
     override fun onDataSetChanged() {
         runBlocking {
@@ -38,19 +41,16 @@ class NoteWidgetItemFactory(
             setTextViewText(R.id.tv_widget_item_content, note.content)
         }
 
-        // Tıklama olayını DOĞRUDAN NoteActivity'yi (düzenleme modu) açacak şekilde ayarla
-        val editIntent = Intent(context, NoteActivity::class.java).apply {
-            putExtra("NOTE_ID", note.id)
-            // Her intent'in benzersiz olması için data ekliyoruz
-            data = "acilnot://edit/${note.id}".toUri()
+        // Sadece bu öğeye özel veriyi (NOTE_ID) içeren "doldurma" niyetini (fill-in intent) oluştur.
+        // Bu intent, NoteWidgetProvider'da tanımlanan şablon PendingIntent ile birleşecek.
+        val fillInIntent = Intent().apply {
+            val extras = Bundle()
+            extras.putInt("NOTE_ID", note.id)
+            putExtras(extras)
         }
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            note.id,
-            editIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        views.setOnClickPendingIntent(R.id.tv_widget_item_content, pendingIntent)
+
+        // Tıklama olayını ana öğeye ata.
+        views.setOnClickFillInIntent(R.id.tv_widget_item_content, fillInIntent)
 
         return views
     }
