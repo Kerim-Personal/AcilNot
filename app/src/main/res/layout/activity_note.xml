@@ -5,7 +5,6 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="@android:color/white"
     tools:context=".NoteActivity">
 
     <EditText
@@ -17,11 +16,28 @@
         android:minLines="4"
         android:gravity="top"/>
 
-    <Button
-        android:id="@+id/btn_save_note"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
+        android:orientation="horizontal"
         android:layout_marginTop="16dp"
-        android:text="Kaydet"/>
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btn_delete_note"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sil"
+            android:textColor="@android:color/holo_red_light"
+            android:visibility="gone"
+            tools:visibility="visible"/>
+
+        <Button
+            android:id="@+id/btn_save_note"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Kaydet"/>
+    </LinearLayout>
 </LinearLayout>

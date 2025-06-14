@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
-import androidx.core.net.toUri // HATA 1 İÇİN EKLENEN IMPORT
+import androidx.core.net.toUri
 import kotlinx.coroutines.runBlocking
 
 class NoteWidgetItemFactory(
@@ -30,47 +30,33 @@ class NoteWidgetItemFactory(
     override fun getCount(): Int = notes.size
 
     override fun getViewAt(position: Int): RemoteViews {
+        if (position >= notes.size) {
+            return RemoteViews(context.packageName, R.layout.widget_note_item)
+        }
         val note = notes[position]
         val views = RemoteViews(context.packageName, R.layout.widget_note_item).apply {
             setTextViewText(R.id.tv_widget_item_content, note.content)
         }
 
-        // DÜZENLEME BUTONU İÇİN PENDINGINTENT
+        // Tıklama olayını DOĞRUDAN NoteActivity'yi (düzenleme modu) açacak şekilde ayarla
         val editIntent = Intent(context, NoteActivity::class.java).apply {
-            data = "edit://${note.id}".toUri()
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("NOTE_ID", note.id)
+            // Her intent'in benzersiz olması için data ekliyoruz
+            data = "acilnot://edit/${note.id}".toUri()
         }
-        val editPendingIntent = PendingIntent.getActivity(
+        val pendingIntent = PendingIntent.getActivity(
             context,
             note.id,
             editIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        views.setOnClickPendingIntent(R.id.btn_widget_item_edit, editPendingIntent)
-
-
-        // SİLME BUTONU İÇİN PENDINGINTENT
-        val deleteIntent = Intent(context, NoteDeleteReceiver::class.java).apply {
-            action = NoteDeleteReceiver.ACTION_DELETE_NOTE
-            putExtra(NoteDeleteReceiver.EXTRA_NOTE_ID, note.id)
-        }
-        val deletePendingIntent = PendingIntent.getBroadcast(
-            context,
-            note.id,
-            deleteIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        views.setOnClickPendingIntent(R.id.btn_widget_item_delete, deletePendingIntent)
+        views.setOnClickPendingIntent(R.id.tv_widget_item_content, pendingIntent)
 
         return views
     }
 
     override fun getLoadingView(): RemoteViews? = null
     override fun getViewTypeCount(): Int = 1
-
-    // HATA 2 İÇİN BU SATIR DÜZELTİLDİ
     override fun getItemId(position: Int): Long = notes[position].id.toLong()
-
     override fun hasStableIds(): Boolean = true
 }
