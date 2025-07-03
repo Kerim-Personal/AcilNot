@@ -40,12 +40,13 @@ class MainActivity : AppCompatActivity() {
     private var isSelectionMode = false
 
     // Tema tercihini kaydetmek için anahtar
-    private val PREF_THEME_MODE = "pref_theme_mode"
+    // DÜZELTME: Bu anahtar, preferences.xml dosyasındaki "theme_selection" anahtarıyla eşleşmeli
+    private val PREF_THEME_MODE = "theme_selection"
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // Temayı onCreate'in başında uygula
+        // Temayı onCreate'in en başında uygula
         applySavedTheme()
+        super.onCreate(savedInstanceState) // super.onCreate() çağrısı temadan sonra yapılmalı
 
         setContentView(R.layout.activity_main)
 
@@ -87,8 +88,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun applySavedTheme() {
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val themeMode = sharedPrefs.getInt(PREF_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        AppCompatDelegate.setDefaultNightMode(themeMode)
+        // DÜZELTME: themeMode'u alırken getString yerine getInt kullanıldı ve
+        // AppCompatDelegate.setDefaultNightMode'a String yerine doğrudan int verildi.
+        // Ayrıca, varsayılan değer olarak System Varsayılanı doğru şekilde ayarlandı.
+        val themeModeString = sharedPrefs.getString(PREF_THEME_MODE, "system_default")
+        val mode = when (themeModeString) {
+            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        AppCompatDelegate.setDefaultNightMode(mode)
     }
 
     private fun setupRecyclerView() {
@@ -137,7 +146,7 @@ class MainActivity : AppCompatActivity() {
         if (count == 0) {
             exitSelectionMode()
         } else {
-            toolbar.title = "$count not seçildi"
+            toolbar.title = resources.getQuantityString(R.plurals.selection_title, count, count)
         }
     }
 

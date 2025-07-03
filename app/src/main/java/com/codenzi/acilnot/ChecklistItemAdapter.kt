@@ -1,5 +1,7 @@
 package com.codenzi.acilnot
 
+import android.graphics.Color // Import eklendi
+import android.graphics.PorterDuff // Import eklendi
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -13,6 +15,16 @@ import androidx.recyclerview.widget.RecyclerView
 class ChecklistItemAdapter(
     private val items: MutableList<ChecklistItem>
 ) : RecyclerView.Adapter<ChecklistItemAdapter.ChecklistItemViewHolder>() {
+
+    private var currentTextColor: Int = Color.BLACK // Varsayılan renkler eklendi
+    private var currentIconTint: Int = Color.BLACK // Varsayılan renkler eklendi
+
+    // Renkleri güncellemek için yeni metot
+    fun updateColors(textColor: Int, iconTint: Int) {
+        this.currentTextColor = textColor
+        this.currentIconTint = iconTint
+        // notifyDataSetChanged() burada çağrılmaz, NoteActivity'den çağrılır.
+    }
 
     inner class ChecklistItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val checkBox: CheckBox = itemView.findViewById(R.id.cb_item)
@@ -46,6 +58,15 @@ class ChecklistItemAdapter(
                 }
             }
         }
+
+        // ChecklistItemAdapter'dan alınan renkleri bağla
+        fun bindColors() {
+            editText.setTextColor(currentTextColor)
+            // CheckBox metin rengini ayarla (eğer CheckBox'ta metin varsa)
+            checkBox.setTextColor(currentTextColor)
+            // Silme butonu ikon rengini ayarla
+            deleteButton.setColorFilter(currentIconTint, PorterDuff.Mode.SRC_IN)
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChecklistItemViewHolder {
@@ -57,6 +78,7 @@ class ChecklistItemAdapter(
         val item = items[position]
         holder.editText.setText(item.text)
         holder.checkBox.isChecked = item.isChecked
+        holder.bindColors() // Renkleri bağlamak için yeni metodu çağır
     }
 
     override fun getItemCount(): Int = items.size
