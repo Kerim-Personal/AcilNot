@@ -1,20 +1,21 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    // Room'un @Dao, @Entity gibi annotation'larını işlemesi için kapt plugin'ini ekleyin.
-    id("kotlin-kapt")
+    // 'kapt' yerine daha performanslı olan 'KSP' plugin'i kullanılıyor.
+    alias(libs.plugins.google.ksp)
 }
 
 android {
     namespace = "com.codenzi.acilnot"
-    compileSdk = 35
+    // compileSdk ve targetSdk en son sürüme güncellendi.
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.codenzi.acilnot"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -35,24 +36,21 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    // ViewBinding'i etkinleştirmek kodu daha güvenli hale getirir, ancak şimdilik devre dışı bırakalım.
-    // viewBinding {
-    //     enable = true
-    // }
 }
 
 dependencies {
+    // Tüm kütüphaneler artık libs.versions.toml dosyasından (version catalog) okunuyor.
+    // Sabit sürüm numaraları ve yerel değişkenler kaldırıldı.
 
-    // Eklenecek olan yeni kütüphane
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
+    // Lifecycle, Room ve Gson kütüphaneleri güncellendi ve version catalog'a taşındı.
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    // 'kapt' yerine 'ksp' kullanılıyor.
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.gson)
 
-    // Room Kütüphaneleri
-    val roomVersion = "2.6.1"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
-
-    // Mevcut kütüphaneler
+    // Mevcut kütüphaneler (zaten version catalog kullanıyordu)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

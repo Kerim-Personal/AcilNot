@@ -10,6 +10,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -21,6 +23,7 @@ class NoteAdapter(
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
     private val selectedItems = mutableSetOf<Int>()
+    private val gson = Gson()
 
     fun toggleSelection(noteId: Int) {
         if (selectedItems.contains(noteId)) {
@@ -43,13 +46,43 @@ class NoteAdapter(
     fun getSelectedItemCount(): Int = selectedItems.size
 
     inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        // YENİ: Başlık TextView referansı
+        private val noteTitle: TextView = itemView.findViewById(R.id.tv_note_title)
         private val noteContent: TextView = itemView.findViewById(R.id.tv_note_content)
         private val creationDate: TextView = itemView.findViewById(R.id.tv_creation_date)
         private val modificationDate: TextView = itemView.findViewById(R.id.tv_modification_date)
         private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
 
         fun bind(note: Note) {
-            noteContent.text = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
+            // YENİ: Başlığı ayarla veya gizle
+            if (note.title.isNotBlank()) {
+                noteTitle.visibility = View.VISIBLE
+                noteTitle.text = note.title
+            } else {
+                noteTitle.visibility = View.GONE
+            }
+
+            try {
+                val content = gson.fromJson(note.content, NoteContent::class.java)
+                val previewBuilder = StringBuilder()
+
+                if (content.text.isNotBlank()) {
+                    previewBuilder.append(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY).toString().trim())
+                }
+
+                if (content.checklist.isNotEmpty()) {
+                    if (previewBuilder.isNotEmpty()) {
+                        previewBuilder.append("\n\n")
+                    }
+                    val checkedCount = content.checklist.count { it.isChecked }
+                    previewBuilder.append("[Liste: ${checkedCount}/${content.checklist.size} tamamlandı]")
+                }
+
+                noteContent.text = previewBuilder.toString()
+            } catch (e: JsonSyntaxException) {
+                noteContent.text = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
+            }
+
             creationDate.text = "Oluşturulma: ${formatDate(note.createdAt)}"
 
             modificationDate.visibility = if (note.modifiedAt.isNotEmpty()) {
@@ -59,7 +92,6 @@ class NoteAdapter(
                 View.GONE
             }
 
-            // Notun seçili olup olmamasına göre arayüzü güncelle
             if (selectedItems.contains(note.id)) {
                 cardContainer.strokeWidth = 8
                 cardContainer.strokeColor = ContextCompat.getColor(cardContainer.context, android.R.color.holo_blue_dark)

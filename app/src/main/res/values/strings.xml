@@ -2,11 +2,51 @@
     <string name="app_name">Acil Not</string>
     <string name="search_title">Ara</string>
     <string name="sort_title">Sırala</string>
+    <string name="action_share">Paylaş</string>
+    <string name="action_delete">Sil</string>
+    <string name="button_save">Kaydet</string>
+    <string name="dialog_confirm_delete">Evet, Sil</string>
+    <string name="dialog_cancel">İptal</string>
+
+    <string name="add_note_fab_description">Yeni Not Ekle</string>
+    <string name="share_chooser_title">Notu şununla paylaş:</string>
+    <string name="delete_notes_confirmation_message">Seçili notları kalıcı olarak silmek istediğinizden emin misiniz?</string>
+
+    <plurals name="selection_title">
+        <item quantity="one">%d not seçildi</item>
+        <item quantity="other">%d not seçildi</item>
+    </plurals>
+    <plurals name="delete_notes_confirmation_title">
+        <item quantity="one">%d notu sil</item>
+        <item quantity="other">%d notu sil</item>
+    </plurals>
+    <plurals name="notes_deleted_toast">
+        <item quantity="one">%d not silindi.</item>
+        <item quantity="other">%d not silindi.</item>
+    </plurals>
+
     <string name="sort_dialog_title">Notları Sırala</string>
     <string name="sort_by_creation_date_newest">Oluşturma Tarihi (Yeniden Eskiye)</string>
     <string name="sort_by_creation_date_oldest">Oluşturma Tarihi (Eskiden Yeniye)</string>
     <string name="sort_by_content_az">İçeriğe Göre (A-Z)</string>
 
-    <string name="share_button_text">Paylaş</string>
-    <string name="share_chooser_title">Notu şununla paylaş:</string>
+    <string name="title_activity_edit_note">Notu Düzenle</string>
+    <string name="title_activity_new_note">Yeni Not Ekle</string>
+    <string name="hint_note_title">Başlık</string>
+    <string name="hint_note_content">Notunuzu buraya yazın…</string>
+    <string name="button_add_checklist_item">+ Liste Öğesi Ekle</string>
+    <string name="delete_note_confirmation_title">Notu Sil</string>
+    <string name="delete_note_confirmation_message">Bu notu kalıcı olarak silmek istediğinizden emin misiniz?</string>
+    <string name="toast_empty_note">Not içeriği boş olamaz!</string>
+    <string name="creation_date_label">Oluşturulma: %s</string>
+    <string name="modification_date_label">Son Düzenleme: %s</string>
+    <string name="edit_history_title">Düzenleme Geçmişi:</string>
+    <string name="edit_history_item">- %s</string>
+
+    <string name="hint_checklist_item">Liste öğesi</string>
+    <string name="delete_checklist_item_description">Liste öğesini sil</string>
+
+    <string name="widget_empty_view_text">Henüz görüntülenecek not yok.\nUygulamadan yeni not ekleyebilirsiniz.</string>
+    <string name="widget_new_note_button">Yeni Not Ekle</string>
+
 </resources>

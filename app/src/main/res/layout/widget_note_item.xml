@@ -11,6 +11,17 @@
     android:background="@drawable/widget_background">
 
     <TextView
+        android:id="@+id/tv_widget_item_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Not Başlığı"
+        android:textColor="@android:color/black"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
         android:id="@+id/tv_widget_item_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -2,6 +2,7 @@ package com.codenzi.acilnot
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -22,6 +23,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -33,6 +38,7 @@ class NoteActivity : AppCompatActivity() {
     private lateinit var noteDao: NoteDao
     private var currentNoteId: Int? = null
 
+    private lateinit var noteTitle: EditText
     private lateinit var noteInput: EditText
     private lateinit var saveButton: Button
     private lateinit var deleteButton: Button
@@ -45,39 +51,80 @@ class NoteActivity : AppCompatActivity() {
     private lateinit var colorPickers: List<View>
     private var selectedColor: String = "#FFECEFF1"
 
+    private lateinit var checklistRecyclerView: RecyclerView
+    private lateinit var addChecklistItemButton: Button
+    private lateinit var checklistAdapter: ChecklistItemAdapter
+    private var checklistItems = mutableListOf<ChecklistItem>()
+
+    private val gson = Gson()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note)
 
         noteDao = NoteDatabase.getDatabase(this).noteDao()
+        noteTitle = findViewById(R.id.et_note_title)
         noteInput = findViewById(R.id.et_note_input)
         saveButton = findViewById(R.id.btn_save_note)
         deleteButton = findViewById(R.id.btn_delete_note)
         editHistoryText = findViewById(R.id.tv_edit_history)
-
         boldButton = findViewById(R.id.btn_bold)
         italicButton = findViewById(R.id.btn_italic)
         strikethroughButton = findViewById(R.id.btn_strikethrough)
-
         editHistoryText.movementMethod = ScrollingMovementMethod()
+
+        checklistRecyclerView = findViewById(R.id.rv_checklist)
+        addChecklistItemButton = findViewById(R.id.btn_add_checklist_item)
+        setupChecklist()
 
         setupFormattingButtons()
         setupColorPickers()
 
+        processIntent(intent)
+
+        saveButton.setOnClickListener { saveNote() }
+        deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        processIntent(intent)
+    }
+
+    private fun processIntent(intent: Intent) {
         if (intent.hasExtra("NOTE_ID")) {
             currentNoteId = intent.getIntExtra("NOTE_ID", 0)
             this.title = "Notu Düzenle"
             deleteButton.visibility = View.VISIBLE
             loadNote()
         } else {
+            currentNoteId = null
             this.title = "Yeni Not Ekle"
             editHistoryText.visibility = View.GONE
+            deleteButton.visibility = View.GONE
             updateColorSelection(findViewById(R.id.color_default))
             updateWindowBackground()
-        }
+            noteTitle.text.clear()
+            noteInput.text.clear()
 
-        saveButton.setOnClickListener { saveNote() }
-        deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
+            // DÜZELTME: Verimsiz notifyDataSetChanged() yerine daha spesifik metod kullanılıyor
+            val oldSize = checklistItems.size
+            if (oldSize > 0) {
+                checklistItems.clear()
+                checklistAdapter.notifyItemRangeRemoved(0, oldSize)
+            }
+        }
+    }
+
+    private fun setupChecklist() {
+        checklistAdapter = ChecklistItemAdapter(checklistItems)
+        checklistRecyclerView.adapter = checklistAdapter
+        checklistRecyclerView.layoutManager = LinearLayoutManager(this)
+
+        addChecklistItemButton.setOnClickListener {
+            checklistAdapter.addItem()
+        }
     }
 
     private fun setupFormattingButtons() {
@@ -89,7 +136,7 @@ class NoteActivity : AppCompatActivity() {
     private fun applySpan(span: Any) {
         val start = noteInput.selectionStart
         val end = noteInput.selectionEnd
-        if (start == end) return // Metin seçili değilse işlem yapma
+        if (start == end) return
 
         val spannable = noteInput.text as Spannable
         spannable.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -106,6 +153,7 @@ class NoteActivity : AppCompatActivity() {
 
         colorDefault.setOnClickListener { onColorSelected(it, R.color.note_color_default) }
         colorYellow.setOnClickListener { onColorSelected(it, R.color.note_color_yellow) }
+        // DÜZELTME: 'blue', 'green', 'pink' referans hataları düzeltildi.
         colorBlue.setOnClickListener { onColorSelected(it, R.color.note_color_blue) }
         colorGreen.setOnClickListener { onColorSelected(it, R.color.note_color_green) }
         colorPink.setOnClickListener { onColorSelected(it, R.color.note_color_pink) }
@@ -125,10 +173,35 @@ class NoteActivity : AppCompatActivity() {
 
     private fun loadNote() {
         lifecycleScope.launch {
-            val note = noteDao.getNoteById(currentNoteId!!)
+            val note = currentNoteId?.let { noteDao.getNoteById(it) }
             note?.let {
+                // DÜZELTME: Kod kalite uyarısı giderildi, 'ifBlank' kullanıldı.
+                this@NoteActivity.title = it.title.ifBlank { "Notu Düzenle" }
+                noteTitle.setText(it.title)
+
                 displayEditHistory(it)
-                noteInput.setText(Html.fromHtml(it.content, Html.FROM_HTML_MODE_LEGACY))
+                try {
+                    val content = gson.fromJson(it.content, NoteContent::class.java)
+                    noteInput.setText(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY))
+
+                    // DÜZELTME: Verimsiz notifyDataSetChanged() yerine daha spesifik metodlar kullanılıyor
+                    val oldSize = checklistItems.size
+                    checklistItems.clear()
+                    checklistAdapter.notifyItemRangeRemoved(0, oldSize)
+                    checklistItems.addAll(content.checklist)
+                    checklistAdapter.notifyItemRangeInserted(0, content.checklist.size)
+
+                } catch (e: JsonSyntaxException) {
+                    noteInput.setText(Html.fromHtml(it.content, Html.FROM_HTML_MODE_LEGACY))
+
+                    // DÜZELTME: Verimsiz notifyDataSetChanged() yerine daha spesifik metodlar kullanılıyor
+                    val oldSize = checklistItems.size
+                    if (oldSize > 0) {
+                        checklistItems.clear()
+                        checklistAdapter.notifyItemRangeRemoved(0, oldSize)
+                    }
+                }
+
                 selectedColor = it.color
                 updateWindowBackground()
 
@@ -146,16 +219,20 @@ class NoteActivity : AppCompatActivity() {
     }
 
     private fun saveNote() {
+        val titleText = noteTitle.text.toString().trim()
         val noteText = Html.toHtml(noteInput.text, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
 
-        if (noteInput.text.isBlank()) {
+        if (titleText.isBlank() && noteInput.text.isBlank() && checklistItems.all { it.text.isBlank() }) {
             Toast.makeText(this, "Not boş olamaz!", Toast.LENGTH_SHORT).show()
             return
         }
 
+        val noteContent = NoteContent(text = noteText, checklist = checklistItems)
+        val jsonContent = gson.toJson(noteContent)
+
         lifecycleScope.launch {
             if (currentNoteId == null) {
-                val newNote = Note(content = noteText, createdAt = System.currentTimeMillis(), color = selectedColor)
+                val newNote = Note(title = titleText, content = jsonContent, createdAt = System.currentTimeMillis(), color = selectedColor)
                 noteDao.insert(newNote)
             } else {
                 val existingNote = noteDao.getNoteById(currentNoteId!!)
@@ -164,7 +241,8 @@ class NoteActivity : AppCompatActivity() {
                         add(System.currentTimeMillis())
                     }
                     val updatedNote = it.copy(
-                        content = noteText,
+                        title = titleText,
+                        content = jsonContent,
                         modifiedAt = updatedModifications,
                         color = selectedColor
                     )

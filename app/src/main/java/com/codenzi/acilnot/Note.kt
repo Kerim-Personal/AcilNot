@@ -9,9 +9,10 @@ import androidx.room.TypeConverters
 data class Note(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
+    // YENİ EKLENEN SATIR: Başlık alanı
+    val title: String,
     val content: String,
     val createdAt: Long,
     val modifiedAt: List<Long> = emptyList(),
-    // YENİ EKLENEN SATIR (Renk bilgisini String olarak tutacağız, ör: "#FFFFFF")
     val color: String = "#FFECEFF1" // Varsayılan renk pastel gri
 )

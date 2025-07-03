@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.widget.RemoteViews
 import androidx.core.net.toUri
 
@@ -28,7 +29,6 @@ class NoteWidgetProvider : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.note_widget_layout)
 
-            // ListView'i dolduracak olan Service Intent'i
             val serviceIntent = Intent(context, NoteWidgetService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 data = this.toUri(Intent.URI_INTENT_SCHEME).toUri()
@@ -36,37 +36,41 @@ class NoteWidgetProvider : AppWidgetProvider() {
             views.setRemoteAdapter(R.id.lv_widget_notes, serviceIntent)
             views.setEmptyView(R.id.lv_widget_notes, R.id.tv_widget_empty)
 
-            // --- YENİ VE DOĞRU YÖNTEM ---
-            // ListView öğelerine tıklandığında NoteActivity'yi açacak olan TIKLAMA ŞABLONUNU oluştur.
+
             val clickIntent = Intent(context, NoteActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
 
-            // PendingIntent.FLAG_MUTABLE, içine fillInIntent'in eklenebilmesi için gereklidir.
+            // --- DÜZELTME BURADA ---
+            // 'fillInIntent' mekanizmasının çalışabilmesi için PendingIntent'in MUTABLE (değiştirilebilir) olması zorunludur.
+            // Bu bayrak IMMUTABLE'dan MUTABLE'a geri çevrildi.
+            val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_MUTABLE
+            } else {
+                0
+            }
+
             val clickPendingIntent = PendingIntent.getActivity(
                 context,
-                0, // Bu requestCode şablon için sabit kalabilir.
+                0,
                 clickIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or mutabilityFlag
             )
             views.setPendingIntentTemplate(R.id.lv_widget_notes, clickPendingIntent)
-            // -----------------------------
 
 
-            // "Yeni Not Ekle" butonu için intent
             val newNoteIntent = Intent(context, NoteActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
             val newNotePendingIntent = PendingIntent.getActivity(
                 context,
-                1, // Farklı bir requestCode kullanmak çakışmaları önler.
+                1,
                 newNoteIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.btn_widget_new, newNotePendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
-            // Liste verilerinin güncellendiğini sisteme bildir.
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
         }
     }

@@ -2,4 +2,6 @@
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
+    // KSP eklentisi burada tüm projeye tanıtılıyor.
+    alias(libs.plugins.google.ksp) apply false
 }

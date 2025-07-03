@@ -2,6 +2,7 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/note_card_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -17,14 +18,27 @@
         android:padding="16dp">
 
         <TextView
+            android:id="@+id/tv_note_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginBottom="8dp"
+            tools:text="Not Başlığı" />
+
+        <TextView
             android:id="@+id/tv_note_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Not içeriği burada görünecek"
+            tools:text="Not içeriği burada görünecek"
             android:textColor="@android:color/black"
             android:textSize="16sp"
-            android:maxLines="6"
+            android:maxLines="4"
             android:ellipsize="end" />
+
         <TextView
             android:id="@+id/tv_creation_date"
             android:layout_width="wrap_content"

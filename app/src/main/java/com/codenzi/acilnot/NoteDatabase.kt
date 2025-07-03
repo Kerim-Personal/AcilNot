@@ -6,13 +6,10 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-// VERSIYONU 3'E YÜKSELTİN
-@Database(entities = [Note::class], version = 3, exportSchema = false)
+// VERSIYONU 4'E YÜKSELTİN
+@Database(entities = [Note::class], version = 4, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
-
-    // ... (geri kalan kod aynı) ...
-// ... (Mevcut kodunuz burada) ...
 
     abstract fun noteDao(): NoteDao
 
@@ -27,8 +24,7 @@ abstract class NoteDatabase : RoomDatabase() {
                     NoteDatabase::class.java,
                     "note_database"
                 )
-                    // Migration'ı kaldırıyoruz.
-                    .fallbackToDestructiveMigration() // Şema değişirse veritabanını yeniden oluşturur.
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
