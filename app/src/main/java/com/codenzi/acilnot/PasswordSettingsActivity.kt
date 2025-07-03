@@ -1,4 +1,3 @@
-// app/src/main/java/com/codenzi/acilnot/PasswordSettingsActivity.kt
 package com.codenzi.acilnot
 
 import android.os.Bundle
@@ -36,7 +35,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
         saveButton = findViewById(R.id.btn_save_password)
         disableButton = findViewById(R.id.btn_disable_password)
 
-        // Parola zaten ayarlıysa mevcut parola alanını ve devre dışı bırakma butonunu göster
         if (PasswordManager.isPasswordSet(this)) {
             tilCurrentPassword.visibility = View.VISIBLE
             disableButton.visibility = View.VISIBLE
@@ -49,9 +47,27 @@ class PasswordSettingsActivity : AppCompatActivity() {
             savePassword()
         }
 
+        // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
         disableButton.setOnClickListener {
-            showDisablePasswordConfirmationDialog()
+            // "Mevcut Parola" alanından girilen metni al
+            val currentPassword = etCurrentPassword.text.toString()
+
+            // Alanın boş olup olmadığını kontrol et
+            if (currentPassword.isBlank()) {
+                Toast.makeText(this, "Lütfen parolayı devre dışı bırakmak için mevcut parolanızı girin.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Girilen parolanın doğruluğunu kontrol et
+            if (PasswordManager.checkPassword(this, currentPassword)) {
+                // Parola doğruysa, devre dışı bırakma onayı için diyaloğu göster
+                showDisablePasswordConfirmationDialog()
+            } else {
+                // Parola yanlışsa hata mesajı göster
+                Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
+            }
         }
+        // --- DEĞİŞİKLİK BURADA BİTİYOR ---
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -64,7 +80,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
         val newPassword = etNewPassword.text.toString()
         val confirmPassword = etConfirmPassword.text.toString()
 
-        // Eğer parola zaten ayarlıysa, mevcut parolayı doğrula
         if (PasswordManager.isPasswordSet(this)) {
             if (!PasswordManager.checkPassword(this, currentPassword)) {
                 Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
@@ -89,7 +104,7 @@ class PasswordSettingsActivity : AppCompatActivity() {
 
         PasswordManager.setPassword(this, newPassword)
         Toast.makeText(this, R.string.password_set_success, Toast.LENGTH_SHORT).show()
-        finish() // Ayarlar ekranına geri dön
+        finish()
     }
 
     private fun showDisablePasswordConfirmationDialog() {
@@ -104,10 +119,8 @@ class PasswordSettingsActivity : AppCompatActivity() {
     }
 
     private fun disablePassword() {
-        // Parola devre dışı bırakılırken mevcut parolayı doğrulamak isteyebilirsiniz.
-        // Basitlik adına bu örnekte doğrulamayı atlıyoruz, ancak gerçek bir uygulamada ekleyebilirsiniz.
         PasswordManager.disablePassword(this)
         Toast.makeText(this, R.string.password_disabled_success, Toast.LENGTH_SHORT).show()
-        finish() // Ayarlar ekranına geri dön
+        finish()
     }
 }

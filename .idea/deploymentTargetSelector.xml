@@ -3,11 +3,11 @@
   <component name="deploymentTargetSelector">
     <selectionStates>
       <SelectionState runConfigName="app">
-        <option name="selectionMode" value="DIALOG" />
-        <DropdownSelection timestamp="2025-07-03T19:14:21.454135500Z">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-07-03T21:00:37.390535Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Codenzi\.android\avd\7_WSVGA_Tablet.avd" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=10620253BN003429" />
             </handle>
           </Target>
         </DropdownSelection>
