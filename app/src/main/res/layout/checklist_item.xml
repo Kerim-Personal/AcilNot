@@ -20,16 +20,12 @@
         android:hint="Liste öğesi"
         android:padding="8dp"
         android:inputType="textCapSentences"
-        android:textColor="@android:color/black"
-        android:textColorHint="@android:color/black"
-        />
-
-    <ImageButton
-        android:id="@+id/btn_delete_item"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_close"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Öğeyi Sil" />
+        /> <ImageButton
+    android:id="@+id/btn_delete_item"
+    android:layout_width="40dp"
+    android:layout_height="40dp"
+    android:src="@drawable/ic_close"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:contentDescription="Öğeyi Sil" />
 
 </LinearLayout>

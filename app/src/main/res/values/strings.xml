@@ -59,7 +59,6 @@
     </plurals>
     <string name="move_notes_to_trash_confirmation_message">Seçili notları çöp kutusuna taşımak istediğinizden emin misiniz?</string>
 
-
     <string name="theme_dialog_title">Tema Seç</string>
     <string name="theme_light">Aydınlık Tema</string>
     <string name="theme_dark">Karanlık Tema</string>

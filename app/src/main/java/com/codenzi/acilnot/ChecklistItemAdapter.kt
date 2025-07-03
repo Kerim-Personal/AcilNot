@@ -60,6 +60,9 @@ class ChecklistItemAdapter(
 
         fun bindColors() {
             editText.setTextColor(currentTextColor)
+            // İpucu rengini mevcut metin renginin yarı saydam (%40) bir versiyonu yap
+            val hintColor = Color.argb(0x66, Color.red(currentTextColor), Color.green(currentTextColor), Color.blue(currentTextColor))
+            editText.setHintTextColor(hintColor)
             checkBox.setTextColor(currentTextColor)
             deleteButton.setColorFilter(currentIconTint, PorterDuff.Mode.SRC_IN)
         }

@@ -33,6 +33,6 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:contentDescription="Yeni Not Ekle"
-        android:src="@android:drawable/ic_input_add" />
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+        android:src="@android:drawable/ic_input_add"
+        app:backgroundTint="?attr/floatingActionButtonBackground"
+        app:tint="?attr/floatingActionButtonIconTint" /> </androidx.coordinatorlayout.widget.CoordinatorLayout>

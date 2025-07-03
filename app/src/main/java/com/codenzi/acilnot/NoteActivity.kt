@@ -77,9 +77,8 @@ class NoteActivity : AppCompatActivity() {
 
         showHistoryButton = findViewById(R.id.btn_show_history)
 
-        // Bilgi butonunu mor yap
-        val white = ContextCompat.getColor(this, R.color.white)
-        showHistoryButton.setColorFilter(white, PorterDuff.Mode.SRC_IN)
+        // Bilgi butonunun rengi artık XML drawable'dan tema özelliği ile kontrol ediliyor.
+        // Bu satır kaldırıldı: showHistoryButton.setColorFilter(ContextCompat.getColor(this, R.color.my_light_primary), PorterDuff.Mode.SRC_IN)
 
         // Hata düzeltmesi: Biçimlendirme butonları başlatılıyor
         boldButton = findViewById(R.id.btn_bold)
