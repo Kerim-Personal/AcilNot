@@ -63,4 +63,34 @@
     <string name="theme_light">Aydınlık Tema</string>
     <string name="theme_dark">Karanlık Tema</string>
     <string name="theme_system_default">Sistem Varsayılanı</string>
+
+    <!-- Uygulama Şifreleme -->
+    <string name="application_encryption_category_title">Uygulama Şifreleme</string>
+    <string name="password_settings_title">Parola Ayarları</string>
+    <string name="password_settings_summary">Uygulamayı parola ile kilitle</string>
+    <string name="fingerprint_unlock_title">Parmak İzi ile Kilidi Aç</string>
+    <string name="fingerprint_unlock_summary">Parmak izi sensörü ile uygulamayı aç</string>
+
+    <!-- Parola Ayarları Ekranı -->
+    <string name="set_password_title">Parola Belirle</string>
+    <string name="enter_new_password_hint">Yeni parola girin</string>
+    <string name="confirm_new_password_hint">Yeni parolayı onaylayın</string>
+    <string name="save_password_button">Parolayı Kaydet</string>
+    <string name="disable_password_button">Parolayı Devre Dışı Bırak</string>
+    <string name="password_mismatch_error">Parolalar eşleşmiyor.</string>
+    <string name="password_too_short_error">Parola en az 4 karakter olmalı.</string>
+    <string name="password_set_success">Parola başarıyla ayarlandı.</string>
+    <string name="password_disabled_success">Parola devre dışı bırakıldı.</string>
+    <string name="password_disable_confirmation_title">Parolayı Devre Dışı Bırak</string>
+    <string name="password_disable_confirmation_message">Uygulama parolasını devre dışı bırakmak istediğinizden emin misiniz?</string>
+    <string name="dialog_yes">Evet</string>
+    <string name="dialog_no">Hayır</string>
+    <string name="enter_current_password_hint">Mevcut parolayı girin</string>
+    <string name="current_password_incorrect_error">Mevcut parola yanlış.</string>
+
+    <!-- Parola Kontrol Ekranı -->
+    <string name="unlock_app_title">Uygulamayı Aç</string>
+    <string name="enter_password_to_unlock">Uygulamayı açmak için parolanızı girin.</string>
+    <string name="unlock_button">Kilidi Aç</string>
+    <string name="incorrect_password_error">Yanlış parola.</string>
 </resources>

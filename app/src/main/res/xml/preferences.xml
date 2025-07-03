@@ -4,24 +4,29 @@
 
     <PreferenceCategory
         android:title="Görünüm">
-
         <ListPreference
             android:key="theme_selection"
             android:title="Tema"
             android:defaultValue="system_default"
             android:entries="@array/theme_entries"
             android:entryValues="@array/theme_values" />
-
     </PreferenceCategory>
 
+    <PreferenceCategory
+        android:title="@string/application_encryption_category_title"> <Preference
+        android:key="password_settings"
+        android:title="@string/password_settings_title"
+        android:summary="@string/password_settings_summary"
+        app:icon="@drawable/ic_lock_24" />
+    </PreferenceCategory>
 
     <PreferenceCategory
         android:title="Diğer Ayarlar">
-
         <Preference
             android:key="trash_settings"
             android:title="Çöp Kutusu"
             android:summary="Silinen notları görüntüle ve yönet"
-            android:icon="@drawable/outline_archive_24" /> </PreferenceCategory>
+            android:icon="@drawable/outline_archive_24" />
+    </PreferenceCategory>
 
 </PreferenceScreen>
