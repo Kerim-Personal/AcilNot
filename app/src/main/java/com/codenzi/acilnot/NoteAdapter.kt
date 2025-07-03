@@ -1,11 +1,12 @@
 package com.codenzi.acilnot
 
 import android.graphics.Color
+import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.content.ContextCompat // HATA 1 İÇİN EKLENEN IMPORT
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
@@ -48,7 +49,7 @@ class NoteAdapter(
         private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
 
         fun bind(note: Note) {
-            noteContent.text = note.content
+            noteContent.text = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
             creationDate.text = "Oluşturulma: ${formatDate(note.createdAt)}"
 
             modificationDate.visibility = if (note.modifiedAt.isNotEmpty()) {
@@ -61,7 +62,6 @@ class NoteAdapter(
             // Notun seçili olup olmamasına göre arayüzü güncelle
             if (selectedItems.contains(note.id)) {
                 cardContainer.strokeWidth = 8
-                // HATA 2 İÇİN DÜZELTME: Android'in kendi rengini kullanıyoruz
                 cardContainer.strokeColor = ContextCompat.getColor(cardContainer.context, android.R.color.holo_blue_dark)
             } else {
                 cardContainer.strokeWidth = 0

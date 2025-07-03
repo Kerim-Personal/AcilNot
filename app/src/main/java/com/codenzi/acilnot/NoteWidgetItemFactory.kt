@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.text.Html
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import androidx.core.graphics.toColorInt
@@ -38,17 +39,13 @@ class NoteWidgetItemFactory(
         }
         val note = notes[position]
         val views = RemoteViews(context.packageName, R.layout.widget_note_item).apply {
-            setTextViewText(R.id.tv_widget_item_content, note.content)
+            setTextViewText(R.id.tv_widget_item_content, Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
 
-            // --- YENİ EKLENEN KISIM: Arka Plan Rengini Ayarla ---
             try {
-                // setBackgroundColor metodu doğrudan desteklenmediği için setInt ile rengi atıyoruz
                 setInt(R.id.widget_item_container, "setBackgroundColor", note.color.toColorInt())
             } catch (e: Exception) {
-                // Hata olursa varsayılan rengi ata
                 setInt(R.id.widget_item_container, "setBackgroundColor", Color.WHITE)
             }
-            // ----------------------------------------------------
         }
 
         val fillInIntent = Intent().apply {
@@ -57,7 +54,6 @@ class NoteWidgetItemFactory(
             putExtras(extras)
         }
 
-        // Tıklama olayını tüm satıra ata
         views.setOnClickFillInIntent(R.id.widget_item_container, fillInIntent)
 
         return views

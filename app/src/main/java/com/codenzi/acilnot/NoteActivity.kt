@@ -3,8 +3,13 @@ package com.codenzi.acilnot
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.Html
+import android.text.Spannable
 import android.text.method.ScrollingMovementMethod
+import android.text.style.StrikethroughSpan
+import android.text.style.StyleSpan
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -22,6 +27,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
 
+@Suppress("DEPRECATION")
 class NoteActivity : AppCompatActivity() {
 
     private lateinit var noteDao: NoteDao
@@ -31,6 +37,10 @@ class NoteActivity : AppCompatActivity() {
     private lateinit var saveButton: Button
     private lateinit var deleteButton: Button
     private lateinit var editHistoryText: TextView
+
+    private lateinit var boldButton: Button
+    private lateinit var italicButton: Button
+    private lateinit var strikethroughButton: Button
 
     private lateinit var colorPickers: List<View>
     private var selectedColor: String = "#FFECEFF1"
@@ -45,8 +55,13 @@ class NoteActivity : AppCompatActivity() {
         deleteButton = findViewById(R.id.btn_delete_note)
         editHistoryText = findViewById(R.id.tv_edit_history)
 
+        boldButton = findViewById(R.id.btn_bold)
+        italicButton = findViewById(R.id.btn_italic)
+        strikethroughButton = findViewById(R.id.btn_strikethrough)
+
         editHistoryText.movementMethod = ScrollingMovementMethod()
 
+        setupFormattingButtons()
         setupColorPickers()
 
         if (intent.hasExtra("NOTE_ID")) {
@@ -63,6 +78,21 @@ class NoteActivity : AppCompatActivity() {
 
         saveButton.setOnClickListener { saveNote() }
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
+    }
+
+    private fun setupFormattingButtons() {
+        boldButton.setOnClickListener { applySpan(StyleSpan(Typeface.BOLD)) }
+        italicButton.setOnClickListener { applySpan(StyleSpan(Typeface.ITALIC)) }
+        strikethroughButton.setOnClickListener { applySpan(StrikethroughSpan()) }
+    }
+
+    private fun applySpan(span: Any) {
+        val start = noteInput.selectionStart
+        val end = noteInput.selectionEnd
+        if (start == end) return // Metin seçili değilse işlem yapma
+
+        val spannable = noteInput.text as Spannable
+        spannable.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 
     private fun setupColorPickers() {
@@ -98,7 +128,7 @@ class NoteActivity : AppCompatActivity() {
             val note = noteDao.getNoteById(currentNoteId!!)
             note?.let {
                 displayEditHistory(it)
-                noteInput.setText(it.content)
+                noteInput.setText(Html.fromHtml(it.content, Html.FROM_HTML_MODE_LEGACY))
                 selectedColor = it.color
                 updateWindowBackground()
 
@@ -116,8 +146,9 @@ class NoteActivity : AppCompatActivity() {
     }
 
     private fun saveNote() {
-        val noteText = noteInput.text.toString()
-        if (noteText.isBlank()) {
+        val noteText = Html.toHtml(noteInput.text, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
+
+        if (noteInput.text.isBlank()) {
             Toast.makeText(this, "Not boş olamaz!", Toast.LENGTH_SHORT).show()
             return
         }
@@ -194,6 +225,7 @@ class NoteActivity : AppCompatActivity() {
         }
         editHistoryText.text = historyBuilder.toString()
     }
+
     private fun formatDate(timestamp: Long): String {
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
         return sdf.format(Date(timestamp))
