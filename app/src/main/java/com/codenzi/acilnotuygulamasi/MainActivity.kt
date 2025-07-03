@@ -1,4 +1,4 @@
-package com.example.acilnotuygulamasi
+package com.codenzi.acilnotuygulamasi
 
 import android.content.Intent
 import android.os.Bundle

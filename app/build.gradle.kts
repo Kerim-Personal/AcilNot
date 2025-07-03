@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.acilnotuygulamasi"
+    namespace = "com.codenzi.acilnotuygulamasi"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.acilnotuygulamasi"
+        applicationId = "com.codenzi.acilnot"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

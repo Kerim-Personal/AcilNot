@@ -1,4 +1,4 @@
-package com.example.acilnotuygulamasi
+package com.codenzi.acilnotuygulamasi
 
 import org.junit.Test
 

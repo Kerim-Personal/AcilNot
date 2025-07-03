@@ -1,4 +1,4 @@
-package com.example.acilnotuygulamasi
+package com.codenzi.acilnotuygulamasi
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager

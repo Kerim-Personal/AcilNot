@@ -1,12 +1,10 @@
-package com.example.acilnotuygulamasi
+package com.codenzi.acilnotuygulamasi
 
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
-import androidx.core.net.toUri
 import kotlinx.coroutines.runBlocking
 
 class NoteWidgetItemFactory(
@@ -22,7 +20,7 @@ class NoteWidgetItemFactory(
 
     override fun onDataSetChanged() {
         runBlocking {
-            notes = noteDao.getLatest5Notes()
+            notes = noteDao.getNotesForWidget()
         }
     }
 

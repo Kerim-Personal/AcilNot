@@ -1,4 +1,4 @@
-package com.example.acilnotuygulamasi
+package com.codenzi.acilnotuygulamasi
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -18,8 +18,8 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE id = :noteId")
     suspend fun getNoteById(noteId: Int): Note?
 
-    @Query("SELECT * FROM notes ORDER BY id DESC LIMIT 5")
-    suspend fun getLatest5Notes(): List<Note>
+    @Query("SELECT * FROM notes ORDER BY id DESC")
+    suspend fun getNotesForWidget(): List<Note>
 
     @Query("SELECT * FROM notes ORDER BY id DESC")
     fun getAllNotes(): Flow<List<Note>>

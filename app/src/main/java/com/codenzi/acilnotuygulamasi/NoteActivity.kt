@@ -1,4 +1,4 @@
-package com.example.acilnotuygulamasi
+package com.codenzi.acilnotuygulamasi
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
@@ -6,10 +6,14 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 class NoteActivity : AppCompatActivity() {
@@ -20,6 +24,7 @@ class NoteActivity : AppCompatActivity() {
     private lateinit var noteInput: EditText
     private lateinit var saveButton: Button
     private lateinit var deleteButton: Button
+    private lateinit var editHistoryText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +34,7 @@ class NoteActivity : AppCompatActivity() {
         noteInput = findViewById(R.id.et_note_input)
         saveButton = findViewById(R.id.btn_save_note)
         deleteButton = findViewById(R.id.btn_delete_note)
+        editHistoryText = findViewById(R.id.tv_edit_history)
 
         // Eğer ID varsa, bu bir düzenlemedir. Notu yükle ve Sil butonunu göster.
         if (intent.hasExtra("NOTE_ID")) {
@@ -39,6 +45,7 @@ class NoteActivity : AppCompatActivity() {
         } else {
             // ID yoksa bu yeni nottur. Sil butonu gizli kalsın.
             this.title = "Yeni Not Ekle"
+            editHistoryText.visibility = View.GONE
         }
 
         saveButton.setOnClickListener { saveNote() }
@@ -49,6 +56,7 @@ class NoteActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val note = noteDao.getNoteById(currentNoteId!!)
             note?.let {
+                displayEditHistory(it)
                 noteInput.setText(it.content)
             }
         }
@@ -63,10 +71,19 @@ class NoteActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             if (currentNoteId == null) {
-                noteDao.insert(Note(content = noteText))
+                noteDao.insert(Note(content = noteText, createdAt = System.currentTimeMillis()))
             } else {
-                val updatedNote = Note(id = currentNoteId!!, content = noteText)
-                noteDao.update(updatedNote)
+                val existingNote = noteDao.getNoteById(currentNoteId!!)
+                existingNote?.let {
+                    val updatedModifications = it.modifiedAt.toMutableList().apply {
+                        add(System.currentTimeMillis())
+                    }
+                    val updatedNote = it.copy(
+                        content = noteText,
+                        modifiedAt = updatedModifications
+                    )
+                    noteDao.update(updatedNote)
+                }
             }
             updateAllWidgets()
             finish()
@@ -100,5 +117,22 @@ class NoteActivity : AppCompatActivity() {
         appWidgetIds.forEach { appWidgetId ->
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
         }
+    }
+
+    private fun displayEditHistory(note: Note) {
+        val historyBuilder = StringBuilder()
+        historyBuilder.append("Oluşturulma: ${formatDate(note.createdAt)}")
+
+        if (note.modifiedAt.isNotEmpty()) {
+            historyBuilder.append("\n\nDüzenleme Geçmişi:")
+            note.modifiedAt.forEach { timestamp ->
+                historyBuilder.append("\n- ${formatDate(timestamp)}")
+            }
+        }
+        editHistoryText.text = historyBuilder.toString()
+    }
+    private fun formatDate(timestamp: Long): String {
+        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+        return sdf.format(Date(timestamp))
     }
 }
