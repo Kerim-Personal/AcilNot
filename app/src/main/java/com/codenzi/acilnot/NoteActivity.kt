@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Html
@@ -18,14 +19,14 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.ScrollView // YENİ EKLENEN SATIR: ScrollView için import
+import android.widget.ScrollView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.repeatOnLifecycle // Bu import NoteActivity'de doğrudan kullanılmadığı için IDE uyarısı verebilir, dilerseniz kaldırabilirsiniz.
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
@@ -50,7 +51,7 @@ class NoteActivity : AppCompatActivity() {
     private lateinit var boldButton: Button
     private lateinit var italicButton: Button
     private lateinit var strikethroughButton: Button
-    private lateinit var showHistoryButton: ImageButton // YENİ: Bilgi butonu
+    private lateinit var showHistoryButton: ImageButton
 
     private lateinit var colorPickers: List<View>
     private var selectedColor: String = "#FFECEFF1"
@@ -72,18 +73,24 @@ class NoteActivity : AppCompatActivity() {
         saveButton = findViewById(R.id.btn_save_note)
         deleteButton = findViewById(R.id.btn_delete_note)
         editHistoryText = findViewById(R.id.tv_edit_history)
+        editHistoryText.movementMethod = ScrollingMovementMethod.getInstance()
+
+        showHistoryButton = findViewById(R.id.btn_show_history)
+
+        // Bilgi butonunu mor yap
+        val purpleColor = ContextCompat.getColor(this, R.color.purple_500)
+        showHistoryButton.setColorFilter(purpleColor, PorterDuff.Mode.SRC_IN)
+
+        // Hata düzeltmesi: Biçimlendirme butonları başlatılıyor
         boldButton = findViewById(R.id.btn_bold)
         italicButton = findViewById(R.id.btn_italic)
         strikethroughButton = findViewById(R.id.btn_strikethrough)
-        editHistoryText.movementMethod = ScrollingMovementMethod.getInstance() // DÜZELTME: editHistoryText'in hareket metodunu doğru ayarla
-
-        showHistoryButton = findViewById(R.id.btn_show_history) // YENİ: Bilgi butonuna referans al
 
         // Bilgi butonuna tıklama dinleyicisi
         showHistoryButton.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("Düzenleme Geçmişi")
-                .setMessage(editHistoryText.text) // Hazırlanmış geçmiş metnini kullan
+                .setMessage(editHistoryText.text)
                 .setPositiveButton("Tamam", null)
                 .show()
         }
@@ -122,7 +129,7 @@ class NoteActivity : AppCompatActivity() {
             noteTitle.text.clear()
             noteInput.text.clear()
 
-            // DÜZELTME: Verimsiz notifyDataSetChanged() yerine daha spesifik metod kullanılıyor
+            // Verimsiz notifyDataSetChanged() yerine daha spesifik metod kullanılıyor
             val oldSize = checklistItems.size
             if (oldSize > 0) {
                 checklistItems.clear()
@@ -144,18 +151,82 @@ class NoteActivity : AppCompatActivity() {
     }
 
     private fun setupFormattingButtons() {
-        boldButton.setOnClickListener { applySpan(StyleSpan(Typeface.BOLD)) }
-        italicButton.setOnClickListener { applySpan(StyleSpan(Typeface.ITALIC)) }
-        strikethroughButton.setOnClickListener { applySpan(StrikethroughSpan()) }
+        boldButton.setOnClickListener { applySpan(Typeface.BOLD) }
+        italicButton.setOnClickListener { applySpan(Typeface.ITALIC) }
+        strikethroughButton.setOnClickListener { applySpan(-1) } // -1 üstü çizili için bir işaretçi olarak kullanılıyor
     }
 
-    private fun applySpan(span: Any) {
+    // applySpan metodunun güncellenmiş hali: Biçimlendirmeyi seçili metin üzerinde açıp kapatma (toggle) yeteneği eklendi
+    private fun applySpan(spanType: Int) {
         val start = noteInput.selectionStart
         val end = noteInput.selectionEnd
-        if (start == end) return
+
+        if (start == end) {
+            // Seçili metin yoksa şimdilik bir işlem yapma.
+            // Buraya, gelecekteki yazma için varsayılan stilin değiştirilmesi gibi daha karmaşık bir mantık eklenebilir.
+            return
+        }
 
         val spannable = noteInput.text as Spannable
-        spannable.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        var targetSpanToAdd: Any? = null
+        var currentStyleAppliedToSelection = false
+
+        when (spanType) {
+            Typeface.BOLD -> {
+                val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java)
+                    .filter { it.style == Typeface.BOLD }
+                currentStyleAppliedToSelection = boldSpans.isNotEmpty() && boldSpans.all {
+                    spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end
+                }
+                targetSpanToAdd = StyleSpan(Typeface.BOLD)
+            }
+            Typeface.ITALIC -> {
+                val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java)
+                    .filter { it.style == Typeface.ITALIC }
+                currentStyleAppliedToSelection = italicSpans.isNotEmpty() && italicSpans.all {
+                    spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end
+                }
+                targetSpanToAdd = StyleSpan(Typeface.ITALIC)
+            }
+            -1 -> { // Üstü çizili
+                val strikethroughSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
+                currentStyleAppliedToSelection = strikethroughSpans.isNotEmpty() && strikethroughSpans.all {
+                    spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end
+                }
+                targetSpanToAdd = StrikethroughSpan()
+            }
+        }
+
+        if (currentStyleAppliedToSelection) {
+            // Stil zaten tüm seçime uygulanmışsa, kaldır
+            // SpansToRemove'u tek bir List<Any> tipine dönüştürerek tip çıkarım hatasını giderdik.
+            val spansToRemove = mutableListOf<Any>()
+            when (spanType) {
+                Typeface.BOLD -> {
+                    spannable.getSpans(start, end, StyleSpan::class.java)
+                        .filter { it.style == Typeface.BOLD }
+                        .forEach { spansToRemove.add(it) }
+                }
+                Typeface.ITALIC -> {
+                    spannable.getSpans(start, end, StyleSpan::class.java)
+                        .filter { it.style == Typeface.ITALIC }
+                        .forEach { spansToRemove.add(it) }
+                }
+                -1 -> { // Strikethrough
+                    spannable.getSpans(start, end, StrikethroughSpan::class.java)
+                        .forEach { spansToRemove.add(it) }
+                }
+            }
+            spansToRemove.forEach { spannable.removeSpan(it) }
+        } else if (targetSpanToAdd != null) {
+            // Stil tüm seçime uygulanmamışsa, uygula
+            spannable.setSpan(targetSpanToAdd, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        // Spannable üzerinde yapılan değişikliklerden sonra EditText'i yenilemek ve seçimi geri yüklemek önemlidir.
+        noteInput.setText(spannable, TextView.BufferType.SPANNABLE)
+        noteInput.setSelection(start, end)
     }
 
     private fun setupColorPickers() {
@@ -169,7 +240,7 @@ class NoteActivity : AppCompatActivity() {
 
         colorDefault.setOnClickListener { onColorSelected(it, R.color.note_color_default) }
         colorYellow.setOnClickListener { onColorSelected(it, R.color.note_color_yellow) }
-        // DÜZELTME: 'blue', 'green', 'pink' referans hataları düzeltildi.
+        // 'blue', 'green', 'pink' referans hataları düzeltildi.
         colorBlue.setOnClickListener { onColorSelected(it, R.color.note_color_blue) }
         colorGreen.setOnClickListener { onColorSelected(it, R.color.note_color_green) }
         colorPink.setOnClickListener { onColorSelected(it, R.color.note_color_pink) }
@@ -191,7 +262,7 @@ class NoteActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val note = currentNoteId?.let { noteDao.getNoteById(it) }
             note?.let {
-                // DÜZELTME: Kod kalite uyarısı giderildi, 'ifBlank' kullanıldı.
+                // Kod kalite uyarısı giderildi, 'ifBlank' kullanıldı.
                 this@NoteActivity.title = it.title.ifBlank { "Notu Düzenle" }
                 noteTitle.setText(it.title)
 
@@ -200,7 +271,7 @@ class NoteActivity : AppCompatActivity() {
                     val content = gson.fromJson(it.content, NoteContent::class.java)
                     noteInput.setText(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY))
 
-                    // DÜZELTME: Verimsiz notifyDataSetChanged() yerine daha spesifik metodlar kullanılıyor
+                    // Verimsiz notifyDataSetChanged() yerine daha spesifik metodlar kullanılıyor
                     val oldSize = checklistItems.size
                     checklistItems.clear()
                     checklistAdapter.notifyItemRangeRemoved(0, oldSize)
@@ -210,7 +281,7 @@ class NoteActivity : AppCompatActivity() {
                 } catch (e: JsonSyntaxException) {
                     noteInput.setText(Html.fromHtml(it.content, Html.FROM_HTML_MODE_LEGACY))
 
-                    // DÜZELTME: Verimsiz notifyDataSetChanged() yerine daha spesifik metodlar kullanılıyor
+                    // Verimsiz notifyDataSetChanged() yerine daha spesifik metodlar kullanılıyor
                     val oldSize = checklistItems.size
                     if (oldSize > 0) {
                         checklistItems.clear()

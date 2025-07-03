@@ -1,6 +1,5 @@
 [versions]
 agp = "8.11.0"
-# DÜZELTME: Kotlin versiyonu, KSP ile tam uyumluluk için 2.0.0'a düşürüldü.
 kotlin = "2.0.0"
 coreKtx = "1.16.0"
 junit = "4.13.2"
@@ -14,6 +13,8 @@ ksp = "2.0.0-1.0.21"
 lifecycle = "2.9.1"
 room = "2.7.2"
 gson = "2.13.1"
+preferenceKtx = "1.2.1"
+kotlinxCoroutines = "1.8.1" # Yeni eklenecek satır
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +30,8 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+androidx-preference-ktx = { group = "androidx.preference", name = "preference-ktx", version.ref = "preferenceKtx" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" } # Yeni eklenecek satır
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

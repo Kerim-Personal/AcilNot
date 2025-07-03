@@ -2,6 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+
     <item
         android:id="@+id/action_search"
         android:title="@string/search_title"
@@ -9,17 +10,20 @@
         app:showAsAction="ifRoom|collapseActionView"
         app:actionViewClass="androidx.appcompat.widget.SearchView" />
 
+
     <item
         android:id="@+id/action_sort"
         android:title="@string/sort_title"
         android:icon="@drawable/outline_sort_24"
         app:showAsAction="ifRoom" />
 
+
     <item
-        android:id="@+id/action_trash"
-        android:title="Çöp Kutusu"
-        android:icon="@drawable/outline_archive_24"
-        app:showAsAction="ifRoom" />
+        android:id="@+id/action_settings"
+        android:title="Ayarlar"
+        android:icon="@drawable/ic_settings_24"
+        app:showAsAction="always" />
+
 
     <item
         android:id="@+id/action_share_contextual"
@@ -32,4 +36,5 @@
         android:title="Sil"
         android:icon="@drawable/outline_delete_24"  app:showAsAction="ifRoom"
         android:visible="false" />
+
 </menu>

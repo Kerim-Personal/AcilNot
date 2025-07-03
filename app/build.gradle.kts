@@ -1,13 +1,11 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    // 'kapt' yerine daha performanslı olan 'KSP' plugin'i kullanılıyor.
     alias(libs.plugins.google.ksp)
 }
 
 android {
     namespace = "com.codenzi.acilnot"
-    // compileSdk ve targetSdk en son sürüme güncellendi.
     compileSdk = 36
 
     defaultConfig {
@@ -18,7 +16,7 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        multiDexEnabled = true // YENİ EKLENEN SATIR: Çoklu DEX'i etkinleştir
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -41,18 +39,18 @@ android {
 
 dependencies {
     // Tüm kütüphaneler artık libs.versions.toml dosyasından (version catalog) okunuyor.
-// Sabit sürüm numaraları ve yerel değişkenler kaldırıldı.
+    // Sabit sürüm numaraları ve yerel değişkenler kaldırıldı.
 
     // Lifecycle, Room ve Gson kütüphaneleri güncellendi ve version catalog'a taşındı.
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.ktx) // Bu satırın düzgün biçimlendirildiğinden emin olun
     // 'kapt' yerine 'ksp' kullanılıyor.
     ksp(libs.androidx.room.compiler)
     implementation(libs.gson)
 
     // Çoklu DEX bağımlılığı
-    implementation("androidx.multidex:multidex:2.0.1") // YENİ EKLENEN SATIR
+    implementation("androidx.multidex:multidex:2.0.1")
 
     // Mevcut kütüphaneler (zaten version catalog kullanıyordu)
     implementation(libs.androidx.core.ktx)
@@ -63,4 +61,6 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    implementation(libs.androidx.preference.ktx)
+    implementation(libs.kotlinx.coroutines.android)
 }

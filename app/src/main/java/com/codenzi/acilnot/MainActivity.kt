@@ -8,10 +8,14 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
+import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -35,8 +39,14 @@ class MainActivity : AppCompatActivity() {
     // Yeni durum yöneticimiz
     private var isSelectionMode = false
 
+    // Tema tercihini kaydetmek için anahtar
+    private val PREF_THEME_MODE = "pref_theme_mode"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Temayı onCreate'in başında uygula
+        applySavedTheme()
+
         setContentView(R.layout.activity_main)
 
         toolbar = findViewById(R.id.toolbar)
@@ -75,6 +85,12 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, callback)
     }
 
+    private fun applySavedTheme() {
+        val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val themeMode = sharedPrefs.getInt(PREF_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        AppCompatDelegate.setDefaultNightMode(themeMode)
+    }
+
     private fun setupRecyclerView() {
         noteAdapter = NoteAdapter(emptyList(),
             // Tıklama dinleyicisi
@@ -103,7 +119,7 @@ class MainActivity : AppCompatActivity() {
     private fun enterSelectionMode() {
         isSelectionMode = true
         invalidateOptionsMenu() // Menüyü yeniden çizmesi için sistemi tetikle
-        toolbar.navigationIcon = getDrawable(R.drawable.ic_close) // Geri butonu yerine kapat ikonu
+        toolbar.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_close)
         toolbar.setNavigationOnClickListener { exitSelectionMode() }
     }
 
@@ -127,6 +143,39 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+
+        // Arama görünümünü ayarla
+        val searchItem = menu.findItem(R.id.action_search)
+        val searchView = searchItem?.actionView as? SearchView
+
+        searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                currentSearchQuery = query
+                sortAndFilterList()
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                currentSearchQuery = newText
+                sortAndFilterList()
+                return false
+            }
+        })
+
+        // Metod parametrelerindeki '?' (null atanabilirlik) kaldırıldı
+        searchItem?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
+            override fun onMenuItemActionExpand(item: MenuItem): Boolean { // 'item: MenuItem?' yerine 'item: MenuItem'
+                // Arama genişlediğinde
+                return true
+            }
+
+            override fun onMenuItemActionCollapse(item: MenuItem): Boolean { // 'item: MenuItem?' yerine 'item: MenuItem'
+                // Arama daraldığında, sorguyu temizle
+                currentSearchQuery = null
+                sortAndFilterList()
+                return true
+            }
+        })
         return super.onCreateOptionsMenu(menu)
     }
 
@@ -134,14 +183,14 @@ class MainActivity : AppCompatActivity() {
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.action_search).isVisible = !isSelectionMode
         menu.findItem(R.id.action_sort).isVisible = !isSelectionMode
-        menu.findItem(R.id.action_trash).isVisible = !isSelectionMode
+        menu.findItem(R.id.action_settings).isVisible = !isSelectionMode
         menu.findItem(R.id.action_share_contextual).isVisible = isSelectionMode
         menu.findItem(R.id.action_delete_contextual).isVisible = isSelectionMode
 
         // Arama kutusu açıksa ve seçim moduna girilirse, arama kutusunu kapat
         if (isSelectionMode) {
             val searchItem = menu.findItem(R.id.action_search)
-            if (searchItem.isActionViewExpanded) {
+            if (searchItem != null && searchItem.isActionViewExpanded) {
                 searchItem.collapseActionView()
             }
         }
@@ -152,12 +201,17 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val selectedNotes = noteAdapter.getSelectedNotes()
         return when (item.itemId) {
+            R.id.action_search -> {
+                // Arama View'i ActionViewClass olarak ayarlandığı için burada ek bir işlem yapmaya gerek yok,
+                // OnQueryTextListener arama işlemini halledecektir.
+                true
+            }
             R.id.action_sort -> {
                 showSortDialog()
                 true
             }
-            R.id.action_trash -> { // Yeni çöp kutusu menü öğesi
-                startActivity(Intent(this, TrashActivity::class.java))
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
                 true
             }
             R.id.action_share_contextual -> {
@@ -214,7 +268,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.sort_dialog_title))
             .setSingleChoiceItems(sortOptions, checkedItem) { dialog, which ->
-                currentSortOrder = SortOrder.values()[which]
+                currentSortOrder = SortOrder.entries[which]
                 sortAndFilterList()
                 dialog.dismiss()
             }
@@ -234,7 +288,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             val searchQuery = currentSearchQuery!!.lowercase(Locale.getDefault())
             sortedList.filter {
-                it.content.lowercase(Locale.getDefault()).contains(searchQuery)
+                it.content.lowercase(Locale.getDefault()).contains(searchQuery) ||
+                        it.title.lowercase(Locale.getDefault()).contains(searchQuery)
             }
         }
         noteAdapter.updateNotes(filteredList)

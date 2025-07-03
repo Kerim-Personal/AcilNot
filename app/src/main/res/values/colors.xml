@@ -9,4 +9,9 @@
     <color name="note_color_green">#D5F5E3</color>
     <color name="note_color_pink">#FADBD8</color>
 
-    <color name="purple_500">#FF6200EE</color> </resources>
+    <color name="purple_500">#FF6200EE</color>
+
+
+    <color name="my_light_primary">#FF3DDC84</color>
+    <color name="my_dark_primary">#FF212121</color>
+</resources>
