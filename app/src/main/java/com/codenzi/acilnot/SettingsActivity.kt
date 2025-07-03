@@ -1,3 +1,4 @@
+// app/src/main/java/com/codenzi/acilnot/SettingsActivity.kt
 package com.codenzi.acilnot
 
 import android.content.Intent
@@ -6,15 +7,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
 import androidx.preference.PreferenceFragmentCompat
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.DrawableCompat
-import android.content.res.Configuration
+import androidx.core.content.ContextCompat // Drawable işlemleri için
+// import androidx.core.graphics.drawable.DrawableCompat // Bu satıra ihtiyacınız yok
+// import android.content.res.Configuration // Bu satıra ihtiyacınız yok
 
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
+        setContentView(R.layout.activity_settings) // Bu layout fragment konteynerini içermeli
 
         val toolbar: Toolbar = findViewById(R.id.settings_toolbar)
         setSupportActionBar(toolbar)
@@ -37,6 +38,7 @@ class SettingsActivity : AppCompatActivity() {
 
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            // Tercihleri R.xml.preferences dosyasından yükle
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
             // Tema tercihini bul ve ikonunu ayarla
@@ -52,6 +54,7 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             // Tema tercihini dinle ve uygula
+            // Bu listener, ListPreference'ın değeri değiştiğinde çalışır.
             val themePreferenceListener: androidx.preference.ListPreference? = findPreference("theme_selection")
             themePreferenceListener?.setOnPreferenceChangeListener { _, newValue ->
                 val mode = when (newValue.toString()) {
@@ -71,7 +74,6 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // YENİ EKLENEN KOD BAŞLANGICI
             // Parola Ayarları tercihini bul ve tıklama dinleyicisi ekle
             val passwordSettingsPreference = findPreference<androidx.preference.Preference>("password_settings")
             passwordSettingsPreference?.setOnPreferenceClickListener {
@@ -79,7 +81,6 @@ class SettingsActivity : AppCompatActivity() {
                 startActivity(intent)
                 true
             }
-            // YENİ EKLENEN KOD BİTİŞİ
         }
     }
 }
