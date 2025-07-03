@@ -78,8 +78,8 @@ class NoteActivity : AppCompatActivity() {
         showHistoryButton = findViewById(R.id.btn_show_history)
 
         // Bilgi butonunu mor yap
-        val purpleColor = ContextCompat.getColor(this, R.color.purple_500)
-        showHistoryButton.setColorFilter(purpleColor, PorterDuff.Mode.SRC_IN)
+        val white = ContextCompat.getColor(this, R.color.white)
+        showHistoryButton.setColorFilter(white, PorterDuff.Mode.SRC_IN)
 
         // Hata düzeltmesi: Biçimlendirme butonları başlatılıyor
         boldButton = findViewById(R.id.btn_bold)
