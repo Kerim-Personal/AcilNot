@@ -15,14 +15,17 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ScrollView // YENİ EKLENEN SATIR: ScrollView için import
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
@@ -47,6 +50,7 @@ class NoteActivity : AppCompatActivity() {
     private lateinit var boldButton: Button
     private lateinit var italicButton: Button
     private lateinit var strikethroughButton: Button
+    private lateinit var showHistoryButton: ImageButton // YENİ: Bilgi butonu
 
     private lateinit var colorPickers: List<View>
     private var selectedColor: String = "#FFECEFF1"
@@ -71,7 +75,18 @@ class NoteActivity : AppCompatActivity() {
         boldButton = findViewById(R.id.btn_bold)
         italicButton = findViewById(R.id.btn_italic)
         strikethroughButton = findViewById(R.id.btn_strikethrough)
-        editHistoryText.movementMethod = ScrollingMovementMethod()
+        editHistoryText.movementMethod = ScrollingMovementMethod.getInstance() // DÜZELTME: editHistoryText'in hareket metodunu doğru ayarla
+
+        showHistoryButton = findViewById(R.id.btn_show_history) // YENİ: Bilgi butonuna referans al
+
+        // Bilgi butonuna tıklama dinleyicisi
+        showHistoryButton.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Düzenleme Geçmişi")
+                .setMessage(editHistoryText.text) // Hazırlanmış geçmiş metnini kullan
+                .setPositiveButton("Tamam", null)
+                .show()
+        }
 
         checklistRecyclerView = findViewById(R.id.rv_checklist)
         addChecklistItemButton = findViewById(R.id.btn_add_checklist_item)
@@ -101,7 +116,6 @@ class NoteActivity : AppCompatActivity() {
         } else {
             currentNoteId = null
             this.title = "Yeni Not Ekle"
-            editHistoryText.visibility = View.GONE
             deleteButton.visibility = View.GONE
             updateColorSelection(findViewById(R.id.color_default))
             updateWindowBackground()
@@ -115,6 +129,8 @@ class NoteActivity : AppCompatActivity() {
                 checklistAdapter.notifyItemRangeRemoved(0, oldSize)
             }
         }
+        // Not yoksa veya yeni notsa bilgi butonunu gizle
+        showHistoryButton.visibility = if (currentNoteId != null) View.VISIBLE else View.GONE
     }
 
     private fun setupChecklist() {
@@ -223,7 +239,7 @@ class NoteActivity : AppCompatActivity() {
         val noteText = Html.toHtml(noteInput.text, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
 
         if (titleText.isBlank() && noteInput.text.isBlank() && checklistItems.all { it.text.isBlank() }) {
-            Toast.makeText(this, "Not boş olamaz!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Not içeriği boş olamaz!", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -264,17 +280,18 @@ class NoteActivity : AppCompatActivity() {
 
     private fun showDeleteConfirmationDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Notu Sil")
-            .setMessage("Bu notu silmek istediğinizden emin misiniz?")
-            .setPositiveButton("Evet, Sil") { _, _ -> deleteNote() }
-            .setNegativeButton("İptal", null)
+            .setTitle(getString(R.string.delete_note_confirmation_title))
+            .setMessage(getString(R.string.delete_note_to_trash_confirmation_message))
+            .setPositiveButton(getString(R.string.dialog_move_to_trash)) { _, _ -> deleteNote() }
+            .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
     }
 
     private fun deleteNote() {
         currentNoteId?.let { id ->
             lifecycleScope.launch {
-                noteDao.deleteById(id)
+                // Notu kalıcı olarak silmek yerine çöp kutusuna taşı
+                noteDao.softDeleteById(id, System.currentTimeMillis())
                 updateAllWidgets()
                 Toast.makeText(applicationContext, "Not silindi.", Toast.LENGTH_SHORT).show()
                 finish()

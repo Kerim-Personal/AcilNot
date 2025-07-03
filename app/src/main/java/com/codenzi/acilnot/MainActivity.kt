@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -59,6 +60,19 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // onBackPressed'i OnBackPressedDispatcher ile değiştirme
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (isSelectionMode) {
+                    exitSelectionMode()
+                } else {
+                    isEnabled = false // Callback'i geçici olarak devre dışı bırakın
+                    onBackPressedDispatcher.onBackPressed() // Normal geri işlevselliğini çağırın
+                }
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, callback)
     }
 
     private fun setupRecyclerView() {
@@ -120,6 +134,7 @@ class MainActivity : AppCompatActivity() {
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.action_search).isVisible = !isSelectionMode
         menu.findItem(R.id.action_sort).isVisible = !isSelectionMode
+        menu.findItem(R.id.action_trash).isVisible = !isSelectionMode
         menu.findItem(R.id.action_share_contextual).isVisible = isSelectionMode
         menu.findItem(R.id.action_delete_contextual).isVisible = isSelectionMode
 
@@ -141,6 +156,10 @@ class MainActivity : AppCompatActivity() {
                 showSortDialog()
                 true
             }
+            R.id.action_trash -> { // Yeni çöp kutusu menü öğesi
+                startActivity(Intent(this, TrashActivity::class.java))
+                true
+            }
             R.id.action_share_contextual -> {
                 shareNotes(selectedNotes)
                 exitSelectionMode()
@@ -154,17 +173,6 @@ class MainActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
     }
-
-    override fun onBackPressed() {
-        if (isSelectionMode) {
-            exitSelectionMode()
-        } else {
-            super.onBackPressed()
-        }
-    }
-
-    // ... shareNotes, deleteNotes, showSortDialog, sortAndFilterList fonksiyonları bir önceki cevaptaki gibi kalabilir ...
-// ... (Mevcut kodunuz burada) ...
 
     private fun shareNotes(notes: List<Note>) {
         if (notes.isEmpty()) return
@@ -183,15 +191,16 @@ class MainActivity : AppCompatActivity() {
         if (notes.isEmpty()) return
 
         AlertDialog.Builder(this)
-            .setTitle("${notes.size} notu sil")
-            .setMessage("Seçili notları silmek istediğinizden emin misiniz?")
-            .setPositiveButton("Evet, Sil") { _, _ ->
+            .setTitle(resources.getQuantityString(R.plurals.move_notes_to_trash_confirmation_title, notes.size, notes.size))
+            .setMessage(getString(R.string.move_notes_to_trash_confirmation_message))
+            .setPositiveButton(getString(R.string.dialog_move_to_trash)) { _, _ ->
                 lifecycleScope.launch {
-                    notes.forEach { noteDao.deleteById(it.id) }
-                    Toast.makeText(applicationContext, "${notes.size} not silindi.", Toast.LENGTH_SHORT).show()
+                    // Notları kalıcı olarak silmek yerine çöp kutusuna taşı
+                    notes.forEach { noteDao.softDeleteById(it.id, System.currentTimeMillis()) }
+                    Toast.makeText(applicationContext, resources.getQuantityString(R.plurals.notes_deleted_toast, notes.size, notes.size), Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("İptal", null)
+            .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
     }
     private fun showSortDialog() {

@@ -8,4 +8,5 @@
     <color name="note_color_blue">#D4E6F1</color>
     <color name="note_color_green">#D5F5E3</color>
     <color name="note_color_pink">#FADBD8</color>
-</resources>
+
+    <color name="purple_500">#FF6200EE</color> </resources>

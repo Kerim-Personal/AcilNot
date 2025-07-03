@@ -49,4 +49,13 @@
     <string name="widget_empty_view_text">Henüz görüntülenecek not yok.\nUygulamadan yeni not ekleyebilirsiniz.</string>
     <string name="widget_new_note_button">Yeni Not Ekle</string>
 
+    <string name="delete_note_to_trash_confirmation_message">Bu notu çöp kutusuna taşımak istediğinizden emin misiniz?</string>
+    <string name="dialog_move_to_trash">Çöp Kutusuna Taşı</string>
+
+    <plurals name="move_notes_to_trash_confirmation_title">
+        <item quantity="one">%d notu çöp kutusuna taşı</item>
+        <item quantity="other">%d notu çöp kutusuna taşı</item>
+    </plurals>
+    <string name="move_notes_to_trash_confirmation_message">Seçili notları çöp kutusuna taşımak istediğinizden emin misiniz?</string>
+
 </resources>

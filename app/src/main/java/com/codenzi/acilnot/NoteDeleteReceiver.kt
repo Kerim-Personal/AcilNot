@@ -27,7 +27,7 @@ class NoteDeleteReceiver : BroadcastReceiver() {
 
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    dao.deleteById(noteId)
+                    dao.hardDeleteById(noteId) // Düzeltme: hardDeleteById kullanıldı
 
                     // İşlem bittikten sonra widget'ı güncelle
                     val appWidgetManager = AppWidgetManager.getInstance(context)

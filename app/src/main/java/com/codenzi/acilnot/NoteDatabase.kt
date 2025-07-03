@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-// VERSIYONU 4'E YÜKSELTİN
-@Database(entities = [Note::class], version = 4, exportSchema = false)
+// VERSIYONU 5'E YÜKSELTİN
+@Database(entities = [Note::class], version = 5, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
 

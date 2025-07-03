@@ -18,6 +18,7 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        multiDexEnabled = true // YENİ EKLENEN SATIR: Çoklu DEX'i etkinleştir
     }
 
     buildTypes {
@@ -40,7 +41,7 @@ android {
 
 dependencies {
     // Tüm kütüphaneler artık libs.versions.toml dosyasından (version catalog) okunuyor.
-    // Sabit sürüm numaraları ve yerel değişkenler kaldırıldı.
+// Sabit sürüm numaraları ve yerel değişkenler kaldırıldı.
 
     // Lifecycle, Room ve Gson kütüphaneleri güncellendi ve version catalog'a taşındı.
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -49,6 +50,9 @@ dependencies {
     // 'kapt' yerine 'ksp' kullanılıyor.
     ksp(libs.androidx.room.compiler)
     implementation(libs.gson)
+
+    // Çoklu DEX bağımlılığı
+    implementation("androidx.multidex:multidex:2.0.1") // YENİ EKLENEN SATIR
 
     // Mevcut kütüphaneler (zaten version catalog kullanıyordu)
     implementation(libs.androidx.core.ktx)

@@ -5,27 +5,31 @@
     <item
         android:id="@+id/action_search"
         android:title="@string/search_title"
-        android:icon="@android:drawable/ic_menu_search"
+        android:icon="@drawable/outline_search_24"
         app:showAsAction="ifRoom|collapseActionView"
         app:actionViewClass="androidx.appcompat.widget.SearchView" />
 
     <item
         android:id="@+id/action_sort"
         android:title="@string/sort_title"
-        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:icon="@drawable/outline_sort_24"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_trash"
+        android:title="Çöp Kutusu"
+        android:icon="@drawable/outline_archive_24"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_share_contextual"
         android:title="Paylaş"
-        android:icon="@android:drawable/ic_menu_share"
-        app:showAsAction="ifRoom"
+        android:icon="@drawable/outline_share_24"  app:showAsAction="ifRoom"
         android:visible="false" />
 
     <item
         android:id="@+id/action_delete_contextual"
         android:title="Sil"
-        android:icon="@android:drawable/ic_menu_delete"
-        app:showAsAction="ifRoom"
+        android:icon="@drawable/outline_delete_24"  app:showAsAction="ifRoom"
         android:visible="false" />
 </menu>

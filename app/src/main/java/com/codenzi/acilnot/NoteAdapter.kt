@@ -49,8 +49,9 @@ class NoteAdapter(
         // YENİ: Başlık TextView referansı
         private val noteTitle: TextView = itemView.findViewById(R.id.tv_note_title)
         private val noteContent: TextView = itemView.findViewById(R.id.tv_note_content)
-        private val creationDate: TextView = itemView.findViewById(R.id.tv_creation_date)
-        private val modificationDate: TextView = itemView.findViewById(R.id.tv_modification_date)
+        // DÜZELTME: Tarih TextView'leri kaldırıldı
+        // private val creationDate: TextView = itemView.findViewById(R.id.tv_creation_date)
+        // private val modificationDate: TextView = itemView.findViewById(R.id.tv_modification_date)
         private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
 
         fun bind(note: Note) {
@@ -83,14 +84,14 @@ class NoteAdapter(
                 noteContent.text = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
             }
 
-            creationDate.text = "Oluşturulma: ${formatDate(note.createdAt)}"
-
-            modificationDate.visibility = if (note.modifiedAt.isNotEmpty()) {
-                modificationDate.text = "Son Düzenleme: ${formatDate(note.modifiedAt.last())}"
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
+            // DÜZELTME: Oluşturulma ve düzenleme tarihleri artık burada gösterilmiyor
+            // creationDate.text = "Oluşturulma: ${formatDate(note.createdAt)}"
+            // modificationDate.visibility = if (note.modifiedAt.isNotEmpty()) {
+            //     modificationDate.text = "Son Düzenleme: ${formatDate(note.modifiedAt.last())}"
+            //     View.VISIBLE
+            // } else {
+            //     View.GONE
+            // }
 
             if (selectedItems.contains(note.id)) {
                 cardContainer.strokeWidth = 8
