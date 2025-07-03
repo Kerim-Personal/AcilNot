@@ -39,26 +39,15 @@ class SettingsActivity : AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
-            // Mevcut tema modunu belirle (Bu kısım ikon renklendirmesi için artık gerekli değil)
-            // val isDarkMode = AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES ||
-            //         (AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM &&
-            //                 (context?.resources?.configuration?.uiMode?.and(Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES))
-
-            // İkon rengini belirle (Bu kısım kaldırıldı, ikonlar kendi renklerini kullanacak)
-            // val iconColor = if (isDarkMode) ContextCompat.getColor(requireContext(), android.R.color.white)
-            // else ContextCompat.getColor(requireContext(), android.R.color.black)
-
             // Tema tercihini bul ve ikonunu ayarla
             val themePreference: androidx.preference.ListPreference? = findPreference("theme_selection")
             themePreference?.let {
-                // Drawable'ı doğrudan ayarla, manuel renklendirme kaldırıldı.
                 it.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_settings_24)
             }
 
             // Çöp Kutusu tercihini bul ve ikonunu ayarla
             val trashPreference = findPreference<androidx.preference.Preference>("trash_settings")
             trashPreference?.let {
-                // Drawable'ı doğrudan ayarla, manuel renklendirme kaldırıldı.
                 it.icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_archive_24)
             }
 
@@ -81,6 +70,16 @@ class SettingsActivity : AppCompatActivity() {
                 startActivity(intent)
                 true
             }
+
+            // YENİ EKLENEN KOD BAŞLANGICI
+            // Parola Ayarları tercihini bul ve tıklama dinleyicisi ekle
+            val passwordSettingsPreference = findPreference<androidx.preference.Preference>("password_settings")
+            passwordSettingsPreference?.setOnPreferenceClickListener {
+                val intent = Intent(context, PasswordSettingsActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            // YENİ EKLENEN KOD BİTİŞİ
         }
     }
 }
