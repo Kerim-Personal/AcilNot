@@ -1,0 +1,104 @@
+package com.codenzi.acilnot
+
+import android.graphics.Color
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.core.content.ContextCompat // HATA 1 İÇİN EKLENEN IMPORT
+import androidx.core.graphics.toColorInt
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+class NoteAdapter(
+    private var notes: List<Note>,
+    private val clickListener: (Note) -> Unit,
+    private val longClickListener: (Note) -> Unit
+) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
+
+    private val selectedItems = mutableSetOf<Int>()
+
+    fun toggleSelection(noteId: Int) {
+        if (selectedItems.contains(noteId)) {
+            selectedItems.remove(noteId)
+        } else {
+            selectedItems.add(noteId)
+        }
+        notifyDataSetChanged()
+    }
+
+    fun getSelectedNotes(): List<Note> {
+        return notes.filter { selectedItems.contains(it.id) }
+    }
+
+    fun clearSelections() {
+        selectedItems.clear()
+        notifyDataSetChanged()
+    }
+
+    fun getSelectedItemCount(): Int = selectedItems.size
+
+    inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val noteContent: TextView = itemView.findViewById(R.id.tv_note_content)
+        private val creationDate: TextView = itemView.findViewById(R.id.tv_creation_date)
+        private val modificationDate: TextView = itemView.findViewById(R.id.tv_modification_date)
+        private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
+
+        fun bind(note: Note) {
+            noteContent.text = note.content
+            creationDate.text = "Oluşturulma: ${formatDate(note.createdAt)}"
+
+            modificationDate.visibility = if (note.modifiedAt.isNotEmpty()) {
+                modificationDate.text = "Son Düzenleme: ${formatDate(note.modifiedAt.last())}"
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+            // Notun seçili olup olmamasına göre arayüzü güncelle
+            if (selectedItems.contains(note.id)) {
+                cardContainer.strokeWidth = 8
+                // HATA 2 İÇİN DÜZELTME: Android'in kendi rengini kullanıyoruz
+                cardContainer.strokeColor = ContextCompat.getColor(cardContainer.context, android.R.color.holo_blue_dark)
+            } else {
+                cardContainer.strokeWidth = 0
+            }
+
+            try {
+                cardContainer.setCardBackgroundColor(note.color.toColorInt())
+            } catch (e: Exception) {
+                cardContainer.setCardBackgroundColor(Color.WHITE)
+            }
+
+            itemView.setOnClickListener { clickListener(note) }
+            itemView.setOnLongClickListener {
+                longClickListener(note)
+                true
+            }
+        }
+
+        private fun formatDate(timestamp: Long): String {
+            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+            return sdf.format(Date(timestamp))
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NoteViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.note_item, parent, false)
+        return NoteViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: NoteViewHolder, position: Int) {
+        holder.bind(notes[position])
+    }
+
+    override fun getItemCount() = notes.size
+
+    fun updateNotes(newNotes: List<Note>) {
+        notes = newNotes
+        notifyDataSetChanged()
+    }
+}

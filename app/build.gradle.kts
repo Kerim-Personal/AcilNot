@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.codenzi.acilnotuygulamasi"
+    namespace = "com.codenzi.acilnot"
     compileSdk = 35
 
     defaultConfig {

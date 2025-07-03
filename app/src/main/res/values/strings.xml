@@ -1,3 +1,12 @@
 <resources>
-    <string name="app_name">AcilNotUygulamasi</string>
+    <string name="app_name">Acil Not</string>
+    <string name="search_title">Ara</string>
+    <string name="sort_title">Sırala</string>
+    <string name="sort_dialog_title">Notları Sırala</string>
+    <string name="sort_by_creation_date_newest">Oluşturma Tarihi (Yeniden Eskiye)</string>
+    <string name="sort_by_creation_date_oldest">Oluşturma Tarihi (Eskiden Yeniye)</string>
+    <string name="sort_by_content_az">İçeriğe Göre (A-Z)</string>
+
+    <string name="share_button_text">Paylaş</string>
+    <string name="share_chooser_title">Notu şununla paylaş:</string>
 </resources>

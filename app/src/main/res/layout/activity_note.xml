@@ -14,16 +14,91 @@
         android:hint="Notunuzu buraya yazın..."
         android:inputType="textMultiLine"
         android:minLines="4"
-        android:gravity="top"/>
+        android:gravity="top"
+        android:background="@android:color/transparent"/>
 
-    <TextView
-        android:id="@+id/tv_edit_history"
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/scrollview_border"
+        android:padding="8dp"
+        android:scrollbars="vertical">
+
+        <TextView
+            android:id="@+id/tv_edit_history"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@android:color/darker_gray"
+            tools:text="Oluşturulma: 14/06/2025 12:00\nDüzenlemeler:\n- 14/06/2025 12:05\n- 14/06/2025 12:10" />
+    </ScrollView>
+
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:textSize="12sp"
-        android:textColor="@android:color/darker_gray"
-        tools:text="Oluşturulma: 14/06/2025 12:00\nDüzenlemeler:\n- 14/06/2025 12:05\n- 14/06/2025 12:10" />
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <FrameLayout
+            android:id="@+id/color_default"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/background_color_selector">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/note_color_default" />
+        </FrameLayout>
+        <FrameLayout
+            android:id="@+id/color_yellow"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/background_color_selector">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/note_color_yellow" />
+        </FrameLayout>
+        <FrameLayout
+            android:id="@+id/color_blue"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/background_color_selector">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/note_color_blue" />
+        </FrameLayout>
+        <FrameLayout
+            android:id="@+id/color_green"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/background_color_selector">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/note_color_green" />
+        </FrameLayout>
+        <FrameLayout
+            android:id="@+id/color_pink"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/background_color_selector">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/note_color_pink" />
+        </FrameLayout>
+
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"

@@ -1,4 +1,4 @@
-package com.codenzi.acilnotuygulamasi
+package com.codenzi.acilnot
 
 import org.junit.Test
 

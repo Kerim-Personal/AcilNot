@@ -1,0 +1,233 @@
+package com.codenzi.acilnot
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.launch
+import java.util.Locale
+
+class MainActivity : AppCompatActivity() {
+
+    enum class SortOrder {
+        CREATION_NEWEST, CREATION_OLDEST, CONTENT_AZ
+    }
+
+    private lateinit var noteDao: NoteDao
+    private lateinit var noteAdapter: NoteAdapter
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var toolbar: Toolbar
+    private var allNotes: List<Note> = emptyList()
+    private var currentSortOrder = SortOrder.CREATION_NEWEST
+    private var currentSearchQuery: String? = null
+
+    // Yeni durum yöneticimiz
+    private var isSelectionMode = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
+        noteDao = NoteDatabase.getDatabase(this).noteDao()
+        recyclerView = findViewById(R.id.rv_notes)
+        val fab: FloatingActionButton = findViewById(R.id.fab_add_note)
+
+        setupRecyclerView()
+
+        fab.setOnClickListener {
+            startActivity(Intent(this, NoteActivity::class.java))
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                noteDao.getAllNotes().collect { notes ->
+                    allNotes = notes
+                    sortAndFilterList()
+                }
+            }
+        }
+    }
+
+    private fun setupRecyclerView() {
+        noteAdapter = NoteAdapter(emptyList(),
+            // Tıklama dinleyicisi
+            { note ->
+                if (isSelectionMode) {
+                    toggleSelection(note)
+                } else {
+                    val intent = Intent(this, NoteActivity::class.java).apply {
+                        putExtra("NOTE_ID", note.id)
+                    }
+                    startActivity(intent)
+                }
+            },
+            // Uzun tıklama dinleyicisi
+            { note ->
+                if (!isSelectionMode) {
+                    enterSelectionMode()
+                }
+                toggleSelection(note)
+            }
+        )
+        recyclerView.adapter = noteAdapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+    }
+
+    private fun enterSelectionMode() {
+        isSelectionMode = true
+        invalidateOptionsMenu() // Menüyü yeniden çizmesi için sistemi tetikle
+        toolbar.navigationIcon = getDrawable(R.drawable.ic_close) // Geri butonu yerine kapat ikonu
+        toolbar.setNavigationOnClickListener { exitSelectionMode() }
+    }
+
+    private fun exitSelectionMode() {
+        isSelectionMode = false
+        noteAdapter.clearSelections()
+        invalidateOptionsMenu()
+        toolbar.title = getString(R.string.app_name) // Başlığı eski haline getir
+        toolbar.navigationIcon = null // Kapat ikonunu kaldır
+    }
+
+    private fun toggleSelection(note: Note) {
+        noteAdapter.toggleSelection(note.id)
+        val count = noteAdapter.getSelectedItemCount()
+        if (count == 0) {
+            exitSelectionMode()
+        } else {
+            toolbar.title = "$count not seçildi"
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    // Menü her gösterileceği zaman bu fonksiyon çağrılır
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.findItem(R.id.action_search).isVisible = !isSelectionMode
+        menu.findItem(R.id.action_sort).isVisible = !isSelectionMode
+        menu.findItem(R.id.action_share_contextual).isVisible = isSelectionMode
+        menu.findItem(R.id.action_delete_contextual).isVisible = isSelectionMode
+
+        // Arama kutusu açıksa ve seçim moduna girilirse, arama kutusunu kapat
+        if (isSelectionMode) {
+            val searchItem = menu.findItem(R.id.action_search)
+            if (searchItem.isActionViewExpanded) {
+                searchItem.collapseActionView()
+            }
+        }
+
+        return super.onPrepareOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val selectedNotes = noteAdapter.getSelectedNotes()
+        return when (item.itemId) {
+            R.id.action_sort -> {
+                showSortDialog()
+                true
+            }
+            R.id.action_share_contextual -> {
+                shareNotes(selectedNotes)
+                exitSelectionMode()
+                true
+            }
+            R.id.action_delete_contextual -> {
+                deleteNotes(selectedNotes)
+                exitSelectionMode()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onBackPressed() {
+        if (isSelectionMode) {
+            exitSelectionMode()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    // ... shareNotes, deleteNotes, showSortDialog, sortAndFilterList fonksiyonları bir önceki cevaptaki gibi kalabilir ...
+// ... (Mevcut kodunuz burada) ...
+
+    private fun shareNotes(notes: List<Note>) {
+        if (notes.isEmpty()) return
+
+        val shareText = notes.joinToString("\n\n---\n\n") { it.content }
+
+        val shareIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            type = "text/plain"
+        }
+        startActivity(Intent.createChooser(shareIntent, "Notları Paylaş"))
+    }
+
+    private fun deleteNotes(notes: List<Note>) {
+        if (notes.isEmpty()) return
+
+        AlertDialog.Builder(this)
+            .setTitle("${notes.size} notu sil")
+            .setMessage("Seçili notları silmek istediğinizden emin misiniz?")
+            .setPositiveButton("Evet, Sil") { _, _ ->
+                lifecycleScope.launch {
+                    notes.forEach { noteDao.deleteById(it.id) }
+                    Toast.makeText(applicationContext, "${notes.size} not silindi.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("İptal", null)
+            .show()
+    }
+    private fun showSortDialog() {
+        val sortOptions = arrayOf(
+            getString(R.string.sort_by_creation_date_newest),
+            getString(R.string.sort_by_creation_date_oldest),
+            getString(R.string.sort_by_content_az)
+        )
+        val checkedItem = currentSortOrder.ordinal
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.sort_dialog_title))
+            .setSingleChoiceItems(sortOptions, checkedItem) { dialog, which ->
+                currentSortOrder = SortOrder.values()[which]
+                sortAndFilterList()
+                dialog.dismiss()
+            }
+            .create()
+            .show()
+    }
+
+    private fun sortAndFilterList() {
+        val sortedList = when (currentSortOrder) {
+            SortOrder.CREATION_NEWEST -> allNotes.sortedByDescending { it.createdAt }
+            SortOrder.CREATION_OLDEST -> allNotes.sortedBy { it.createdAt }
+            SortOrder.CONTENT_AZ -> allNotes.sortedBy { it.content.lowercase(Locale.getDefault()) }
+        }
+
+        val filteredList = if (currentSearchQuery.isNullOrBlank()) {
+            sortedList
+        } else {
+            val searchQuery = currentSearchQuery!!.lowercase(Locale.getDefault())
+            sortedList.filter {
+                it.content.lowercase(Locale.getDefault()).contains(searchQuery)
+            }
+        }
+        noteAdapter.updateNotes(filteredList)
+    }
+}

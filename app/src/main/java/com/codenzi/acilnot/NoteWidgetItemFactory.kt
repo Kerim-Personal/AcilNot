@@ -1,10 +1,12 @@
-package com.codenzi.acilnotuygulamasi
+package com.codenzi.acilnot
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
+import androidx.core.graphics.toColorInt
 import kotlinx.coroutines.runBlocking
 
 class NoteWidgetItemFactory(
@@ -37,18 +39,26 @@ class NoteWidgetItemFactory(
         val note = notes[position]
         val views = RemoteViews(context.packageName, R.layout.widget_note_item).apply {
             setTextViewText(R.id.tv_widget_item_content, note.content)
+
+            // --- YENİ EKLENEN KISIM: Arka Plan Rengini Ayarla ---
+            try {
+                // setBackgroundColor metodu doğrudan desteklenmediği için setInt ile rengi atıyoruz
+                setInt(R.id.widget_item_container, "setBackgroundColor", note.color.toColorInt())
+            } catch (e: Exception) {
+                // Hata olursa varsayılan rengi ata
+                setInt(R.id.widget_item_container, "setBackgroundColor", Color.WHITE)
+            }
+            // ----------------------------------------------------
         }
 
-        // Sadece bu öğeye özel veriyi (NOTE_ID) içeren "doldurma" niyetini (fill-in intent) oluştur.
-        // Bu intent, NoteWidgetProvider'da tanımlanan şablon PendingIntent ile birleşecek.
         val fillInIntent = Intent().apply {
             val extras = Bundle()
             extras.putInt("NOTE_ID", note.id)
             putExtras(extras)
         }
 
-        // Tıklama olayını ana öğeye ata.
-        views.setOnClickFillInIntent(R.id.tv_widget_item_content, fillInIntent)
+        // Tıklama olayını tüm satıra ata
+        views.setOnClickFillInIntent(R.id.widget_item_container, fillInIntent)
 
         return views
     }

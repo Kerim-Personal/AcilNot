@@ -1,4 +1,4 @@
-package com.codenzi.acilnotuygulamasi
+package com.codenzi.acilnot
 
 import android.content.Context
 import androidx.room.Database
@@ -6,9 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Note::class], version = 2, exportSchema = false)
+// VERSIYONU 3'E YÜKSELTİN
+@Database(entities = [Note::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
+
+    // ... (geri kalan kod aynı) ...
+// ... (Mevcut kodunuz burada) ...
 
     abstract fun noteDao(): NoteDao
 

@@ -1,4 +1,4 @@
-package com.codenzi.acilnotuygulamasi
+package com.codenzi.acilnot
 
 import androidx.room.Dao
 import androidx.room.Insert

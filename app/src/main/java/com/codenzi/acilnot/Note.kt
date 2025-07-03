@@ -1,4 +1,4 @@
-package com.codenzi.acilnotuygulamasi
+package com.codenzi.acilnot
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -11,5 +11,7 @@ data class Note(
     val id: Int = 0,
     val content: String,
     val createdAt: Long,
-    val modifiedAt: List<Long> = emptyList()
+    val modifiedAt: List<Long> = emptyList(),
+    // YENİ EKLENEN SATIR (Renk bilgisini String olarak tutacağız, ör: "#FFFFFF")
+    val color: String = "#FFECEFF1" // Varsayılan renk pastel gri
 )

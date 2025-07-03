@@ -2,4 +2,10 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="note_color_default">#ECEFF1</color>
+    <color name="note_color_yellow">#FFFDD0</color>
+    <color name="note_color_blue">#D4E6F1</color>
+    <color name="note_color_green">#D5F5E3</color>
+    <color name="note_color_pink">#FADBD8</color>
 </resources>
