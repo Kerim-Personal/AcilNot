@@ -26,7 +26,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle // Bu import NoteActivity'de doğrudan kullanılmadığı için IDE uyarısı verebilir, dilerseniz kaldırabilirsiniz.
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
@@ -258,6 +258,41 @@ class NoteActivity : AppCompatActivity() {
         }
     }
 
+    // Helper function to determine contrasting text color
+    private fun getContrastingTextColor(backgroundColor: String): Int {
+        return try {
+            val colorInt = backgroundColor.toColorInt()
+            // Calculate perceived luminescence (a common way to determine brightness)
+            val red = Color.red(colorInt)
+            val green = Color.green(colorInt)
+            val blue = Color.blue(colorInt)
+            val luminescence = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+            if (luminescence > 0.5) { // If light color
+                ContextCompat.getColor(this, R.color.black) // Use black text
+            } else { // If dark color
+                ContextCompat.getColor(this, R.color.white) // Use white text
+            }
+        } catch (e: IllegalArgumentException) {
+            ContextCompat.getColor(this, R.color.black) // Default to black if color is invalid
+        }
+    }
+
+    private fun updateWindowBackground() {
+        try {
+            window.setBackgroundDrawable(selectedColor.toColorInt().toDrawable())
+        } catch (e: IllegalArgumentException) {
+            window.setBackgroundDrawable(Color.WHITE.toDrawable())
+        }
+        val textColor = getContrastingTextColor(selectedColor)
+        // Update checklist adapter colors
+        checklistAdapter.updateColors(textColor, textColor) // Icon tint can be same as text color
+        checklistAdapter.notifyDataSetChanged() // Notify adapter to rebind views with new colors
+
+        // Also update the noteTitle and noteInput text colors
+        noteTitle.setTextColor(textColor)
+        noteInput.setTextColor(textColor)
+    }
+
     private fun loadNote() {
         lifecycleScope.launch {
             val note = currentNoteId?.let { noteDao.getNoteById(it) }
@@ -338,14 +373,6 @@ class NoteActivity : AppCompatActivity() {
             }
             updateAllWidgets()
             finish()
-        }
-    }
-
-    private fun updateWindowBackground() {
-        try {
-            window.setBackgroundDrawable(selectedColor.toColorInt().toDrawable())
-        } catch (e: IllegalArgumentException) {
-            window.setBackgroundDrawable(Color.WHITE.toDrawable())
         }
     }
 

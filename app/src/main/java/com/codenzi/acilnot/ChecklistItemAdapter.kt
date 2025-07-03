@@ -1,7 +1,7 @@
 package com.codenzi.acilnot
 
-import android.graphics.Color // Import eklendi
-import android.graphics.PorterDuff // Import eklendi
+import android.graphics.Color
+import android.graphics.PorterDuff
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -16,10 +16,9 @@ class ChecklistItemAdapter(
     private val items: MutableList<ChecklistItem>
 ) : RecyclerView.Adapter<ChecklistItemAdapter.ChecklistItemViewHolder>() {
 
-    private var currentTextColor: Int = Color.BLACK // Varsayılan renkler eklendi
-    private var currentIconTint: Int = Color.BLACK // Varsayılan renkler eklendi
+    private var currentTextColor: Int = Color.BLACK
+    private var currentIconTint: Int = Color.BLACK
 
-    // Renkleri güncellemek için yeni metot
     fun updateColors(textColor: Int, iconTint: Int) {
         this.currentTextColor = textColor
         this.currentIconTint = iconTint
@@ -59,12 +58,9 @@ class ChecklistItemAdapter(
             }
         }
 
-        // ChecklistItemAdapter'dan alınan renkleri bağla
         fun bindColors() {
             editText.setTextColor(currentTextColor)
-            // CheckBox metin rengini ayarla (eğer CheckBox'ta metin varsa)
             checkBox.setTextColor(currentTextColor)
-            // Silme butonu ikon rengini ayarla
             deleteButton.setColorFilter(currentIconTint, PorterDuff.Mode.SRC_IN)
         }
     }
@@ -78,7 +74,7 @@ class ChecklistItemAdapter(
         val item = items[position]
         holder.editText.setText(item.text)
         holder.checkBox.isChecked = item.isChecked
-        holder.bindColors() // Renkleri bağlamak için yeni metodu çağır
+        holder.bindColors()
     }
 
     override fun getItemCount(): Int = items.size

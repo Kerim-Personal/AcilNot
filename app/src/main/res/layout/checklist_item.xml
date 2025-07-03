@@ -20,7 +20,9 @@
         android:hint="Liste öğesi"
         android:padding="8dp"
         android:inputType="textCapSentences"
-        android:textColor="@android:color/black" />
+        android:textColor="@android:color/black"
+        android:textColorHint="@android:color/black"
+        />
 
     <ImageButton
         android:id="@+id/btn_delete_item"
