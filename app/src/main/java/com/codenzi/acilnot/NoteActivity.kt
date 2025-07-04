@@ -134,6 +134,7 @@ class NoteActivity : AppCompatActivity() {
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
     }
 
+    // Orijinal, istediğiniz gibi çalışan toggleStyle fonksiyonu
     private fun toggleStyle(styleType: Int) {
         val spannable = noteInput.text as SpannableStringBuilder
         val start = noteInput.selectionStart
@@ -185,39 +186,39 @@ class NoteActivity : AppCompatActivity() {
         updateFormattingButtonsState()
     }
 
+    // *** DÜZELTME: Buton renginin anında güncellenmesini sağlayan YENİ fonksiyon ***
     private fun updateFormattingButtonsState() {
-        isUpdatingToggleButtons = true
+        isUpdatingToggleButtons = true // Döngüleri engellemek için
 
         val spannable = noteInput.text ?: return
         val position = noteInput.selectionStart
+        val selectionEnd = noteInput.selectionEnd
 
-        val activeSpans = if (position > 0) {
-            spannable.getSpans(position - 1, position, Any::class.java)
+        // Eğer metin seçiliyse, seçimin stil durumuna bak
+        if (position != selectionEnd) {
+            val boldSpans = spannable.getSpans(position, selectionEnd, StyleSpan::class.java)
+            boldButton.isChecked = boldSpans.any { it.style == Typeface.BOLD }
+
+            val italicSpans = spannable.getSpans(position, selectionEnd, StyleSpan::class.java)
+            italicButton.isChecked = italicSpans.any { it.style == Typeface.ITALIC }
+
+            val strikeSpans = spannable.getSpans(position, selectionEnd, StrikethroughSpan::class.java)
+            strikethroughButton.isChecked = strikeSpans.isNotEmpty()
         } else {
-            spannable.getSpans(position, position, Any::class.java)
-        }
+            // Metin seçili değilse, SADECE imlecin olduğu yerdeki "yazım stili" durumuna bak.
+            // Bu, bir stili kapattığınızda butonun renginin anında normale dönmesini sağlar.
+            val spansAtCursor = spannable.getSpans(position, position, Any::class.java)
 
-        var isBold = false
-        var isItalic = false
-        var isStrike = false
-
-        activeSpans.forEach { span ->
-            val flags = spannable.getSpanFlags(span)
-            if (spannable.getSpanEnd(span) == position || flags == Spanned.SPAN_INCLUSIVE_INCLUSIVE) {
-                if (span is StyleSpan) {
-                    when (span.style) {
-                        Typeface.BOLD -> isBold = true
-                        Typeface.ITALIC -> isItalic = true
-                    }
-                } else if (span is StrikethroughSpan) {
-                    isStrike = true
-                }
+            boldButton.isChecked = spansAtCursor.any {
+                it is StyleSpan && it.style == Typeface.BOLD && spannable.getSpanFlags(it) == Spanned.SPAN_INCLUSIVE_INCLUSIVE
+            }
+            italicButton.isChecked = spansAtCursor.any {
+                it is StyleSpan && it.style == Typeface.ITALIC && spannable.getSpanFlags(it) == Spanned.SPAN_INCLUSIVE_INCLUSIVE
+            }
+            strikethroughButton.isChecked = spansAtCursor.any {
+                it is StrikethroughSpan && spannable.getSpanFlags(it) == Spanned.SPAN_INCLUSIVE_INCLUSIVE
             }
         }
-
-        boldButton.isChecked = isBold
-        italicButton.isChecked = isItalic
-        strikethroughButton.isChecked = isStrike
 
         isUpdatingToggleButtons = false
     }
@@ -282,7 +283,6 @@ class NoteActivity : AppCompatActivity() {
         } else {
             currentNoteId = null
             deleteButton.visibility = View.GONE
-            // DÜZELTME: Gereksiz 'let' kaldırıldı
             updateColorSelection(findViewById(R.id.color_default))
             updateWindowBackground()
             noteTitle.text?.clear()
@@ -290,7 +290,6 @@ class NoteActivity : AppCompatActivity() {
             if (checklistItems.isNotEmpty()) {
                 val oldSize = checklistItems.size
                 checklistItems.clear()
-                // DÜZELTME: Daha verimli notify metodu kullanıldı
                 checklistAdapter.notifyItemRangeRemoved(0, oldSize)
             }
         }
@@ -351,7 +350,6 @@ class NoteActivity : AppCompatActivity() {
         }
         val textColor = getContrastingTextColor(selectedColor)
         checklistAdapter.updateColors(textColor, textColor)
-        // DÜZELTME: Daha verimli notify metodu kullanıldı
         if (checklistAdapter.itemCount > 0) {
             checklistAdapter.notifyItemRangeChanged(0, checklistAdapter.itemCount)
         }
