@@ -15,5 +15,6 @@ data class Note(
     val modifiedAt: List<Long> = emptyList(),
     val color: String = "#FFECEFF1", // Varsayılan renk pastel gri
     val isDeleted: Boolean = false, // Notun çöp kutusunda olup olmadığını belirtir
-    val deletedAt: Long? = null // Notun çöp kutusuna taşındığı zamanı tutar
+    val deletedAt: Long? = null, // Notun çöp kutusuna taşındığı zamanı tutar
+    val showOnWidget: Boolean = false // YENİ: Notun widget'ta gösterilip gösterilmeyeceği
 )

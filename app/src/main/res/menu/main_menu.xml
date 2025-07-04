@@ -2,7 +2,6 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-
     <item
         android:id="@+id/action_search"
         android:title="@string/search_title"
@@ -24,6 +23,17 @@
         android:icon="@drawable/ic_settings_24"
         app:showAsAction="always" />
 
+    <item
+        android:id="@+id/action_unpin_all"
+        android:title="Widget Sabitlemelerini Temizle"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_pin_to_widget"
+        android:title="Widget'a Sabitle"
+        android:icon="@drawable/ic_push_pin"
+        app:showAsAction="ifRoom"
+        android:visible="false" />
 
     <item
         android:id="@+id/action_share_contextual"

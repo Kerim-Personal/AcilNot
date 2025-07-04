@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 
-@Database(entities = [Note::class], version = 6, exportSchema = false)
+@Database(entities = [Note::class], version = 7, exportSchema = false) // GÜNCELLENDİ: Sürüm 7
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
 
