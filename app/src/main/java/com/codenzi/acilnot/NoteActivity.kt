@@ -1,34 +1,40 @@
 package com.codenzi.acilnot
 
+import android.Manifest
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.text.Html
 import android.text.Spannable
-import android.text.method.ScrollingMovementMethod
+import android.text.SpannableStringBuilder
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.ScrollView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.textfield.TextInputEditText
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import java.text.SimpleDateFormat
@@ -42,16 +48,21 @@ class NoteActivity : AppCompatActivity() {
     private lateinit var noteDao: NoteDao
     private var currentNoteId: Int? = null
 
-    private lateinit var noteTitle: EditText
-    private lateinit var noteInput: EditText
+    private lateinit var noteTitle: TextInputEditText
+    private lateinit var noteInput: SelectionAwareEditText
     private lateinit var saveButton: Button
     private lateinit var deleteButton: Button
     private lateinit var editHistoryText: TextView
 
-    private lateinit var boldButton: Button
-    private lateinit var italicButton: Button
-    private lateinit var strikethroughButton: Button
+    private lateinit var formatToggleButtonGroup: MaterialButtonToggleGroup
+    private lateinit var boldButton: MaterialButton
+    private lateinit var italicButton: MaterialButton
+    private lateinit var strikethroughButton: MaterialButton
+
     private lateinit var showHistoryButton: ImageButton
+    private lateinit var voiceNoteButton: ImageButton
+    private lateinit var speechRecognizer: SpeechRecognizer
+    private lateinit var speechRecognizerIntent: Intent
 
     private lateinit var colorPickers: List<View>
     private var selectedColor: String = "#FFECEFF1"
@@ -62,30 +73,47 @@ class NoteActivity : AppCompatActivity() {
     private var checklistItems = mutableListOf<ChecklistItem>()
 
     private val gson = Gson()
+    private var isUpdatingToggleButtons = false
+
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                startSpeechToText()
+            } else {
+                Toast.makeText(this, "Mikrofon izni gerekli.", Toast.LENGTH_SHORT).show()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note)
 
+        // View'ları bul
         noteDao = NoteDatabase.getDatabase(this).noteDao()
         noteTitle = findViewById(R.id.et_note_title)
         noteInput = findViewById(R.id.et_note_input)
         saveButton = findViewById(R.id.btn_save_note)
         deleteButton = findViewById(R.id.btn_delete_note)
         editHistoryText = findViewById(R.id.tv_edit_history)
-        editHistoryText.movementMethod = ScrollingMovementMethod.getInstance()
-
         showHistoryButton = findViewById(R.id.btn_show_history)
+        voiceNoteButton = findViewById(R.id.btn_voice_note)
+        checklistRecyclerView = findViewById(R.id.rv_checklist)
+        addChecklistItemButton = findViewById(R.id.btn_add_checklist_item)
 
-        // Bilgi butonunun rengi artık XML drawable'dan tema özelliği ile kontrol ediliyor.
-        // Bu satır kaldırıldı: showHistoryButton.setColorFilter(ContextCompat.getColor(this, R.color.my_light_primary), PorterDuff.Mode.SRC_IN)
-
-        // Hata düzeltmesi: Biçimlendirme butonları başlatılıyor
+        formatToggleButtonGroup = findViewById(R.id.toggle_button_group)
         boldButton = findViewById(R.id.btn_bold)
         italicButton = findViewById(R.id.btn_italic)
         strikethroughButton = findViewById(R.id.btn_strikethrough)
 
-        // Bilgi butonuna tıklama dinleyicisi
+        setupListeners()
+        setupChecklist()
+        setupColorPickers()
+        setupVoiceNote()
+
+        processIntent(intent)
+    }
+
+    private fun setupListeners() {
         showHistoryButton.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("Düzenleme Geçmişi")
@@ -94,17 +122,148 @@ class NoteActivity : AppCompatActivity() {
                 .show()
         }
 
-        checklistRecyclerView = findViewById(R.id.rv_checklist)
-        addChecklistItemButton = findViewById(R.id.btn_add_checklist_item)
-        setupChecklist()
+        formatToggleButtonGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isUpdatingToggleButtons) return@addOnButtonCheckedListener
 
-        setupFormattingButtons()
-        setupColorPickers()
+            val style = when(checkedId) {
+                R.id.btn_bold -> Typeface.BOLD
+                R.id.btn_italic -> Typeface.ITALIC
+                R.id.btn_strikethrough -> -1
+                else -> null
+            }
+            style?.let { applySpan(it, isChecked) }
+        }
 
-        processIntent(intent)
+        noteInput.setOnSelectionChangedListener { _, _ ->
+            updateFormattingButtonsState()
+        }
 
         saveButton.setOnClickListener { saveNote() }
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
+    }
+
+    /**
+     * Seçili metne veya imlecin konumuna stil uygular veya kaldırır.
+     * Bu metod artık yeni metin yazmak için stilin aktif edilmesini de destekliyor.
+     */
+    private fun applySpan(spanType: Int, isChecked: Boolean) {
+        val start = noteInput.selectionStart
+        val end = noteInput.selectionEnd
+        if (start < 0 || end < 0 || start > end) return
+
+        val spannable = noteInput.text as SpannableStringBuilder
+
+        val spanClass: Class<out Any> = when (spanType) {
+            Typeface.BOLD, Typeface.ITALIC -> StyleSpan::class.java
+            -1 -> StrikethroughSpan::class.java
+            else -> return
+        }
+
+        // Önce mevcut stili kaldır (varsa)
+        val spans = spannable.getSpans(start, end, spanClass)
+        for(span in spans) {
+            val styleMatch = span is StyleSpan && span.style == spanType
+            val strikeMatch = span is StrikethroughSpan && spanType == -1
+            if (styleMatch || strikeMatch) {
+                spannable.removeSpan(span)
+            }
+        }
+
+        // Eğer buton "aktif" hale getiriliyorsa, stili uygula
+        if (isChecked) {
+            val newSpan: Any = when (spanType) {
+                Typeface.BOLD -> StyleSpan(Typeface.BOLD)
+                Typeface.ITALIC -> StyleSpan(Typeface.ITALIC)
+                else -> StrikethroughSpan()
+            }
+
+            if (start == end) {
+                // Seçim yoksa: Bu, yeni metin yazmak içindir.
+                // Bitiş noktasında genişleyen (inclusive) bir span ekliyoruz.
+                spannable.setSpan(newSpan, start, end, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+            } else {
+                // Seçim varsa: Sadece seçili metne uygula.
+                spannable.setSpan(newSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+    }
+
+    /**
+     * İmlecin konumuna göre B, I, S butonlarının aktif/pasif durumunu günceller.
+     * Artık yazma stillerini de (composing span) kontrol eder.
+     */
+    private fun updateFormattingButtonsState() {
+        isUpdatingToggleButtons = true // Sonsuz döngüyü engelle
+
+        val spannable = noteInput.text ?: return
+        val selectionStart = noteInput.selectionStart
+
+        // 1. İmlecin "içinde" olduğu stil var mı? (Önceki karaktere bakarak)
+        val target = if (selectionStart > 0) selectionStart - 1 else 0
+        val isBoldInText = spannable.getSpans(target, target, StyleSpan::class.java).any { it.style == Typeface.BOLD }
+        val isItalicInText = spannable.getSpans(target, target, StyleSpan::class.java).any { it.style == Typeface.ITALIC }
+        val isStrikeInText = spannable.getSpans(target, target, StrikethroughSpan::class.java).isNotEmpty()
+
+        // 2. İmlecin tam konumunda "yazma stili" aktif mi? (Sıfır uzunluklu span'a bakarak)
+        val composingBold = spannable.getSpans(selectionStart, selectionStart, StyleSpan::class.java).any { it.style == Typeface.BOLD }
+        val composingItalic = spannable.getSpans(selectionStart, selectionStart, StyleSpan::class.java).any { it.style == Typeface.ITALIC }
+        val composingStrike = spannable.getSpans(selectionStart, selectionStart, StrikethroughSpan::class.java).isNotEmpty()
+
+        // Butonların durumunu güncelle
+        boldButton.isChecked = isBoldInText || composingBold
+        italicButton.isChecked = isItalicInText || composingItalic
+        strikethroughButton.isChecked = isStrikeInText || composingStrike
+
+        isUpdatingToggleButtons = false // Engeli kaldır
+    }
+
+    // --- Diğer metodlar (değişiklik yok) ---
+
+    private fun setupVoiceNote() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            voiceNoteButton.visibility = View.GONE; return
+        }
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        speechRecognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+        }
+        speechRecognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+                Toast.makeText(applicationContext, "Dinliyorum...", Toast.LENGTH_SHORT).show()
+            }
+            override fun onResults(results: Bundle?) {
+                results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let {
+                    val currentText = noteInput.text.toString()
+                    noteInput.setText(if (currentText.isEmpty()) it else "$currentText $it")
+                    noteInput.text?.let { it1 -> noteInput.setSelection(it1.length) }
+                }
+            }
+            override fun onError(error: Int) { Toast.makeText(applicationContext, "Bir hata oluştu, tekrar deneyin.", Toast.LENGTH_SHORT).show() }
+            override fun onBeginningOfSpeech() {}
+            override fun onEndOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+        voiceNoteButton.setOnClickListener { startSpeechToText() }
+    }
+
+    private fun startSpeechToText() {
+        when {
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> {
+                speechRecognizer.startListening(speechRecognizerIntent)
+            }
+            else -> {
+                requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::speechRecognizer.isInitialized) speechRecognizer.destroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -116,26 +275,23 @@ class NoteActivity : AppCompatActivity() {
     private fun processIntent(intent: Intent) {
         if (intent.hasExtra("NOTE_ID")) {
             currentNoteId = intent.getIntExtra("NOTE_ID", 0)
-            this.title = "Notu Düzenle"
             deleteButton.visibility = View.VISIBLE
             loadNote()
         } else {
             currentNoteId = null
-            this.title = "Yeni Not Ekle"
             deleteButton.visibility = View.GONE
-            updateColorSelection(findViewById(R.id.color_default))
+            findViewById<View>(R.id.color_default).let {
+                updateColorSelection(it)
+            }
             updateWindowBackground()
-            noteTitle.text.clear()
-            noteInput.text.clear()
-
-            // Verimsiz notifyDataSetChanged() yerine daha spesifik metod kullanılıyor
-            val oldSize = checklistItems.size
-            if (oldSize > 0) {
+            noteTitle.text?.clear()
+            noteInput.text?.clear()
+            if (checklistItems.isNotEmpty()) {
+                val oldSize = checklistItems.size
                 checklistItems.clear()
                 checklistAdapter.notifyItemRangeRemoved(0, oldSize)
             }
         }
-        // Not yoksa veya yeni notsa bilgi butonunu gizle
         showHistoryButton.visibility = if (currentNoteId != null) View.VISIBLE else View.GONE
     }
 
@@ -143,89 +299,7 @@ class NoteActivity : AppCompatActivity() {
         checklistAdapter = ChecklistItemAdapter(checklistItems)
         checklistRecyclerView.adapter = checklistAdapter
         checklistRecyclerView.layoutManager = LinearLayoutManager(this)
-
-        addChecklistItemButton.setOnClickListener {
-            checklistAdapter.addItem()
-        }
-    }
-
-    private fun setupFormattingButtons() {
-        boldButton.setOnClickListener { applySpan(Typeface.BOLD) }
-        italicButton.setOnClickListener { applySpan(Typeface.ITALIC) }
-        strikethroughButton.setOnClickListener { applySpan(-1) } // -1 üstü çizili için bir işaretçi olarak kullanılıyor
-    }
-
-    // applySpan metodunun güncellenmiş hali: Biçimlendirmeyi seçili metin üzerinde açıp kapatma (toggle) yeteneği eklendi
-    private fun applySpan(spanType: Int) {
-        val start = noteInput.selectionStart
-        val end = noteInput.selectionEnd
-
-        if (start == end) {
-            // Seçili metin yoksa şimdilik bir işlem yapma.
-            // Buraya, gelecekteki yazma için varsayılan stilin değiştirilmesi gibi daha karmaşık bir mantık eklenebilir.
-            return
-        }
-
-        val spannable = noteInput.text as Spannable
-
-        var targetSpanToAdd: Any? = null
-        var currentStyleAppliedToSelection = false
-
-        when (spanType) {
-            Typeface.BOLD -> {
-                val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java)
-                    .filter { it.style == Typeface.BOLD }
-                currentStyleAppliedToSelection = boldSpans.isNotEmpty() && boldSpans.all {
-                    spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end
-                }
-                targetSpanToAdd = StyleSpan(Typeface.BOLD)
-            }
-            Typeface.ITALIC -> {
-                val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java)
-                    .filter { it.style == Typeface.ITALIC }
-                currentStyleAppliedToSelection = italicSpans.isNotEmpty() && italicSpans.all {
-                    spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end
-                }
-                targetSpanToAdd = StyleSpan(Typeface.ITALIC)
-            }
-            -1 -> { // Üstü çizili
-                val strikethroughSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
-                currentStyleAppliedToSelection = strikethroughSpans.isNotEmpty() && strikethroughSpans.all {
-                    spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end
-                }
-                targetSpanToAdd = StrikethroughSpan()
-            }
-        }
-
-        if (currentStyleAppliedToSelection) {
-            // Stil zaten tüm seçime uygulanmışsa, kaldır
-            // SpansToRemove'u tek bir List<Any> tipine dönüştürerek tip çıkarım hatasını giderdik.
-            val spansToRemove = mutableListOf<Any>()
-            when (spanType) {
-                Typeface.BOLD -> {
-                    spannable.getSpans(start, end, StyleSpan::class.java)
-                        .filter { it.style == Typeface.BOLD }
-                        .forEach { spansToRemove.add(it) }
-                }
-                Typeface.ITALIC -> {
-                    spannable.getSpans(start, end, StyleSpan::class.java)
-                        .filter { it.style == Typeface.ITALIC }
-                        .forEach { spansToRemove.add(it) }
-                }
-                -1 -> { // Strikethrough
-                    spannable.getSpans(start, end, StrikethroughSpan::class.java)
-                        .forEach { spansToRemove.add(it) }
-                }
-            }
-            spansToRemove.forEach { spannable.removeSpan(it) }
-        } else if (targetSpanToAdd != null) {
-            // Stil tüm seçime uygulanmamışsa, uygula
-            spannable.setSpan(targetSpanToAdd, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-
-        // Spannable üzerinde yapılan değişikliklerden sonra EditText'i yenilemek ve seçimi geri yüklemek önemlidir.
-        noteInput.setText(spannable, TextView.BufferType.SPANNABLE)
-        noteInput.setSelection(start, end)
+        addChecklistItemButton.setOnClickListener { checklistAdapter.addItem() }
     }
 
     private fun setupColorPickers() {
@@ -234,15 +308,15 @@ class NoteActivity : AppCompatActivity() {
         val colorBlue: FrameLayout = findViewById(R.id.color_blue)
         val colorGreen: FrameLayout = findViewById(R.id.color_green)
         val colorPink: FrameLayout = findViewById(R.id.color_pink)
-
         colorPickers = listOf(colorDefault, colorYellow, colorBlue, colorGreen, colorPink)
-
-        colorDefault.setOnClickListener { onColorSelected(it, R.color.note_color_default) }
-        colorYellow.setOnClickListener { onColorSelected(it, R.color.note_color_yellow) }
-        // 'blue', 'green', 'pink' referans hataları düzeltildi.
-        colorBlue.setOnClickListener { onColorSelected(it, R.color.note_color_blue) }
-        colorGreen.setOnClickListener { onColorSelected(it, R.color.note_color_green) }
-        colorPink.setOnClickListener { onColorSelected(it, R.color.note_color_pink) }
+        val listeners = mapOf(
+            colorDefault to R.color.note_color_default,
+            colorYellow to R.color.note_color_yellow,
+            colorBlue to R.color.note_color_blue,
+            colorGreen to R.color.note_color_green,
+            colorPink to R.color.note_color_pink
+        )
+        listeners.forEach { (view, colorResId) -> view.setOnClickListener { onColorSelected(it, colorResId) } }
     }
 
     private fun onColorSelected(view: View, colorResId: Int) {
@@ -252,27 +326,18 @@ class NoteActivity : AppCompatActivity() {
     }
 
     private fun updateColorSelection(selectedView: View?) {
-        colorPickers.forEach { picker ->
-            picker.isSelected = (picker == selectedView)
-        }
+        colorPickers.forEach { it.isSelected = (it == selectedView) }
     }
 
-    // Helper function to determine contrasting text color
     private fun getContrastingTextColor(backgroundColor: String): Int {
         return try {
             val colorInt = backgroundColor.toColorInt()
-            // Calculate perceived luminescence (a common way to determine brightness)
-            val red = Color.red(colorInt)
-            val green = Color.green(colorInt)
-            val blue = Color.blue(colorInt)
-            val luminescence = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
-            if (luminescence > 0.5) { // If light color
-                ContextCompat.getColor(this, R.color.black) // Use black text
-            } else { // If dark color
-                ContextCompat.getColor(this, R.color.white) // Use white text
-            }
+            if ((0.299 * Color.red(colorInt) + 0.587 * Color.green(colorInt) + 0.114 * Color.blue(colorInt)) / 255 > 0.5)
+                ContextCompat.getColor(this, R.color.black)
+            else
+                ContextCompat.getColor(this, R.color.white)
         } catch (e: IllegalArgumentException) {
-            ContextCompat.getColor(this, R.color.black) // Default to black if color is invalid
+            ContextCompat.getColor(this, R.color.black)
         }
     }
 
@@ -283,57 +348,40 @@ class NoteActivity : AppCompatActivity() {
             window.setBackgroundDrawable(Color.WHITE.toDrawable())
         }
         val textColor = getContrastingTextColor(selectedColor)
-        // Update checklist adapter colors
-        checklistAdapter.updateColors(textColor, textColor) // Icon tint can be same as text color
-        checklistAdapter.notifyDataSetChanged() // Notify adapter to rebind views with new colors
-
-        // Also update the noteTitle and noteInput text colors
+        checklistAdapter.updateColors(textColor, textColor)
+        checklistAdapter.notifyDataSetChanged()
         noteTitle.setTextColor(textColor)
         noteInput.setTextColor(textColor)
     }
 
     private fun loadNote() {
         lifecycleScope.launch {
-            val note = currentNoteId?.let { noteDao.getNoteById(it) }
-            note?.let {
-                // Kod kalite uyarısı giderildi, 'ifBlank' kullanıldı.
-                this@NoteActivity.title = it.title.ifBlank { "Notu Düzenle" }
-                noteTitle.setText(it.title)
-
-                displayEditHistory(it)
+            noteDao.getNoteById(currentNoteId ?: return@launch)?.let { note ->
+                noteTitle.setText(note.title)
+                displayEditHistory(note)
                 try {
-                    val content = gson.fromJson(it.content, NoteContent::class.java)
+                    val content = gson.fromJson(note.content, NoteContent::class.java)
                     noteInput.setText(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY))
-
-                    // Verimsiz notifyDataSetChanged() yerine daha spesifik metodlar kullanılıyor
-                    val oldSize = checklistItems.size
                     checklistItems.clear()
-                    checklistAdapter.notifyItemRangeRemoved(0, oldSize)
                     checklistItems.addAll(content.checklist)
-                    checklistAdapter.notifyItemRangeInserted(0, content.checklist.size)
-
+                    checklistAdapter.notifyDataSetChanged()
                 } catch (e: JsonSyntaxException) {
-                    noteInput.setText(Html.fromHtml(it.content, Html.FROM_HTML_MODE_LEGACY))
-
-                    // Verimsiz notifyDataSetChanged() yerine daha spesifik metodlar kullanılıyor
-                    val oldSize = checklistItems.size
-                    if (oldSize > 0) {
-                        checklistItems.clear()
-                        checklistAdapter.notifyItemRangeRemoved(0, oldSize)
-                    }
+                    noteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
+                    checklistItems.clear()
+                    checklistAdapter.notifyDataSetChanged()
                 }
-
-                selectedColor = it.color
+                selectedColor = note.color
                 updateWindowBackground()
-
-                val colorInt = try { it.color.toColorInt() } catch (e: Exception) { Color.WHITE }
-                val viewToSelect: View = when(colorInt) {
-                    ContextCompat.getColor(this@NoteActivity, R.color.note_color_yellow) -> findViewById(R.id.color_yellow)
-                    ContextCompat.getColor(this@NoteActivity, R.color.note_color_blue) -> findViewById(R.id.color_blue)
-                    ContextCompat.getColor(this@NoteActivity, R.color.note_color_green) -> findViewById(R.id.color_green)
-                    ContextCompat.getColor(this@NoteActivity, R.color.note_color_pink) -> findViewById(R.id.color_pink)
-                    else -> findViewById(R.id.color_default)
-                }
+                val colorInt = try { note.color.toColorInt() } catch (e: Exception) { Color.WHITE }
+                val viewToSelect = colorPickers.getOrNull(
+                    when (colorInt) {
+                        ContextCompat.getColor(this@NoteActivity, R.color.note_color_yellow) -> 1
+                        ContextCompat.getColor(this@NoteActivity, R.color.note_color_blue) -> 2
+                        ContextCompat.getColor(this@NoteActivity, R.color.note_color_green) -> 3
+                        ContextCompat.getColor(this@NoteActivity, R.color.note_color_pink) -> 4
+                        else -> 0
+                    }
+                )
                 updateColorSelection(viewToSelect)
             }
         }
@@ -341,35 +389,22 @@ class NoteActivity : AppCompatActivity() {
 
     private fun saveNote() {
         val titleText = noteTitle.text.toString().trim()
-        val noteText = Html.toHtml(noteInput.text, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
+        val noteContentText = noteInput.text
 
-        if (titleText.isBlank() && noteInput.text.isBlank() && checklistItems.all { it.text.isBlank() }) {
+        if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() }) {
             Toast.makeText(this, "Not içeriği boş olamaz!", Toast.LENGTH_SHORT).show()
             return
         }
-
-        val noteContent = NoteContent(text = noteText, checklist = checklistItems)
-        val jsonContent = gson.toJson(noteContent)
+        val noteTextHtml = if(noteContentText.isNullOrBlank()) "" else Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
+        val jsonContent = gson.toJson(NoteContent(text = noteTextHtml, checklist = checklistItems))
 
         lifecycleScope.launch {
-            if (currentNoteId == null) {
-                val newNote = Note(title = titleText, content = jsonContent, createdAt = System.currentTimeMillis(), color = selectedColor)
-                noteDao.insert(newNote)
-            } else {
-                val existingNote = noteDao.getNoteById(currentNoteId!!)
-                existingNote?.let {
-                    val updatedModifications = it.modifiedAt.toMutableList().apply {
-                        add(System.currentTimeMillis())
-                    }
-                    val updatedNote = it.copy(
-                        title = titleText,
-                        content = jsonContent,
-                        modifiedAt = updatedModifications,
-                        color = selectedColor
-                    )
-                    noteDao.update(updatedNote)
+            currentNoteId?.let { id ->
+                noteDao.getNoteById(id)?.let {
+                    val updatedModifications = it.modifiedAt.toMutableList().apply { add(System.currentTimeMillis()) }
+                    noteDao.update(it.copy(title = titleText, content = jsonContent, modifiedAt = updatedModifications, color = selectedColor))
                 }
-            }
+            } ?: noteDao.insert(Note(title = titleText, content = jsonContent, createdAt = System.currentTimeMillis(), color = selectedColor))
             updateAllWidgets()
             finish()
         }
@@ -387,7 +422,6 @@ class NoteActivity : AppCompatActivity() {
     private fun deleteNote() {
         currentNoteId?.let { id ->
             lifecycleScope.launch {
-                // Notu kalıcı olarak silmek yerine çöp kutusuna taşı
                 noteDao.softDeleteById(id, System.currentTimeMillis())
                 updateAllWidgets()
                 Toast.makeText(applicationContext, "Not silindi.", Toast.LENGTH_SHORT).show()
@@ -399,16 +433,13 @@ class NoteActivity : AppCompatActivity() {
     private fun updateAllWidgets() {
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, NoteWidgetProvider::class.java)
-        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-        appWidgetIds.forEach { appWidgetId ->
-            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
+        appWidgetManager.getAppWidgetIds(componentName).forEach {
+            appWidgetManager.notifyAppWidgetViewDataChanged(it, R.id.lv_widget_notes)
         }
     }
 
     private fun displayEditHistory(note: Note) {
-        val historyBuilder = StringBuilder()
-        historyBuilder.append("Oluşturulma: ${formatDate(note.createdAt)}")
-
+        val historyBuilder = StringBuilder("Oluşturulma: ${formatDate(note.createdAt)}")
         if (note.modifiedAt.isNotEmpty()) {
             historyBuilder.append("\n\nDüzenleme Geçmişi:")
             note.modifiedAt.forEach { timestamp ->
@@ -418,8 +449,6 @@ class NoteActivity : AppCompatActivity() {
         editHistoryText.text = historyBuilder.toString()
     }
 
-    private fun formatDate(timestamp: Long): String {
-        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
-        return sdf.format(Date(timestamp))
-    }
+    private fun formatDate(timestamp: Long): String =
+        SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
 }

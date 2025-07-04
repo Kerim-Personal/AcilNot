@@ -107,35 +107,58 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/ll_format_buttons"
-        style="?android:attr/buttonBarStyle"
+        android:id="@+id/ll_format_buttons_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="horizontal"
+        style="?android:attr/buttonBarStyle"
         app:layout_constraintBottom_toTopOf="@id/ll_color_pickers"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
-        <Button
-            android:id="@+id/btn_bold"
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggle_button_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:selectionRequired="false"
+            app:singleSelection="false">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_bold"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/tooltip_bold"
+                app:icon="@drawable/ic_format_bold_24" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_italic"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/tooltip_italic"
+                app:icon="@drawable/ic_format_italic_24" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_strikethrough"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/tooltip_strikethrough"
+                app:icon="@drawable/ic_format_strikethrough_24" />
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <ImageButton
+            android:id="@+id/btn_voice_note"
             style="?android:attr/buttonBarButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="B"
-            android:textStyle="bold" />
-        <Button
-            android:id="@+id/btn_italic"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="I"
-            android:textStyle="italic" />
-        <Button
-            android:id="@+id/btn_strikethrough"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="S" />
+            android:layout_marginStart="16dp"
+            android:contentDescription="@string/tooltip_voice_note"
+            android:src="@drawable/ic_microphone_24" />
+
     </LinearLayout>
 
     <ScrollView
@@ -148,7 +171,7 @@
         android:padding="8dp"
         android:scrollbars="vertical"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/ll_format_buttons"
+        app:layout_constraintBottom_toTopOf="@id/ll_format_buttons_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
         <TextView
@@ -171,23 +194,30 @@
         app:layout_constraintBottom_toTopOf="@id/sv_edit_history"
         app:layout_constraintStart_toStartOf="parent" />
 
-
-    <EditText
-        android:id="@+id/et_note_title"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_note_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:background="@android:color/transparent"
-        android:hint="@string/hint_note_title"
-        android:inputType="textCapWords"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large"
-        android:textStyle="bold"
-        android:textColor="@android:color/black"
-        android:textColorHint="@android:color/darker_gray"
+        app:hintEnabled="false"
         app:layout_constraintEnd_toStartOf="@id/btn_show_history"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_note_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:hint="@string/hint_note_title"
+            android:inputType="textCapWords"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:textColorHint="@android:color/darker_gray" />
+
+    </com.google.android.material.textfield.TextInputLayout>
 
     <ImageButton
         android:id="@+id/btn_show_history"
@@ -195,12 +225,11 @@
         android:layout_height="48dp"
         android:layout_marginEnd="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Düzenleme Geçmişini Göster"
+        android:contentDescription="@string/tooltip_edit_history"
         android:src="@drawable/outline_info_24"
-        app:layout_constraintBottom_toBottomOf="@+id/et_note_title"
+        app:layout_constraintBottom_toBottomOf="@+id/til_note_title"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/et_note_title" />
-
+        app:layout_constraintTop_toTopOf="@+id/til_note_title" />
 
     <View
         android:id="@+id/divider"
@@ -211,7 +240,7 @@
         android:background="?android:attr/listDivider"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/et_note_title" />
+        app:layout_constraintTop_toBottomOf="@id/til_note_title" />
 
     <ScrollView
         android:id="@+id/sv_main_content"
@@ -231,7 +260,7 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="16dp">
 
-            <EditText
+            <com.codenzi.acilnot.SelectionAwareEditText
                 android:id="@+id/et_note_input"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -249,7 +278,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp" />
-
         </LinearLayout>
     </ScrollView>
 

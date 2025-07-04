@@ -93,4 +93,10 @@
     <string name="enter_password_to_unlock">Uygulamayı açmak için parolanızı girin.</string>
     <string name="unlock_button">Kilidi Aç</string>
     <string name="incorrect_password_error">Yanlış parola.</string>
+
+    <string name="tooltip_bold">Kalın</string>
+    <string name="tooltip_italic">İtalik</string>
+    <string name="tooltip_strikethrough">Üstü Çizili</string>
+    <string name="tooltip_voice_note">Sesli Not Ekle</string>
+    <string name="tooltip_edit_history">Düzenleme Geçmişini Göster</string>
 </resources>
