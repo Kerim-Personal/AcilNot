@@ -12,8 +12,8 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.text.Html
-import android.text.Spannable
 import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.view.View
@@ -88,7 +88,6 @@ class NoteActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note)
 
-        // View'ları bul
         noteDao = NoteDatabase.getDatabase(this).noteDao()
         noteTitle = findViewById(R.id.et_note_title)
         noteInput = findViewById(R.id.et_note_input)
@@ -122,17 +121,10 @@ class NoteActivity : AppCompatActivity() {
                 .show()
         }
 
-        formatToggleButtonGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isUpdatingToggleButtons) return@addOnButtonCheckedListener
+        boldButton.setOnClickListener { toggleStyle(Typeface.BOLD) }
+        italicButton.setOnClickListener { toggleStyle(Typeface.ITALIC) }
+        strikethroughButton.setOnClickListener { toggleStyle(-1) }
 
-            val style = when(checkedId) {
-                R.id.btn_bold -> Typeface.BOLD
-                R.id.btn_italic -> Typeface.ITALIC
-                R.id.btn_strikethrough -> -1
-                else -> null
-            }
-            style?.let { applySpan(it, isChecked) }
-        }
 
         noteInput.setOnSelectionChangedListener { _, _ ->
             updateFormattingButtonsState()
@@ -142,82 +134,94 @@ class NoteActivity : AppCompatActivity() {
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
     }
 
-    /**
-     * Seçili metne veya imlecin konumuna stil uygular veya kaldırır.
-     * Bu metod artık yeni metin yazmak için stilin aktif edilmesini de destekliyor.
-     */
-    private fun applySpan(spanType: Int, isChecked: Boolean) {
+    private fun toggleStyle(styleType: Int) {
+        val spannable = noteInput.text as SpannableStringBuilder
         val start = noteInput.selectionStart
         val end = noteInput.selectionEnd
-        if (start < 0 || end < 0 || start > end) return
 
-        val spannable = noteInput.text as SpannableStringBuilder
-
-        val spanClass: Class<out Any> = when (spanType) {
-            Typeface.BOLD, Typeface.ITALIC -> StyleSpan::class.java
-            -1 -> StrikethroughSpan::class.java
+        val (spanClass, newSpan) = when (styleType) {
+            Typeface.BOLD -> StyleSpan::class.java to StyleSpan(Typeface.BOLD)
+            Typeface.ITALIC -> StyleSpan::class.java to StyleSpan(Typeface.ITALIC)
+            -1 -> StrikethroughSpan::class.java to StrikethroughSpan()
             else -> return
         }
 
-        // Önce mevcut stili kaldır (varsa)
-        val spans = spannable.getSpans(start, end, spanClass)
-        for(span in spans) {
-            val styleMatch = span is StyleSpan && span.style == spanType
-            val strikeMatch = span is StrikethroughSpan && spanType == -1
-            if (styleMatch || strikeMatch) {
-                spannable.removeSpan(span)
-            }
-        }
-
-        // Eğer buton "aktif" hale getiriliyorsa, stili uygula
-        if (isChecked) {
-            val newSpan: Any = when (spanType) {
-                Typeface.BOLD -> StyleSpan(Typeface.BOLD)
-                Typeface.ITALIC -> StyleSpan(Typeface.ITALIC)
-                else -> StrikethroughSpan()
+        if (start != end) {
+            val existingSpans = spannable.getSpans(start, end, spanClass)
+            val styleExists = existingSpans.any {
+                (it is StyleSpan && newSpan is StyleSpan && it.style == newSpan.style) || it is StrikethroughSpan
             }
 
-            if (start == end) {
-                // Seçim yoksa: Bu, yeni metin yazmak içindir.
-                // Bitiş noktasında genişleyen (inclusive) bir span ekliyoruz.
-                spannable.setSpan(newSpan, start, end, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+            if (styleExists) {
+                existingSpans.forEach {
+                    if ((it is StyleSpan && newSpan is StyleSpan && it.style == newSpan.style) || it is StrikethroughSpan) {
+                        spannable.removeSpan(it)
+                    }
+                }
             } else {
-                // Seçim varsa: Sadece seçili metne uygula.
-                spannable.setSpan(newSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(newSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
+        else {
+            val position = noteInput.selectionStart
+            val activeSpans = spannable.getSpans(position, position, Any::class.java)
+
+            val activeStyleSpan = activeSpans.find {
+                val isMatchingStyle = (it is StyleSpan && newSpan is StyleSpan && it.style == newSpan.style) || it is StrikethroughSpan
+                isMatchingStyle && spannable.getSpanFlags(it) == Spanned.SPAN_INCLUSIVE_INCLUSIVE
+            }
+
+            if (activeStyleSpan != null) {
+                val spanStart = spannable.getSpanStart(activeStyleSpan)
+                spannable.removeSpan(activeStyleSpan)
+                if (position > spanStart) {
+                    spannable.setSpan(newSpan, spanStart, position, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+            else {
+                spannable.setSpan(newSpan, position, position, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+            }
+        }
+        updateFormattingButtonsState()
     }
 
-    /**
-     * İmlecin konumuna göre B, I, S butonlarının aktif/pasif durumunu günceller.
-     * Artık yazma stillerini de (composing span) kontrol eder.
-     */
     private fun updateFormattingButtonsState() {
-        isUpdatingToggleButtons = true // Sonsuz döngüyü engelle
+        isUpdatingToggleButtons = true
 
         val spannable = noteInput.text ?: return
-        val selectionStart = noteInput.selectionStart
+        val position = noteInput.selectionStart
 
-        // 1. İmlecin "içinde" olduğu stil var mı? (Önceki karaktere bakarak)
-        val target = if (selectionStart > 0) selectionStart - 1 else 0
-        val isBoldInText = spannable.getSpans(target, target, StyleSpan::class.java).any { it.style == Typeface.BOLD }
-        val isItalicInText = spannable.getSpans(target, target, StyleSpan::class.java).any { it.style == Typeface.ITALIC }
-        val isStrikeInText = spannable.getSpans(target, target, StrikethroughSpan::class.java).isNotEmpty()
+        val activeSpans = if (position > 0) {
+            spannable.getSpans(position - 1, position, Any::class.java)
+        } else {
+            spannable.getSpans(position, position, Any::class.java)
+        }
 
-        // 2. İmlecin tam konumunda "yazma stili" aktif mi? (Sıfır uzunluklu span'a bakarak)
-        val composingBold = spannable.getSpans(selectionStart, selectionStart, StyleSpan::class.java).any { it.style == Typeface.BOLD }
-        val composingItalic = spannable.getSpans(selectionStart, selectionStart, StyleSpan::class.java).any { it.style == Typeface.ITALIC }
-        val composingStrike = spannable.getSpans(selectionStart, selectionStart, StrikethroughSpan::class.java).isNotEmpty()
+        var isBold = false
+        var isItalic = false
+        var isStrike = false
 
-        // Butonların durumunu güncelle
-        boldButton.isChecked = isBoldInText || composingBold
-        italicButton.isChecked = isItalicInText || composingItalic
-        strikethroughButton.isChecked = isStrikeInText || composingStrike
+        activeSpans.forEach { span ->
+            val flags = spannable.getSpanFlags(span)
+            if (spannable.getSpanEnd(span) == position || flags == Spanned.SPAN_INCLUSIVE_INCLUSIVE) {
+                if (span is StyleSpan) {
+                    when (span.style) {
+                        Typeface.BOLD -> isBold = true
+                        Typeface.ITALIC -> isItalic = true
+                    }
+                } else if (span is StrikethroughSpan) {
+                    isStrike = true
+                }
+            }
+        }
 
-        isUpdatingToggleButtons = false // Engeli kaldır
+        boldButton.isChecked = isBold
+        italicButton.isChecked = isItalic
+        strikethroughButton.isChecked = isStrike
+
+        isUpdatingToggleButtons = false
     }
 
-    // --- Diğer metodlar (değişiklik yok) ---
 
     private fun setupVoiceNote() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
@@ -234,9 +238,7 @@ class NoteActivity : AppCompatActivity() {
             }
             override fun onResults(results: Bundle?) {
                 results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let {
-                    val currentText = noteInput.text.toString()
-                    noteInput.setText(if (currentText.isEmpty()) it else "$currentText $it")
-                    noteInput.text?.let { it1 -> noteInput.setSelection(it1.length) }
+                    noteInput.text?.insert(noteInput.selectionStart, it)
                 }
             }
             override fun onError(error: Int) { Toast.makeText(applicationContext, "Bir hata oluştu, tekrar deneyin.", Toast.LENGTH_SHORT).show() }
@@ -280,15 +282,15 @@ class NoteActivity : AppCompatActivity() {
         } else {
             currentNoteId = null
             deleteButton.visibility = View.GONE
-            findViewById<View>(R.id.color_default).let {
-                updateColorSelection(it)
-            }
+            // DÜZELTME: Gereksiz 'let' kaldırıldı
+            updateColorSelection(findViewById(R.id.color_default))
             updateWindowBackground()
             noteTitle.text?.clear()
             noteInput.text?.clear()
             if (checklistItems.isNotEmpty()) {
                 val oldSize = checklistItems.size
                 checklistItems.clear()
+                // DÜZELTME: Daha verimli notify metodu kullanıldı
                 checklistAdapter.notifyItemRangeRemoved(0, oldSize)
             }
         }
@@ -349,7 +351,10 @@ class NoteActivity : AppCompatActivity() {
         }
         val textColor = getContrastingTextColor(selectedColor)
         checklistAdapter.updateColors(textColor, textColor)
-        checklistAdapter.notifyDataSetChanged()
+        // DÜZELTME: Daha verimli notify metodu kullanıldı
+        if (checklistAdapter.itemCount > 0) {
+            checklistAdapter.notifyItemRangeChanged(0, checklistAdapter.itemCount)
+        }
         noteTitle.setTextColor(textColor)
         noteInput.setTextColor(textColor)
     }
@@ -362,13 +367,20 @@ class NoteActivity : AppCompatActivity() {
                 try {
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     noteInput.setText(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY))
+
+                    val oldSize = checklistItems.size
                     checklistItems.clear()
+                    checklistAdapter.notifyItemRangeRemoved(0, oldSize)
+
                     checklistItems.addAll(content.checklist)
-                    checklistAdapter.notifyDataSetChanged()
+                    checklistAdapter.notifyItemRangeInserted(0, checklistItems.size)
+
                 } catch (e: JsonSyntaxException) {
                     noteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
+
+                    val oldSize = checklistItems.size
                     checklistItems.clear()
-                    checklistAdapter.notifyDataSetChanged()
+                    checklistAdapter.notifyItemRangeRemoved(0, oldSize)
                 }
                 selectedColor = note.color
                 updateWindowBackground()
@@ -383,6 +395,7 @@ class NoteActivity : AppCompatActivity() {
                     }
                 )
                 updateColorSelection(viewToSelect)
+                updateFormattingButtonsState()
             }
         }
     }

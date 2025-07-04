@@ -2,19 +2,19 @@ package com.codenzi.acilnot
 
 import android.graphics.Color
 import android.text.Html
+import android.text.Spanned
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
+import androidx.core.view.isVisible
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class NoteAdapter(
     private var notes: List<Note>,
@@ -26,12 +26,16 @@ class NoteAdapter(
     private val gson = Gson()
 
     fun toggleSelection(noteId: Int) {
+        val index = notes.indexOfFirst { it.id == noteId }
+        if (index == -1) return
+
         if (selectedItems.contains(noteId)) {
             selectedItems.remove(noteId)
         } else {
             selectedItems.add(noteId)
         }
-        notifyDataSetChanged()
+        // Sadece değişen öğeyi güncelle
+        notifyItemChanged(index)
     }
 
     fun getSelectedNotes(): List<Note> {
@@ -39,59 +43,57 @@ class NoteAdapter(
     }
 
     fun clearSelections() {
+        val previouslySelectedIndices = selectedItems.mapNotNull { selectedId ->
+            notes.indexOfFirst { it.id == selectedId }.takeIf { it != -1 }
+        }
         selectedItems.clear()
-        notifyDataSetChanged()
+        // Sadece daha önce seçili olan öğeleri güncelle
+        previouslySelectedIndices.forEach { notifyItemChanged(it) }
     }
 
     fun getSelectedItemCount(): Int = selectedItems.size
 
     inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        // YENİ: Başlık TextView referansı
         private val noteTitle: TextView = itemView.findViewById(R.id.tv_note_title)
         private val noteContent: TextView = itemView.findViewById(R.id.tv_note_content)
-        // DÜZELTME: Tarih TextView'leri kaldırıldı
-        // private val creationDate: TextView = itemView.findViewById(R.id.tv_creation_date)
-        // private val modificationDate: TextView = itemView.findViewById(R.id.tv_modification_date)
         private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
 
         fun bind(note: Note) {
-            // YENİ: Başlığı ayarla veya gizle
-            if (note.title.isNotBlank()) {
-                noteTitle.visibility = View.VISIBLE
-                noteTitle.text = note.title
-            } else {
-                noteTitle.visibility = View.GONE
-            }
+            // KTX Uzantısı Kullanımı
+            noteTitle.isVisible = note.title.isNotBlank()
+            noteTitle.text = note.title
 
             try {
                 val content = gson.fromJson(note.content, NoteContent::class.java)
-                val previewBuilder = StringBuilder()
+                val textPreview: Spanned = Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY)
 
-                if (content.text.isNotBlank()) {
-                    previewBuilder.append(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY).toString().trim())
+                val hasText = textPreview.isNotBlank()
+                val hasChecklist = content.checklist.isNotEmpty()
+
+                // İçerik görünürlüğünü en başta ayarla
+                noteContent.isVisible = hasText || hasChecklist
+
+                if (hasText) {
+                    noteContent.text = textPreview
+                } else {
+                    noteContent.text = "" // TextView'i temizle
                 }
 
-                if (content.checklist.isNotEmpty()) {
-                    if (previewBuilder.isNotEmpty()) {
-                        previewBuilder.append("\n\n")
+                if (hasChecklist) {
+                    val checklistSummary = StringBuilder()
+                    if (hasText) {
+                        checklistSummary.append("\n\n")
                     }
                     val checkedCount = content.checklist.count { it.isChecked }
-                    previewBuilder.append("[Liste: ${checkedCount}/${content.checklist.size} tamamlandı]")
+                    checklistSummary.append("[Liste: ${checkedCount}/${content.checklist.size} tamamlandı]")
+                    noteContent.append(checklistSummary.toString())
                 }
 
-                noteContent.text = previewBuilder.toString()
             } catch (e: JsonSyntaxException) {
-                noteContent.text = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
+                val preview: Spanned = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
+                noteContent.text = preview
+                noteContent.isVisible = preview.isNotBlank()
             }
-
-            // DÜZELTME: Oluşturulma ve düzenleme tarihleri artık burada gösterilmiyor
-            // creationDate.text = "Oluşturulma: ${formatDate(note.createdAt)}"
-            // modificationDate.visibility = if (note.modifiedAt.isNotEmpty()) {
-            //     modificationDate.text = "Son Düzenleme: ${formatDate(note.modifiedAt.last())}"
-            //     View.VISIBLE
-            // } else {
-            //     View.GONE
-            // }
 
             if (selectedItems.contains(note.id)) {
                 cardContainer.strokeWidth = 8
@@ -112,11 +114,6 @@ class NoteAdapter(
                 true
             }
         }
-
-        private fun formatDate(timestamp: Long): String {
-            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            return sdf.format(Date(timestamp))
-        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NoteViewHolder {
@@ -131,7 +128,30 @@ class NoteAdapter(
     override fun getItemCount() = notes.size
 
     fun updateNotes(newNotes: List<Note>) {
-        notes = newNotes
-        notifyDataSetChanged()
+        // DiffUtil kullanarak listeyi verimli bir şekilde güncelle
+        val diffCallback = NoteDiffCallback(this.notes, newNotes)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+        this.notes = newNotes
+        diffResult.dispatchUpdatesTo(this)
+    }
+}
+
+// DiffUtil için karşılaştırıcı sınıf
+class NoteDiffCallback(
+    private val oldList: List<Note>,
+    private val newList: List<Note>
+) : DiffUtil.Callback() {
+
+    override fun getOldListSize(): Int = oldList.size
+    override fun getNewListSize(): Int = newList.size
+
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        // Öğelerin aynı olup olmadığını ID ile kontrol et
+        return oldList[oldItemPosition].id == newList[newItemPosition].id
+    }
+
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        // Öğelerin içeriğinin aynı olup olmadığını kontrol et
+        return oldList[oldItemPosition] == newList[newItemPosition]
     }
 }
