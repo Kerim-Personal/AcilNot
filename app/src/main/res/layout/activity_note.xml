@@ -39,126 +39,167 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/ll_color_pickers"
+        android:id="@+id/ll_bottom_controls"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingVertical="8dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
         app:layout_constraintBottom_toTopOf="@id/ll_button_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <FrameLayout
-            android:id="@+id/color_default"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="4dp"
-            android:background="@drawable/background_color_selector">
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bordered_color_default" />
-        </FrameLayout>
-        <FrameLayout
-            android:id="@+id/color_yellow"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="4dp"
-            android:background="@drawable/background_color_selector">
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bordered_color_yellow" />
-        </FrameLayout>
-        <FrameLayout
-            android:id="@+id/color_blue"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="4dp"
-            android:background="@drawable/background_color_selector">
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bordered_color_blue" />
-        </FrameLayout>
-        <FrameLayout
-            android:id="@+id/color_green"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="4dp"
-            android:background="@drawable/background_color_selector">
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bordered_color_green" />
-        </FrameLayout>
-        <FrameLayout
-            android:id="@+id/color_pink"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="4dp"
-            android:background="@drawable/background_color_selector">
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bordered_color_pink" />
-        </FrameLayout>
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/ll_format_buttons_container"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        style="?android:attr/buttonBarStyle"
-        app:layout_constraintBottom_toTopOf="@id/ll_color_pickers"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/toggle_button_group"
+        <LinearLayout
+            android:id="@+id/ll_format_buttons_container"
+            style="?android:attr/buttonBarStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:selectionRequired="false"
-            app:singleSelection="false">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_bold"
-                style="?attr/materialButtonOutlinedStyle"
+            android:gravity="center"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggle_button_group"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="@string/tooltip_bold"
-                app:icon="@drawable/ic_format_bold_24" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_italic"
-                style="?attr/materialButtonOutlinedStyle"
+                app:selectionRequired="false"
+                app:singleSelection="false">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_bold"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/tooltip_bold"
+                    app:icon="@drawable/ic_format_bold_24" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_italic"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/tooltip_italic"
+                    app:icon="@drawable/ic_format_italic_24" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_strikethrough"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/tooltip_strikethrough"
+                    app:icon="@drawable/ic_format_strikethrough_24" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+            <ImageButton
+                android:id="@+id/btn_voice_note"
+                style="?android:attr/buttonBarButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="@string/tooltip_italic"
-                app:icon="@drawable/ic_format_italic_24" />
+                android:layout_marginStart="16dp"
+                android:contentDescription="@string/tooltip_voice_note"
+                android:src="@drawable/ic_microphone_24" />
+        </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_strikethrough"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:contentDescription="@string/tooltip_strikethrough"
-                app:icon="@drawable/ic_format_strikethrough_24" />
-
-        </com.google.android.material.button.MaterialButtonToggleGroup>
-
-        <ImageButton
-            android:id="@+id/btn_voice_note"
-            style="?android:attr/buttonBarButtonStyle"
+        <HorizontalScrollView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:contentDescription="@string/tooltip_voice_note"
-            android:src="@drawable/ic_microphone_24" />
+            android:scrollbars="none"
+            tools:ignore="SpeakableTextPresentCheck">
 
+            <LinearLayout
+                android:id="@+id/ll_color_pickers"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingVertical="8dp">
+
+                <FrameLayout
+                    android:id="@+id/color_default"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/background_color_selector">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bordered_color_default" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/color_yellow"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="@drawable/background_color_selector">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bordered_color_yellow" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/color_blue"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="@drawable/background_color_selector">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bordered_color_blue" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/color_green"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="@drawable/background_color_selector">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bordered_color_green" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/color_pink"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="@drawable/background_color_selector">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bordered_color_pink" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/color_purple"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="@drawable/background_color_selector">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bordered_color_purple" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/color_orange"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/background_color_selector">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bordered_color_orange" />
+                </FrameLayout>
+            </LinearLayout>
+        </HorizontalScrollView>
     </LinearLayout>
 
     <ScrollView
@@ -171,7 +212,7 @@
         android:padding="8dp"
         android:scrollbars="vertical"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/ll_format_buttons_container"
+        app:layout_constraintBottom_toTopOf="@id/ll_bottom_controls"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
         <TextView

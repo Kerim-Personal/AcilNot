@@ -8,6 +8,9 @@
     <color name="note_color_blue">#D4E6F1</color>
     <color name="note_color_green">#D5F5E3</color>
     <color name="note_color_pink">#FADBD8</color>
+    <color name="note_color_purple">#EAEAF4</color>
+    <color name="note_color_orange">#FDEBD0</color>
+
     <color name="my_light_primary">#660033</color>
     <color name="my_dark_primary">#FF212121</color>
 </resources>

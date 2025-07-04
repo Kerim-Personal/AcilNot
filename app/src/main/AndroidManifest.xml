@@ -3,10 +3,6 @@
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-
 
     <application
         android:name=".MyApplication"
@@ -47,14 +43,6 @@
         <activity android:name=".PasswordSettingsActivity"
             android:exported="false" />
 
-        <activity
-            android:name=".RecordingPermissionActivity"
-            android:theme="@style/Theme.Transparent"
-            android:exported="true"
-            android:excludeFromRecents="true"
-            android:taskAffinity=""
-            android:launchMode="singleInstance"/>
-
         <receiver
             android:name=".NoteWidgetProvider"
             android:exported="true">
@@ -66,25 +54,9 @@
                 android:resource="@xml/note_widget_provider_info" />
         </receiver>
 
-        <receiver
-            android:name=".VoiceNoteWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/voice_note_widget_info" />
-        </receiver>
-
         <service
             android:name=".NoteWidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
-
-        <service
-            android:name=".VoiceNoteRecordingService"
-            android:foregroundServiceType="microphone"
-            android:exported="false" />
 
     </application>
 

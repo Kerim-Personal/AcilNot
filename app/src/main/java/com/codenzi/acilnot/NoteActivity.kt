@@ -134,7 +134,6 @@ class NoteActivity : AppCompatActivity() {
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
     }
 
-    // Orijinal, istediğiniz gibi çalışan toggleStyle fonksiyonu
     private fun toggleStyle(styleType: Int) {
         val spannable = noteInput.text as SpannableStringBuilder
         val start = noteInput.selectionStart
@@ -186,15 +185,13 @@ class NoteActivity : AppCompatActivity() {
         updateFormattingButtonsState()
     }
 
-    // *** DÜZELTME: Buton renginin anında güncellenmesini sağlayan YENİ fonksiyon ***
     private fun updateFormattingButtonsState() {
-        isUpdatingToggleButtons = true // Döngüleri engellemek için
+        isUpdatingToggleButtons = true
 
         val spannable = noteInput.text ?: return
         val position = noteInput.selectionStart
         val selectionEnd = noteInput.selectionEnd
 
-        // Eğer metin seçiliyse, seçimin stil durumuna bak
         if (position != selectionEnd) {
             val boldSpans = spannable.getSpans(position, selectionEnd, StyleSpan::class.java)
             boldButton.isChecked = boldSpans.any { it.style == Typeface.BOLD }
@@ -205,8 +202,6 @@ class NoteActivity : AppCompatActivity() {
             val strikeSpans = spannable.getSpans(position, selectionEnd, StrikethroughSpan::class.java)
             strikethroughButton.isChecked = strikeSpans.isNotEmpty()
         } else {
-            // Metin seçili değilse, SADECE imlecin olduğu yerdeki "yazım stili" durumuna bak.
-            // Bu, bir stili kapattığınızda butonun renginin anında normale dönmesini sağlar.
             val spansAtCursor = spannable.getSpans(position, position, Any::class.java)
 
             boldButton.isChecked = spansAtCursor.any {
@@ -309,13 +304,19 @@ class NoteActivity : AppCompatActivity() {
         val colorBlue: FrameLayout = findViewById(R.id.color_blue)
         val colorGreen: FrameLayout = findViewById(R.id.color_green)
         val colorPink: FrameLayout = findViewById(R.id.color_pink)
-        colorPickers = listOf(colorDefault, colorYellow, colorBlue, colorGreen, colorPink)
+        val colorPurple: FrameLayout = findViewById(R.id.color_purple)
+        val colorOrange: FrameLayout = findViewById(R.id.color_orange)
+
+        colorPickers = listOf(colorDefault, colorYellow, colorBlue, colorGreen, colorPink, colorPurple, colorOrange)
+
         val listeners = mapOf(
             colorDefault to R.color.note_color_default,
             colorYellow to R.color.note_color_yellow,
             colorBlue to R.color.note_color_blue,
             colorGreen to R.color.note_color_green,
-            colorPink to R.color.note_color_pink
+            colorPink to R.color.note_color_pink,
+            colorPurple to R.color.note_color_purple,
+            colorOrange to R.color.note_color_orange
         )
         listeners.forEach { (view, colorResId) -> view.setOnClickListener { onColorSelected(it, colorResId) } }
     }
@@ -389,6 +390,8 @@ class NoteActivity : AppCompatActivity() {
                         ContextCompat.getColor(this@NoteActivity, R.color.note_color_blue) -> 2
                         ContextCompat.getColor(this@NoteActivity, R.color.note_color_green) -> 3
                         ContextCompat.getColor(this@NoteActivity, R.color.note_color_pink) -> 4
+                        ContextCompat.getColor(this@NoteActivity, R.color.note_color_purple) -> 5
+                        ContextCompat.getColor(this@NoteActivity, R.color.note_color_orange) -> 6
                         else -> 0
                     }
                 )
