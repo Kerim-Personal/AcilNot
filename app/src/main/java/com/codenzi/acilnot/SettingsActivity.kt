@@ -1,5 +1,7 @@
 package com.codenzi.acilnot
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -66,6 +68,16 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            // Widget Arka Plan Değişikliği Dinleyicisi
+            val widgetBackgroundPreference: ListPreference? = findPreference("widget_background_selection")
+            widgetBackgroundPreference?.setOnPreferenceChangeListener { _, newValue ->
+                // SharedPreferences'ın güncellenmesini beklemek için kısa bir gecikme
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    updateWidget()
+                }, 100) // 100ms gecikme
+                true
+            }
+
             // Gizlilik Sözleşmesi butonu
             val privacyPolicyPreference: Preference? = findPreference("privacy_policy")
             privacyPolicyPreference?.setOnPreferenceClickListener {
@@ -103,6 +115,27 @@ class SettingsActivity : AppCompatActivity() {
                         .show()
                 }
                 true
+            }
+        }
+
+        private fun updateWidget() {
+            try {
+                val context = requireContext()
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val componentName = ComponentName(context, NoteWidgetProvider::class.java)
+                val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+                
+                // Tüm widget'ları güncelle
+                appWidgetIds.forEach { appWidgetId ->
+                    NoteWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+                }
+                
+                // Widget verilerini de güncelle
+                appWidgetIds.forEach { appWidgetId ->
+                    appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
