@@ -68,8 +68,8 @@ class SettingsActivity : AppCompatActivity() {
             // Gizlilik Sözleşmesi butonu
             val privacyPolicyPreference: Preference? = findPreference("privacy_policy")
             privacyPolicyPreference?.setOnPreferenceClickListener {
-                // TODO: "your_privacy_policy_url" kısmını kendi gizlilik politikası linkinizle değiştirin
-                val url = "https://www.your_privacy_policy_url.com"
+
+                val url = "https://www.codenzi.com"
                 try {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                     startActivity(intent)
@@ -79,11 +79,11 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Bize Ulaşın butonu
+
             val contactUsPreference: Preference? = findPreference("contact_us")
             contactUsPreference?.setOnPreferenceClickListener {
-                // TODO: "your_email@example.com" kısmını kendi destek e-posta adresinizle değiştirin
-                val email = "destek@example.com"
+
+                val email = "info@codenzi.com"
                 val subject = "Acil Not Uygulaması Geri Bildirim"
                 try {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {

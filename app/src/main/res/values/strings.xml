@@ -105,4 +105,5 @@
     <string name="privacy_policy_summary">Uygulamanın gizlilik politikasını okuyun.</string>
     <string name="contact_us_title">Bize Ulaşın</string>
     <string name="contact_us_summary">Geri bildirim veya destek için bize e-posta gönderin.</string>
+    <string name="security_info">Güvenlik Bilgisi</string>
 </resources>
