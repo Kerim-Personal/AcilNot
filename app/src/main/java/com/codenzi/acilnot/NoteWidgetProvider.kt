@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.widget.RemoteViews
 import androidx.core.net.toUri
+import androidx.preference.PreferenceManager // PreferenceManager'ı import etmeyi unutmayın!
 
 class NoteWidgetProvider : AppWidgetProvider() {
 
@@ -29,6 +30,22 @@ class NoteWidgetProvider : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.note_widget_layout)
 
+            // YENİ: Widget arka planını ayarla
+            val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val backgroundDrawableName = sharedPrefs.getString("widget_background_selection", "widget_background") // Varsayılan olarak mevcut arka planı kullan
+            val backgroundResId = context.resources.getIdentifier(
+                backgroundDrawableName, "drawable", context.packageName
+            )
+
+            if (backgroundResId != 0) {
+                views.setInt(R.id.widget_container_layout, "setBackgroundResource", backgroundResId)
+            } else {
+                // Eğer kaynak bulunamazsa veya geçersizse varsayılanı kullan
+                // DOĞRU KULLANIM BUDUR
+                views.setInt(R.id.widget_container_layout, "setBackgroundResource", R.drawable.widget_background)
+            }
+
+
             val serviceIntent = Intent(context, NoteWidgetService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 data = this.toUri(Intent.URI_INTENT_SCHEME).toUri()
@@ -41,9 +58,6 @@ class NoteWidgetProvider : AppWidgetProvider() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
 
-            // --- DÜZELTME BURADA ---
-            // 'fillInIntent' mekanizmasının çalışabilmesi için PendingIntent'in MUTABLE (değiştirilebilir) olması zorunludur.
-            // Bu bayrak IMMUTABLE'dan MUTABLE'a geri çevrildi.
             val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 PendingIntent.FLAG_MUTABLE
             } else {

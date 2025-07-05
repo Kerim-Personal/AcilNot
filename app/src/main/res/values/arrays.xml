@@ -11,4 +11,30 @@
         <item>dark</item>
         <item>system_default</item>
     </string-array>
+
+    <string-array name="widget_background_entries">
+        <item>Varsayılan Widget Arka Planı</item>
+        <item>Arka Plan 1</item>
+        <item>Arka Plan 2</item>
+        <item>Arka Plan 3</item>
+        <item>Arka Plan 4</item>
+        <item>Arka Plan 5</item>
+        <item>Arka Plan 6</item>
+        <item>Arka Plan 7</item>
+        <item>Arka Plan 8</item>
+        <item>Arka Plan 9</item>
+        <item>Arka Plan 10</item>
+    </string-array>
+    <string-array name="widget_background_values">
+        <item>widget_background</item> <item>bg1</item>
+        <item>bg2</item>
+        <item>bg3</item>
+        <item>bg4</item>
+        <item>bg5</item>
+        <item>bg6</item>
+        <item>bg7</item>
+        <item>bg8</item>
+        <item>bg9</item>
+        <item>bg10</item>
+    </string-array>
 </resources>
