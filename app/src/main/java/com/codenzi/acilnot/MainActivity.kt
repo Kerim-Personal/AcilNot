@@ -177,7 +177,6 @@ class MainActivity : AppCompatActivity() {
         menu.findItem(R.id.action_search).isVisible = !isSelectionMode
         menu.findItem(R.id.action_sort).isVisible = !isSelectionMode
         menu.findItem(R.id.action_settings).isVisible = !isSelectionMode
-        menu.findItem(R.id.action_unpin_all).isVisible = !isSelectionMode
         pinItem.isVisible = isSelectionMode
         menu.findItem(R.id.action_share_contextual).isVisible = isSelectionMode
         menu.findItem(R.id.action_delete_contextual).isVisible = isSelectionMode
@@ -214,10 +213,6 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true
             }
-            R.id.action_unpin_all -> {
-                unpinAllNotesFromWidget()
-                true
-            }
             R.id.action_pin_to_widget -> {
                 val areAllSelectedPinned = selectedNotes.isNotEmpty() && selectedNotes.all { it.showOnWidget }
                 if (areAllSelectedPinned) {
@@ -250,14 +245,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun unpinAllNotesFromWidget() {
-        lifecycleScope.launch {
-            noteDao.unpinAllNotes()
-            updateAllWidgets()
-            Toast.makeText(applicationContext, "Tüm widget sabitlemeleri kaldırıldı.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun unpinSelectedNotes(notes: List<Note>) {
         if (notes.isEmpty()) return
         val noteIds = notes.map { it.id }
@@ -272,7 +259,7 @@ class MainActivity : AppCompatActivity() {
         if (notes.isEmpty()) return
         val noteIds = notes.map { it.id }
         lifecycleScope.launch {
-            noteDao.unpinAllNotes()
+            noteDao.unpinAllNotes() // Önce mevcut tüm pinleri kaldır
             noteDao.setPinnedStatus(noteIds, true)
             updateAllWidgets()
             Toast.makeText(applicationContext, "Seçili notlar widget'a sabitlendi.", Toast.LENGTH_SHORT).show()

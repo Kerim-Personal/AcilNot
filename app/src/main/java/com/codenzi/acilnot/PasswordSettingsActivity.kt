@@ -3,6 +3,7 @@ package com.codenzi.acilnot
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +19,7 @@ class PasswordSettingsActivity : AppCompatActivity() {
     private lateinit var etConfirmPassword: TextInputEditText
     private lateinit var saveButton: Button
     private lateinit var disableButton: Button
+    private lateinit var infoButton: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +36,7 @@ class PasswordSettingsActivity : AppCompatActivity() {
         etConfirmPassword = findViewById(R.id.et_confirm_password)
         saveButton = findViewById(R.id.btn_save_password)
         disableButton = findViewById(R.id.btn_disable_password)
+        infoButton = findViewById(R.id.btn_security_info)
 
         if (PasswordManager.isPasswordSet(this)) {
             tilCurrentPassword.visibility = View.VISIBLE
@@ -47,27 +50,30 @@ class PasswordSettingsActivity : AppCompatActivity() {
             savePassword()
         }
 
-        // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
         disableButton.setOnClickListener {
-            // "Mevcut Parola" alanından girilen metni al
             val currentPassword = etCurrentPassword.text.toString()
-
-            // Alanın boş olup olmadığını kontrol et
             if (currentPassword.isBlank()) {
                 Toast.makeText(this, "Lütfen parolayı devre dışı bırakmak için mevcut parolanızı girin.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
-            // Girilen parolanın doğruluğunu kontrol et
             if (PasswordManager.checkPassword(this, currentPassword)) {
-                // Parola doğruysa, devre dışı bırakma onayı için diyaloğu göster
                 showDisablePasswordConfirmationDialog()
             } else {
-                // Parola yanlışsa hata mesajı göster
                 Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
             }
         }
-        // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+
+        infoButton.setOnClickListener {
+            showSecurityInfoDialog()
+        }
+    }
+
+    private fun showSecurityInfoDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Güvenlik Bilgisi")
+            .setMessage(R.string.password_security_explanation)
+            .setPositiveButton("Tamam", null)
+            .show()
     }
 
     override fun onSupportNavigateUp(): Boolean {

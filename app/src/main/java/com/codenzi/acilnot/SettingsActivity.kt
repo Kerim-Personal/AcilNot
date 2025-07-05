@@ -1,27 +1,26 @@
-// app/src/main/java/com/codenzi/acilnot/SettingsActivity.kt
 package com.codenzi.acilnot
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
+import androidx.preference.ListPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
-import androidx.core.content.ContextCompat // Drawable işlemleri için
-// import androidx.core.graphics.drawable.DrawableCompat // Bu satıra ihtiyacınız yok
-// import android.content.res.Configuration // Bu satıra ihtiyacınız yok
 
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings) // Bu layout fragment konteynerini içermeli
+        setContentView(R.layout.activity_settings)
 
         val toolbar: Toolbar = findViewById(R.id.settings_toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "Ayarlar"
-
 
         if (savedInstanceState == null) {
             supportFragmentManager
@@ -38,25 +37,11 @@ class SettingsActivity : AppCompatActivity() {
 
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            // Tercihleri R.xml.preferences dosyasından yükle
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
-            // Tema tercihini bul ve ikonunu ayarla
-            val themePreference: androidx.preference.ListPreference? = findPreference("theme_selection")
-            themePreference?.let {
-                it.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_settings_24)
-            }
-
-            // Çöp Kutusu tercihini bul ve ikonunu ayarla
-            val trashPreference = findPreference<androidx.preference.Preference>("trash_settings")
-            trashPreference?.let {
-                it.icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_archive_24)
-            }
-
-            // Tema tercihini dinle ve uygula
-            // Bu listener, ListPreference'ın değeri değiştiğinde çalışır.
-            val themePreferenceListener: androidx.preference.ListPreference? = findPreference("theme_selection")
-            themePreferenceListener?.setOnPreferenceChangeListener { _, newValue ->
+            // TEMA DEĞİŞTİRME ÖZELLİĞİ DÜZELTİLDİ
+            val themePreference: ListPreference? = findPreference("theme_selection")
+            themePreference?.setOnPreferenceChangeListener { _, newValue ->
                 val mode = when (newValue.toString()) {
                     "light" -> AppCompatDelegate.MODE_NIGHT_NO
                     "dark" -> AppCompatDelegate.MODE_NIGHT_YES
@@ -66,19 +51,50 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Çöp Kutusu tercihini bul ve tıklama dinleyicisi ekle
-            val trashPreferenceClickListener = findPreference<androidx.preference.Preference>("trash_settings")
-            trashPreferenceClickListener?.setOnPreferenceClickListener {
-                val intent = Intent(context, TrashActivity::class.java)
-                startActivity(intent)
+            // Parola Ayarları butonu
+            val passwordSettingsPreference: Preference? = findPreference("password_settings")
+            passwordSettingsPreference?.setOnPreferenceClickListener {
+                startActivity(Intent(activity, PasswordSettingsActivity::class.java))
                 true
             }
 
-            // Parola Ayarları tercihini bul ve tıklama dinleyicisi ekle
-            val passwordSettingsPreference = findPreference<androidx.preference.Preference>("password_settings")
-            passwordSettingsPreference?.setOnPreferenceClickListener {
-                val intent = Intent(context, PasswordSettingsActivity::class.java)
-                startActivity(intent)
+            // Çöp Kutusu butonu
+            val trashPreference: Preference? = findPreference("trash_settings")
+            trashPreference?.setOnPreferenceClickListener {
+                startActivity(Intent(activity, TrashActivity::class.java))
+                true
+            }
+
+            // Gizlilik Sözleşmesi butonu
+            val privacyPolicyPreference: Preference? = findPreference("privacy_policy")
+            privacyPolicyPreference?.setOnPreferenceClickListener {
+                // TODO: "your_privacy_policy_url" kısmını kendi gizlilik politikası linkinizle değiştirin
+                val url = "https://www.your_privacy_policy_url.com"
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Web tarayıcısı bulunamadı.", Toast.LENGTH_SHORT).show()
+                }
+                true
+            }
+
+            // Bize Ulaşın butonu
+            val contactUsPreference: Preference? = findPreference("contact_us")
+            contactUsPreference?.setOnPreferenceClickListener {
+                // TODO: "your_email@example.com" kısmını kendi destek e-posta adresinizle değiştirin
+                val email = "destek@example.com"
+                val subject = "Acil Not Uygulaması Geri Bildirim"
+                try {
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:")
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
+                        putExtra(Intent.EXTRA_SUBJECT, subject)
+                    }
+                    startActivity(Intent.createChooser(intent, "E-posta gönder..."))
+                } catch (e: Exception) {
+                    Toast.makeText(context, "E-posta uygulaması bulunamadı.", Toast.LENGTH_SHORT).show()
+                }
                 true
             }
         }

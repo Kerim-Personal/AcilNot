@@ -2,13 +2,13 @@ package com.codenzi.acilnot
 
 import android.content.Context
 import android.util.AttributeSet
-import androidx.appcompat.widget.AppCompatEditText
+import com.google.android.material.textfield.TextInputEditText
 
 class SelectionAwareEditText @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = androidx.appcompat.R.attr.editTextStyle
-) : AppCompatEditText(context, attrs, defStyleAttr) {
+    defStyleAttr: Int = com.google.android.material.R.attr.editTextStyle
+) : TextInputEditText(context, attrs, defStyleAttr) {
 
     private var selectionChangedListener: ((Int, Int) -> Unit)? = null
 

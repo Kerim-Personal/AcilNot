@@ -27,6 +27,14 @@
             android:title="Çöp Kutusu"
             android:summary="Silinen notları görüntüle ve yönet"
             android:icon="@drawable/outline_archive_24" />
+        <Preference
+            android:key="privacy_policy"
+            android:summary="@string/privacy_policy_summary"
+            android:title="@string/privacy_policy_title" />
+        <Preference
+            android:key="contact_us"
+            android:summary="@string/contact_us_summary"
+            android:title="@string/contact_us_title" />
     </PreferenceCategory>
 
 </PreferenceScreen>

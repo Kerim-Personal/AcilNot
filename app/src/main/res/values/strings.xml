@@ -85,8 +85,9 @@
     <string name="password_disable_confirmation_message">Uygulama parolasını devre dışı bırakmak istediğinizden emin misiniz?</string>
     <string name="dialog_yes">Evet</string>
     <string name="dialog_no">Hayır</string>
-    <string name="enter_current_password_hint">Mevcut parolayı girin</string>
+    <string name="enter_current_password_hint">Parolanızı girin</string>
     <string name="current_password_incorrect_error">Mevcut parola yanlış.</string>
+    <string name="password_security_explanation">Güvenliğiniz bizim için önemlidir. Parolanız, telefonunuzda asla doğrudan saklanmaz. Bunun yerine, geri döndürülemez bir şifreleme olan SHA-256 Hash ve her parolaya özel eklenen rastgele bir \"Tuzlama (Salt)\" tekniği ile korunur. Bu sayede, biz dahil hiç kimse orijinal parolanıza erişemez.</string>
 
     <!-- Parola Kontrol Ekranı -->
     <string name="unlock_app_title">Uygulamayı Aç</string>
@@ -99,4 +100,9 @@
     <string name="tooltip_strikethrough">Üstü Çizili</string>
     <string name="tooltip_voice_note">Sesli Not Ekle</string>
     <string name="tooltip_edit_history">Düzenleme Geçmişini Göster</string>
+
+    <string name="privacy_policy_title">Gizlilik Sözleşmesi</string>
+    <string name="privacy_policy_summary">Uygulamanın gizlilik politikasını okuyun.</string>
+    <string name="contact_us_title">Bize Ulaşın</string>
+    <string name="contact_us_summary">Geri bildirim veya destek için bize e-posta gönderin.</string>
 </resources>

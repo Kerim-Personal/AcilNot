@@ -9,24 +9,17 @@
         app:showAsAction="ifRoom|collapseActionView"
         app:actionViewClass="androidx.appcompat.widget.SearchView" />
 
-
     <item
         android:id="@+id/action_sort"
         android:title="@string/sort_title"
         android:icon="@drawable/outline_sort_24"
         app:showAsAction="ifRoom" />
 
-
     <item
         android:id="@+id/action_settings"
         android:title="Ayarlar"
         android:icon="@drawable/ic_settings_24"
         app:showAsAction="always" />
-
-    <item
-        android:id="@+id/action_unpin_all"
-        android:title="Widget Sabitlemelerini Temizle"
-        app:showAsAction="never" />
 
     <item
         android:id="@+id/action_pin_to_widget"
