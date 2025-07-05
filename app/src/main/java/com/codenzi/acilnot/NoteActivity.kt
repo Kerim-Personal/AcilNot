@@ -488,8 +488,9 @@ class NoteActivity : AppCompatActivity() {
     private fun updateAllWidgets() {
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, NoteWidgetProvider::class.java)
-        appWidgetManager.getAppWidgetIds(componentName).forEach {
-            appWidgetManager.notifyAppWidgetViewDataChanged(it, R.id.lv_widget_notes)
+        appWidgetManager.getAppWidgetIds(componentName).forEach { appWidgetId ->
+            // Widget'ı tamamen güncelle (arka plan dahil)
+            NoteWidgetProvider.updateAppWidget(this, appWidgetManager, appWidgetId)
         }
     }
 
