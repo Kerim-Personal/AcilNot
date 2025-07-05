@@ -35,7 +35,8 @@ class NoteDeleteReceiver : BroadcastReceiver() {
                     val componentName = ComponentName(context, NoteWidgetProvider::class.java)
                     val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
                     appWidgetIds.forEach { appWidgetId ->
-                        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
+                        // Widget'ı tamamen güncelle (arka plan dahil)
+                        NoteWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
                     }
                 } finally {
                     // Sisteme arka plan işinin bittiğini haber ver
