@@ -12,7 +12,8 @@ import kotlinx.coroutines.launch
 class NoteDeleteReceiver : BroadcastReceiver() {
 
     companion object {
-        const val ACTION_DELETE_NOTE = "com.example.acilnotuygulamasi.ACTION_DELETE_NOTE"
+        // Düzeltilmiş eylem adı
+        const val ACTION_DELETE_NOTE = "com.codenzi.acilnot.ACTION_DELETE_NOTE"
         const val EXTRA_NOTE_ID = "EXTRA_NOTE_ID"
     }
 

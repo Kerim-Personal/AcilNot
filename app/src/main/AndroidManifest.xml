@@ -44,6 +44,14 @@
             android:exported="false" />
 
         <receiver
+            android:name=".NoteDeleteReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.codenzi.acilnot.ACTION_DELETE_NOTE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".NoteWidgetProvider"
             android:exported="true">
             <intent-filter>

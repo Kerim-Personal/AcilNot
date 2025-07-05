@@ -43,16 +43,30 @@
     <string name="modification_date_label">Son Düzenleme: %s</string>
     <string name="edit_history_title">Düzenleme Geçmişi:</string>
     <string name="edit_history_item">- %s</string>
-
     <string name="hint_checklist_item">Liste öğesi</string>
     <string name="delete_checklist_item_description">Liste öğesini sil</string>
+    <string name="edit_history_dialog_title">Düzenleme Geçmişi</string>
+    <string name="dialog_ok">Tamam</string>
+    <string name="speech_listening">Dinliyorum...</string>
+    <string name="speech_error_generic">Bir hata oluştu, tekrar deneyin.</string>
+    <string name="note_moved_to_trash_toast">Not çöp kutusuna taşındı.</string>
+    <string name="checklist_summary_preview">[Liste: %1$d/%2$d tamamlandı]</string>
 
     <string name="widget_empty_view_text">Henüz görüntülenecek not yok.\nUygulamadan yeni not ekleyebilirsiniz.</string>
     <string name="widget_new_note_button">Yeni Not Ekle</string>
 
+    <string name="trash_bin_title">Çöp Kutusu</string>
+    <string name="empty_trash_message">Çöp kutusu boş.</string>
+    <string name="note_options_title">Not Seçenekleri</string>
+    <string name="restore_note">Notu Geri Yükle</string>
+    <string name="delete_permanently">Kalıcı Olarak Sil</string>
+    <string name="note_restored_toast">Not geri yüklendi.</string>
+    <string name="note_deleted_permanently_toast">Not kalıcı olarak silindi.</string>
+    <string name="dialog_title_delete_permanently">Notu Kalıcı Olarak Sil</string>
+    <string name="dialog_message_delete_permanently">Bu notu kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</string>
+    <string name="dialog_confirm_delete_permanently">Evet, Kalıcı Olarak Sil</string>
     <string name="delete_note_to_trash_confirmation_message">Bu notu çöp kutusuna taşımak istediğinizden emin misiniz?</string>
     <string name="dialog_move_to_trash">Çöp Kutusuna Taşı</string>
-
     <plurals name="move_notes_to_trash_confirmation_title">
         <item quantity="one">%d notu çöp kutusuna taşı</item>
         <item quantity="other">%d notu çöp kutusuna taşı</item>
@@ -64,14 +78,9 @@
     <string name="theme_dark">Karanlık Tema</string>
     <string name="theme_system_default">Sistem Varsayılanı</string>
 
-    <!-- Uygulama Şifreleme -->
     <string name="application_encryption_category_title">Uygulama Şifreleme</string>
     <string name="password_settings_title">Parola Ayarları</string>
     <string name="password_settings_summary">Uygulamayı parola ile kilitle</string>
-    <string name="fingerprint_unlock_title">Parmak İzi ile Kilidi Aç</string>
-    <string name="fingerprint_unlock_summary">Parmak izi sensörü ile uygulamayı aç</string>
-
-    <!-- Parola Ayarları Ekranı -->
     <string name="set_password_title">Parola Belirle</string>
     <string name="enter_new_password_hint">Yeni parola girin</string>
     <string name="confirm_new_password_hint">Yeni parolayı onaylayın</string>
@@ -88,8 +97,9 @@
     <string name="enter_current_password_hint">Parolanızı girin</string>
     <string name="current_password_incorrect_error">Mevcut parola yanlış.</string>
     <string name="password_security_explanation">Güvenliğiniz bizim için önemlidir. Parolanız, telefonunuzda asla doğrudan saklanmaz. Bunun yerine, geri döndürülemez bir şifreleme olan SHA-256 Hash ve her parolaya özel eklenen rastgele bir \"Tuzlama (Salt)\" tekniği ile korunur. Bu sayede, biz dahil hiç kimse orijinal parolanıza erişemez.</string>
+    <string name="toast_enter_current_password_to_disable">Lütfen parolayı devre dışı bırakmak için mevcut parolanızı girin.</string>
+    <string name="toast_password_fields_cannot_be_empty">Parola alanları boş bırakılamaz.</string>
 
-    <!-- Parola Kontrol Ekranı -->
     <string name="unlock_app_title">Uygulamayı Aç</string>
     <string name="enter_password_to_unlock">Uygulamayı açmak için parolanızı girin.</string>
     <string name="unlock_button">Kilidi Aç</string>
@@ -100,10 +110,17 @@
     <string name="tooltip_strikethrough">Üstü Çizili</string>
     <string name="tooltip_voice_note">Sesli Not Ekle</string>
     <string name="tooltip_edit_history">Düzenleme Geçmişini Göster</string>
+    <string name="security_info_button_description">Güvenlik Bilgisi</string>
 
+    <string name="settings_title">Ayarlar</string>
     <string name="privacy_policy_title">Gizlilik Sözleşmesi</string>
     <string name="privacy_policy_summary">Uygulamanın gizlilik politikasını okuyun.</string>
     <string name="contact_us_title">Bize Ulaşın</string>
     <string name="contact_us_summary">Geri bildirim veya destek için bize e-posta gönderin.</string>
     <string name="security_info">Güvenlik Bilgisi</string>
+    <string name="toast_no_browser_found">Web tarayıcısı bulunamadı.</string>
+    <string name="contact_us_email_subject">Acil Not Uygulaması Geri Bildirim</string>
+    <string name="contact_us_email_chooser_title">E-posta gönder...</string>
+    <string name="toast_no_email_app_found">E-posta uygulaması bulunamadı.</string>
+
 </resources>

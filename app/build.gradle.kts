@@ -6,12 +6,14 @@ plugins {
 
 android {
     namespace = "com.codenzi.acilnot"
-    compileSdk = 36
+    // DÜZELTME: compileSdk, en son stabil sürüme (35) çekildi.
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.codenzi.acilnot"
         minSdk = 24
-        targetSdk = 36
+        // DÜZELTME: targetSdk, en son stabil sürüme (35) çekildi.
+        targetSdk = 35
         versionCode = 2
         versionName = "1.1.0"
 
