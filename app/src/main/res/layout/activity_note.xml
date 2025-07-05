@@ -270,7 +270,7 @@
         android:layout_marginEnd="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/tooltip_edit_history"
-        android:src="@drawable/outline_info_24"
+        android:src="@drawable/outline_info_note_24"
         app:layout_constraintBottom_toBottomOf="@+id/til_note_title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/til_note_title" />

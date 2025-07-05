@@ -3,4 +3,7 @@
     <attr name="floatingActionButtonBackground" format="color"/>
     <attr name="floatingActionButtonIconTint" format="color"/>
     <attr name="infoButtonTint" format="color"/>
+    <attr name="passwordCheckIconTint" format="color"/>
+    <attr name="destructiveButtonColor" format="color"/>
+    <attr name="noteInfoButtonTint" format="color"/>
 </resources>
