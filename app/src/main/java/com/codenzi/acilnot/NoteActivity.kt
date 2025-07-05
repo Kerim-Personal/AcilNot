@@ -22,6 +22,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -110,6 +111,23 @@ class NoteActivity : AppCompatActivity() {
         setupVoiceNote()
 
         processIntent(intent)
+
+        // YENİ: Geri tuşuna basıldığında notun kaydedilmesini garantileyen kod bloğu
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Geri tuşuna basıldığında kaydetme işlemini tetikle
+                performSave()
+                // Bu callback'i devre dışı bırak ve varsayılan geri tuşu davranışını çalıştır
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, callback)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        performSave()
     }
 
     private fun setupListeners() {
@@ -130,8 +148,54 @@ class NoteActivity : AppCompatActivity() {
             updateFormattingButtonsState()
         }
 
-        saveButton.setOnClickListener { saveNote() }
+        saveButton.setOnClickListener {
+            val titleText = noteTitle.text.toString().trim()
+            val noteContentText = noteInput.text
+            if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() }) {
+                Toast.makeText(this, R.string.toast_empty_note, Toast.LENGTH_SHORT).show()
+            } else {
+                performSave()
+                finish()
+            }
+        }
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
+    }
+
+    private fun performSave() {
+        val titleText = noteTitle.text.toString().trim()
+        val noteContentText = noteInput.text
+
+        if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() }) {
+            return
+        }
+
+        val noteTextHtml = if (noteContentText.isNullOrBlank()) "" else Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
+        val jsonContent = gson.toJson(NoteContent(text = noteTextHtml, checklist = checklistItems))
+
+        lifecycleScope.launch {
+            if (currentNoteId != null) {
+                noteDao.getNoteById(currentNoteId!!)?.let {
+                    val updatedModifications = it.modifiedAt.toMutableList().apply { add(System.currentTimeMillis()) }
+                    val updatedNote = it.copy(
+                        title = titleText,
+                        content = jsonContent,
+                        modifiedAt = updatedModifications,
+                        color = selectedColor
+                    )
+                    noteDao.update(updatedNote)
+                }
+            } else {
+                val newNote = Note(
+                    title = titleText,
+                    content = jsonContent,
+                    createdAt = System.currentTimeMillis(),
+                    color = selectedColor
+                )
+                val newId = noteDao.insert(newNote)
+                currentNoteId = newId.toInt()
+            }
+            updateAllWidgets()
+        }
     }
 
     private fun toggleStyle(styleType: Int) {
@@ -401,29 +465,6 @@ class NoteActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveNote() {
-        val titleText = noteTitle.text.toString().trim()
-        val noteContentText = noteInput.text
-
-        if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() }) {
-            Toast.makeText(this, "Not içeriği boş olamaz!", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val noteTextHtml = if(noteContentText.isNullOrBlank()) "" else Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
-        val jsonContent = gson.toJson(NoteContent(text = noteTextHtml, checklist = checklistItems))
-
-        lifecycleScope.launch {
-            currentNoteId?.let { id ->
-                noteDao.getNoteById(id)?.let {
-                    val updatedModifications = it.modifiedAt.toMutableList().apply { add(System.currentTimeMillis()) }
-                    noteDao.update(it.copy(title = titleText, content = jsonContent, modifiedAt = updatedModifications, color = selectedColor))
-                }
-            } ?: noteDao.insert(Note(title = titleText, content = jsonContent, createdAt = System.currentTimeMillis(), color = selectedColor))
-            updateAllWidgets()
-            finish()
-        }
-    }
-
     private fun showDeleteConfirmationDialog() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.delete_note_confirmation_title))
@@ -438,7 +479,7 @@ class NoteActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 noteDao.softDeleteById(id, System.currentTimeMillis())
                 updateAllWidgets()
-                Toast.makeText(applicationContext, "Not silindi.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(applicationContext, R.string.note_moved_to_trash_toast, Toast.LENGTH_SHORT).show()
                 finish()
             }
         }

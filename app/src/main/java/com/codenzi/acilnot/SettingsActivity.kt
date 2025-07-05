@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
@@ -68,13 +69,16 @@ class SettingsActivity : AppCompatActivity() {
             // Gizlilik Sözleşmesi butonu
             val privacyPolicyPreference: Preference? = findPreference("privacy_policy")
             privacyPolicyPreference?.setOnPreferenceClickListener {
-
                 val url = "https://www.codenzi.com"
                 try {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                     startActivity(intent)
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Web tarayıcısı bulunamadı.", Toast.LENGTH_SHORT).show()
+                    AlertDialog.Builder(requireContext())
+                        .setTitle(getString(R.string.error_dialog_title))
+                        .setMessage(getString(R.string.toast_no_browser_found))
+                        .setPositiveButton(getString(R.string.dialog_ok), null)
+                        .show()
                 }
                 true
             }
@@ -82,18 +86,21 @@ class SettingsActivity : AppCompatActivity() {
 
             val contactUsPreference: Preference? = findPreference("contact_us")
             contactUsPreference?.setOnPreferenceClickListener {
-
                 val email = "info@codenzi.com"
-                val subject = "Acil Not Uygulaması Geri Bildirim"
+                val subject = getString(R.string.contact_us_email_subject)
                 try {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                         data = Uri.parse("mailto:")
                         putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
                         putExtra(Intent.EXTRA_SUBJECT, subject)
                     }
-                    startActivity(Intent.createChooser(intent, "E-posta gönder..."))
+                    startActivity(Intent.createChooser(intent, getString(R.string.contact_us_email_chooser_title)))
                 } catch (e: Exception) {
-                    Toast.makeText(context, "E-posta uygulaması bulunamadı.", Toast.LENGTH_SHORT).show()
+                    AlertDialog.Builder(requireContext())
+                        .setTitle(getString(R.string.error_dialog_title))
+                        .setMessage(getString(R.string.toast_no_email_app_found))
+                        .setPositiveButton(getString(R.string.dialog_ok), null)
+                        .show()
                 }
                 true
             }

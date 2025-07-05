@@ -123,4 +123,8 @@
     <string name="contact_us_email_chooser_title">E-posta gönder...</string>
     <string name="toast_no_email_app_found">E-posta uygulaması bulunamadı.</string>
 
+
+    <string name="trash_title">Çöp Kutusu</string>
+    <string name="error_dialog_title">Uygulama Bulunamadı</string>
+
 </resources>

@@ -41,6 +41,9 @@ class MainActivity : AppCompatActivity() {
     private var isSelectionMode = false
     private val PREF_THEME_MODE = "theme_selection"
 
+    // YENİ: Sayfayı kaydırmak için kullanılacak bayrak
+    private var shouldScrollToTop = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedTheme()
         super.onCreate(savedInstanceState)
@@ -64,6 +67,12 @@ class MainActivity : AppCompatActivity() {
                 noteDao.getAllNotes().collect { notes ->
                     allNotes = notes
                     sortAndFilterList()
+
+                    // DEĞİŞTİRİLDİ: Bayrak kontrolü ile güvenilir kaydırma
+                    if (shouldScrollToTop) {
+                        recyclerView.scrollToPosition(0)
+                        shouldScrollToTop = false // Bayrağı sıfırla ki sadece bir kere çalışsın
+                    }
                 }
             }
         }
@@ -79,6 +88,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
         onBackPressedDispatcher.addCallback(this, callback)
+    }
+
+    // DEĞİŞTİRİLDİ: onResume artık doğrudan kaydırma yapmıyor, sadece bayrağı ayarlıyor.
+    override fun onResume() {
+        super.onResume()
+        shouldScrollToTop = true
     }
 
     private fun applySavedTheme() {
