@@ -313,7 +313,6 @@ class MainActivity : AppCompatActivity() {
         if (notes.isEmpty()) return
         val noteIds = notes.map { it.id }
         lifecycleScope.launch {
-            noteDao.unpinAllNotes()
             noteDao.setPinnedStatus(noteIds, true)
             updateAllWidgets()
             Toast.makeText(applicationContext, "Seçili notlar widget'a sabitlendi.", Toast.LENGTH_SHORT).show()

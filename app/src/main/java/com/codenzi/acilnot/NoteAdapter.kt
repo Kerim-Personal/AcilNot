@@ -6,6 +6,7 @@ import android.text.Spanned
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
@@ -57,11 +58,15 @@ class NoteAdapter(
         private val noteTitle: TextView = itemView.findViewById(R.id.tv_note_title)
         private val noteContent: TextView = itemView.findViewById(R.id.tv_note_content)
         private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
+        private val pinnedIcon: ImageView = itemView.findViewById(R.id.iv_pinned_icon) // YENİ EKLENDİ
 
         fun bind(note: Note) {
             // KTX Uzantısı Kullanımı
             noteTitle.isVisible = note.title.isNotBlank()
             noteTitle.text = note.title
+
+            // YENİ: Pin ikonunun görünürlüğünü ayarla
+            pinnedIcon.isVisible = note.showOnWidget
 
             try {
                 val content = gson.fromJson(note.content, NoteContent::class.java)
