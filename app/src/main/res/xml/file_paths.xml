@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <external-files-path
+        name="audio_notes"
+        path="." />
+
+    <cache-path
+        name="shared_images"
+        path="." />
+</paths>
