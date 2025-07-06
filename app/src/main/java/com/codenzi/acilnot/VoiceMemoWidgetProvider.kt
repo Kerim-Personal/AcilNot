@@ -5,11 +5,8 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.RemoteViews
-import android.Manifest
-import androidx.core.content.ContextCompat
 
 class VoiceMemoWidgetProvider : AppWidgetProvider() {
 
@@ -61,7 +58,6 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         val remoteViews = RemoteViews(context.packageName, R.layout.widget_voice_memo)
         val isCurrentlyRecording = isRecording(context)
 
-        // Arayüzü duruma göre güncelle
         if (isCurrentlyRecording) {
             remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_stop_24)
             remoteViews.setTextViewText(R.id.tv_widget_status, "Durdurmak için dokun")
@@ -70,20 +66,32 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
             remoteViews.setTextViewText(R.id.tv_widget_status, "Kaydetmek için dokun")
         }
 
-        // Butonun tıklama görevini ayarla: Her zaman RecordingStarterActivity'yi başlatacak.
-        val intent = Intent(context, RecordingStarterActivity::class.java)
-        // Her tıklamanın yeni bir olay olmasını sağlamak için FLAG_ACTIVITY_NEW_TASK ekliyoruz.
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        // Tıklama görevini doğrudan AudioRecordingService'e yönlendir.
+        val intent = Intent(context, AudioRecordingService::class.java).apply {
+            action = if (isCurrentlyRecording) {
+                AudioRecordingService.ACTION_STOP_RECORDING
+            } else {
+                AudioRecordingService.ACTION_START_RECORDING
+            }
+        }
 
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            appWidgetId, // Benzersiz bir istek kodu
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(
+                context,
+                appWidgetId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            PendingIntent.getService(
+                context,
+                appWidgetId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
 
         remoteViews.setOnClickPendingIntent(R.id.btn_record_voice, pendingIntent)
-
         appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
     }
 }

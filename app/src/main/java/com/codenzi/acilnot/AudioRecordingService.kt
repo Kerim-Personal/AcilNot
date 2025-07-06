@@ -7,22 +7,31 @@ import android.app.PendingIntent
 import android.app.Service
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
-import android.os.Build // HATA 1: Eksik olan import ifadesi eklendi.
+import android.content.pm.PackageManager
+import android.media.MediaRecorder
+import android.os.Build
 import android.os.IBinder
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import android.Manifest
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class AudioRecordingService : Service() {
 
-    private var audioFilePath: String? = null
+    // Servis içinde MediaRecorder örneğini tutacağız.
+    private var mediaRecorder: MediaRecorder? = null
+    private var audioFile: File? = null
 
     companion object {
         const val ACTION_START_RECORDING = "com.codenzi.acilnot.action.START_RECORDING"
@@ -32,40 +41,82 @@ class AudioRecordingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val action = intent?.action
-
-        if (action == ACTION_START_RECORDING) {
-            audioFilePath = intent.getStringExtra("audio_file_path")
-
-            createNotificationChannel()
-            startForeground(NOTIFICATION_ID, createNotification())
-
-            Toast.makeText(this, "Kayıt başladı...", Toast.LENGTH_SHORT).show()
-            updateWidgetState(true)
-
-        } else if (action == ACTION_STOP_RECORDING) {
-            stopRecordingAndSave()
+        when (intent?.action) {
+            ACTION_START_RECORDING -> {
+                startRecording()
+            }
+            ACTION_STOP_RECORDING -> {
+                stopRecordingAndSave()
+            }
         }
-
         return START_NOT_STICKY
     }
 
-    private fun stopRecordingAndSave() {
-        if (audioFilePath != null) {
-            saveAudioNote()
-            Toast.makeText(this, "Sesli not kaydedildi", Toast.LENGTH_SHORT).show()
+    private fun startRecording() {
+        if (mediaRecorder != null) return // Zaten kayıt yapılıyorsa tekrar başlatma
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Mikrofon izni gerekli", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        updateWidgetState(false)
+        try {
+            audioFile = createAudioFile()
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(this)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
 
-        // HATA 3: Deprecated metod modern haliyle değiştirildi.
+            recorder.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setOutputFile(audioFile?.absolutePath)
+                prepare()
+                start()
+            }
+            mediaRecorder = recorder
+
+            createNotificationChannel()
+            startForeground(NOTIFICATION_ID, createNotification())
+            updateWidgetState(true)
+            Toast.makeText(this, "Kayıt başladı...", Toast.LENGTH_SHORT).show()
+
+        } catch (e: IOException) {
+            e.printStackTrace()
+            Toast.makeText(this, "Kayıt başlatılamadı.", Toast.LENGTH_SHORT).show()
+            cleanup()
+        }
+    }
+
+    private fun stopRecordingAndSave() {
+        if (mediaRecorder == null) return // Durdurulacak bir kayıt yoksa bir şey yapma
+
+        try {
+            mediaRecorder?.apply {
+                stop()
+                release()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            mediaRecorder = null
+            saveAudioNote()
+            Toast.makeText(this, "Sesli not kaydedildi", Toast.LENGTH_SHORT).show()
+            cleanup()
+        }
+    }
+
+    private fun cleanup() {
+        updateWidgetState(false)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     private fun updateWidgetState(isRecording: Boolean) {
         VoiceMemoWidgetProvider.setRecording(this, isRecording)
-
         val intent = Intent(this, VoiceMemoWidgetProvider::class.java).apply {
             action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
             val appWidgetManager = AppWidgetManager.getInstance(this@AudioRecordingService)
@@ -77,14 +128,16 @@ class AudioRecordingService : Service() {
     }
 
     private fun saveAudioNote() {
+        if (audioFile == null || !audioFile!!.exists() || audioFile!!.length() == 0L) {
+            return
+        }
         val noteDao = NoteDatabase.getDatabase(this).noteDao()
         val title = "Sesli Not - ${formatDate(System.currentTimeMillis())}"
         val contentJson = Gson().toJson(NoteContent(
             text = "",
             checklist = mutableListOf(),
-            audioFilePath = audioFilePath
+            audioFilePath = audioFile?.absolutePath
         ))
-
         CoroutineScope(Dispatchers.IO).launch {
             noteDao.insert(Note(
                 title = title,
@@ -94,17 +147,23 @@ class AudioRecordingService : Service() {
         }
     }
 
+    private fun createAudioFile(): File {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val storageDir: File? = getExternalFilesDir("AudioNotes")
+        storageDir?.mkdirs()
+        return File.createTempFile("AUDIO_${timeStamp}_", ".mp3", storageDir)
+    }
+
     private fun createNotification(): Notification {
         val stopIntent = Intent(this, AudioRecordingService::class.java).apply {
             action = ACTION_STOP_RECORDING
         }
         val stopPendingIntent = PendingIntent.getService(
             this,
-            1, // Farklı bir istek kodu
+            0,
             stopIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle("Acil Not")
             .setContentText("Ses kaydı yapılıyor...")
@@ -115,7 +174,6 @@ class AudioRecordingService : Service() {
     }
 
     private fun createNotificationChannel() {
-        // HATA 2: Bu if kontrolü, API 26 uyarısını doğru şekilde yönetir.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
