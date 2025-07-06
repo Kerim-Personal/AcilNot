@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="theme_entries">
-        <item>Aydınlık Tema</item>
-        <item>Karanlık Tema</item>
-        <item>Sistem Varsayılanı</item>
+        <item>@string/theme_light</item>
+        <item>@string/theme_dark</item>
+        <item>@string/theme_system_default</item>
     </string-array>
 
     <string-array name="theme_values">
@@ -13,19 +13,20 @@
     </string-array>
 
     <string-array name="widget_background_entries">
-        <item>Papirüs Kağıdı</item>
-        <item>Renklerin Ahengi</item>
-        <item>Kuzgun Karası</item>
-        <item>Sahil Mavisi</item>
-        <item>Lavanta Rüyası</item>
-        <item>Gül Kurusu</item>
-        <item>Bulut Grisi</item>
-        <item>Nane Ferahlığı</item>
-        <item>Mercan Esintisi</item>
-        <item>Kristal Berraklığı</item>
-        <item>Safir laciverti</item>
+        <item>@string/widget_bg_papyrys</item>
+        <item>@string/widget_bg_harmony_of_colors</item>
+        <item>@string/widget_bg_raven_black</item>
+        <item>@string/widget_bg_beach_blue</item>
+        <item>@string/widget_bg_lavender_dream</item>
+        <item>@string/widget_bg_rose_dust</item>
+        <item>@string/widget_bg_cloud_gray</item>
+        <item>@string/widget_bg_mint_freshness</item>
+        <item>@string/widget_bg_coral_breeze</item>
+        <item>@string/widget_bg_crystal_clarity</item>
+        <item>@string/widget_bg_sapphire_blue</item>
     </string-array>
-    <string-array name="widget_background_values">
+
+    <string-array name="widget_background_values" translatable="false">
         <item>widget_background</item>
         <item>bg1</item>
         <item>bg2</item>
