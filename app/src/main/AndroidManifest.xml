@@ -64,6 +64,24 @@
             android:name=".NoteWidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
+        <service
+            android:name=".AudioRecordingService"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
+
+        <receiver
+            android:name=".VoiceMemoWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.codenzi.acilnot.action.START_RECORDING" />
+                <action android:name="com.codenzi.acilnot.action.STOP_RECORDING" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/voice_memo_widget_provider_info" />
+        </receiver>
+
     </application>
 
 </manifest>

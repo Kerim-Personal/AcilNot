@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
+import android.media.MediaPlayer // YENİ: MediaPlayer importu
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -38,6 +39,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import java.io.IOException // YENİ: IOException importu
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -76,6 +78,13 @@ class NoteActivity : AppCompatActivity() {
     private val gson = Gson()
     private var isUpdatingToggleButtons = false
 
+    // YENİ: MediaPlayer için değişkenler
+    private lateinit var audioPlayerContainer: View
+    private lateinit var playPauseButton: ImageButton
+    private lateinit var audioTitleText: TextView
+    private var mediaPlayer: MediaPlayer? = null
+    private var audioPath: String? = null
+
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
@@ -105,6 +114,11 @@ class NoteActivity : AppCompatActivity() {
         italicButton = findViewById(R.id.btn_italic)
         strikethroughButton = findViewById(R.id.btn_strikethrough)
 
+        // YENİ: Ses oynatıcı view'larını bağla
+        audioPlayerContainer = findViewById(R.id.ll_audio_player)
+        playPauseButton = findViewById(R.id.btn_play_pause)
+        audioTitleText = findViewById(R.id.tv_audio_title)
+
         setupListeners()
         setupChecklist()
         setupColorPickers()
@@ -112,12 +126,9 @@ class NoteActivity : AppCompatActivity() {
 
         processIntent(intent)
 
-        // YENİ: Geri tuşuna basıldığında notun kaydedilmesini garantileyen kod bloğu
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Geri tuşuna basıldığında kaydetme işlemini tetikle
                 performSave()
-                // Bu callback'i devre dışı bırak ve varsayılan geri tuşu davranışını çalıştır
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
             }
@@ -127,6 +138,7 @@ class NoteActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        releaseMediaPlayer() // Aktivite durduğunda oynatıcıyı serbest bırak
         performSave()
     }
 
@@ -143,7 +155,6 @@ class NoteActivity : AppCompatActivity() {
         italicButton.setOnClickListener { toggleStyle(Typeface.ITALIC) }
         strikethroughButton.setOnClickListener { toggleStyle(-1) }
 
-
         noteInput.setOnSelectionChangedListener { _, _ ->
             updateFormattingButtonsState()
         }
@@ -159,6 +170,9 @@ class NoteActivity : AppCompatActivity() {
             }
         }
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
+
+        // YENİ: Ses oynatma butonu listener'ı
+        playPauseButton.setOnClickListener { togglePlayback() }
     }
 
     private fun performSave() {
@@ -170,7 +184,7 @@ class NoteActivity : AppCompatActivity() {
         }
 
         val noteTextHtml = if (noteContentText.isNullOrBlank()) "" else Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
-        val jsonContent = gson.toJson(NoteContent(text = noteTextHtml, checklist = checklistItems))
+        val jsonContent = gson.toJson(NoteContent(text = noteTextHtml, checklist = checklistItems, audioFilePath = audioPath))
 
         lifecycleScope.launch {
             if (currentNoteId != null) {
@@ -326,6 +340,7 @@ class NoteActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         if (::speechRecognizer.isInitialized) speechRecognizer.destroy()
+        releaseMediaPlayer() // YENİ: onDestroy'da da serbest bırakma
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -438,12 +453,24 @@ class NoteActivity : AppCompatActivity() {
                     checklistItems.addAll(content.checklist)
                     checklistAdapter.notifyItemRangeInserted(0, checklistItems.size)
 
+                    // YENİ: Ses dosyasını kontrol et ve oynatıcıyı ayarla
+                    if (content.audioFilePath != null) {
+                        audioPath = content.audioFilePath
+                        audioPlayerContainer.visibility = View.VISIBLE
+                        audioTitleText.text = note.title.ifBlank { "Ses Kaydı" }
+                        prepareMediaPlayer()
+                    } else {
+                        audioPlayerContainer.visibility = View.GONE
+                        audioPath = null
+                    }
+
                 } catch (e: JsonSyntaxException) {
                     noteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
-
                     val oldSize = checklistItems.size
                     checklistItems.clear()
                     checklistAdapter.notifyItemRangeRemoved(0, oldSize)
+                    audioPlayerContainer.visibility = View.GONE // Eski notlarda oynatıcıyı gizle
+                    audioPath = null
                 }
                 selectedColor = note.color
                 updateWindowBackground()
@@ -489,7 +516,6 @@ class NoteActivity : AppCompatActivity() {
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, NoteWidgetProvider::class.java)
         appWidgetManager.getAppWidgetIds(componentName).forEach { appWidgetId ->
-            // Widget'ı tamamen güncelle (arka plan dahil)
             NoteWidgetProvider.updateAppWidget(this, appWidgetManager, appWidgetId)
         }
     }
@@ -507,4 +533,42 @@ class NoteActivity : AppCompatActivity() {
 
     private fun formatDate(timestamp: Long): String =
         SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
+
+    // YENİ: Ses oynatma ile ilgili tüm fonksiyonlar
+    private fun prepareMediaPlayer() {
+        releaseMediaPlayer() // Öncekiyi serbest bırak
+        mediaPlayer = MediaPlayer().apply {
+            try {
+                setDataSource(audioPath)
+                prepareAsync() // Asenkron hazırlık
+                setOnPreparedListener {
+                    playPauseButton.isEnabled = true
+                }
+                setOnCompletionListener {
+                    playPauseButton.setImageResource(android.R.drawable.ic_media_play)
+                }
+                playPauseButton.setImageResource(android.R.drawable.ic_media_play)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Toast.makeText(this@NoteActivity, "Ses dosyası oynatılamıyor.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun togglePlayback() {
+        mediaPlayer?.let {
+            if (it.isPlaying) {
+                it.pause()
+                playPauseButton.setImageResource(android.R.drawable.ic_media_play)
+            } else {
+                it.start()
+                playPauseButton.setImageResource(android.R.drawable.ic_media_pause)
+            }
+        }
+    }
+
+    private fun releaseMediaPlayer() {
+        mediaPlayer?.release()
+        mediaPlayer = null
+    }
 }

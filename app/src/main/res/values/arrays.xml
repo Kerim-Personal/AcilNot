@@ -26,7 +26,8 @@
         <item>Arka Plan 10</item>
     </string-array>
     <string-array name="widget_background_values">
-        <item>widget_background</item> <item>bg1</item>
+        <item>widget_background</item>
+        <item>bg1</item>
         <item>bg2</item>
         <item>bg3</item>
         <item>bg4</item>
