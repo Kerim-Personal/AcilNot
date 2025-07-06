@@ -253,11 +253,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateAllWidgets() {
-        val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
-        val componentName = ComponentName(applicationContext, NoteWidgetProvider::class.java)
-        appWidgetManager.getAppWidgetIds(componentName).forEach { appWidgetId ->
-            // Widget'ı tamamen güncelle (arka plan dahil)
-            NoteWidgetProvider.updateAppWidget(applicationContext, appWidgetManager, appWidgetId)
+        try {
+            val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
+            val componentName = ComponentName(applicationContext, NoteWidgetProvider::class.java)
+            appWidgetManager.getAppWidgetIds(componentName).forEach { appWidgetId ->
+                // Widget'ı tamamen güncelle (arka plan dahil)
+                NoteWidgetProvider.updateAppWidget(applicationContext, appWidgetManager, appWidgetId)
+            }
+        } catch (e: Exception) {
+            // Widget güncellenirken hata olursa kullanıcıya bildir
+            Toast.makeText(applicationContext, "Widget güncellenirken bir sorun oluştu.", Toast.LENGTH_SHORT).show()
         }
     }
 

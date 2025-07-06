@@ -17,8 +17,13 @@ class NoteWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+        try {
+            for (appWidgetId in appWidgetIds) {
+                updateAppWidget(context, appWidgetManager, appWidgetId)
+            }
+        } catch (e: Exception) {
+            // Widget güncellenirken genel bir hata olursa logla
+            // Burada loglama yapılabilir, ancak kullanıcıya göstermeye gerek yok
         }
     }
 
@@ -28,7 +33,8 @@ class NoteWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            val views = RemoteViews(context.packageName, R.layout.note_widget_layout)
+            try {
+                val views = RemoteViews(context.packageName, R.layout.note_widget_layout)
 
             // YENİ: Widget arka planını ayarla
             val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -84,8 +90,18 @@ class NoteWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_widget_new, newNotePendingIntent)
 
-            appWidgetManager.updateAppWidget(appWidgetId, views)
-            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
+                appWidgetManager.updateAppWidget(appWidgetId, views)
+                appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
+            } catch (e: Exception) {
+                // Widget güncellenirken hata olursa varsayılan bir widget göster
+                try {
+                    val errorViews = RemoteViews(context.packageName, R.layout.note_widget_layout)
+                    errorViews.setTextViewText(R.id.tv_widget_empty, "Widget yüklenirken bir sorun oluştu.\nLütfen daha sonra tekrar deneyin.")
+                    appWidgetManager.updateAppWidget(appWidgetId, errorViews)
+                } catch (ex: Exception) {
+                    // Son çare olarak hiçbir şey yapma
+                }
+            }
         }
     }
 }

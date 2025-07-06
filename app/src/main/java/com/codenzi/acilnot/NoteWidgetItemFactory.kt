@@ -27,8 +27,13 @@ class NoteWidgetItemFactory(
     }
 
     override fun onDataSetChanged() {
-        runBlocking {
-            notes = noteDao.getNotesForWidget()
+        try {
+            runBlocking {
+                notes = noteDao.getNotesForWidget()
+            }
+        } catch (e: Exception) {
+            // Widget yüklenirken hata olursa boş liste kullan
+            notes = emptyList()
         }
     }
 
@@ -39,12 +44,14 @@ class NoteWidgetItemFactory(
     override fun getCount(): Int = notes.size
 
     override fun getViewAt(position: Int): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_note_item)
+        
         if (position >= notes.size) {
-            return RemoteViews(context.packageName, R.layout.widget_note_item)
+            return views
         }
 
-        val note = notes[position]
-        val views = RemoteViews(context.packageName, R.layout.widget_note_item)
+        try {
+            val note = notes[position]
 
         // YENİ: Başlığı ayarla
         if (note.title.isNotBlank()) {
@@ -99,9 +106,15 @@ class NoteWidgetItemFactory(
             putExtras(extras)
         }
 
-        views.setOnClickFillInIntent(R.id.widget_item_container, fillInIntent)
+            views.setOnClickFillInIntent(R.id.widget_item_container, fillInIntent)
 
-        return views
+            return views
+        } catch (e: Exception) {
+            // Widget item yüklenirken hata olursa boş bir view döndür
+            views.setTextViewText(R.id.tv_widget_item_title, "")
+            views.setTextViewText(R.id.tv_widget_item_content, "Not yüklenirken hata oluştu")
+            return views
+        }
     }
 
     override fun getLoadingView(): RemoteViews? = null
