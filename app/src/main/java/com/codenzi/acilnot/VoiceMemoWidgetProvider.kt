@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.view.View
 import android.widget.RemoteViews
 
 class VoiceMemoWidgetProvider : AppWidgetProvider() {
@@ -61,9 +62,12 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         if (isCurrentlyRecording) {
             remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_stop_24)
             remoteViews.setTextViewText(R.id.tv_widget_status, "Durdurmak için dokun")
+            remoteViews.setViewVisibility(R.id.tv_widget_timer, View.VISIBLE)
         } else {
             remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_red_24)
             remoteViews.setTextViewText(R.id.tv_widget_status, "Kaydetmek için dokun")
+            remoteViews.setViewVisibility(R.id.tv_widget_timer, View.GONE)
+            remoteViews.setTextViewText(R.id.tv_widget_timer, "00:00")
         }
 
         val intent = Intent(context, AudioRecordingService::class.java).apply {
@@ -79,7 +83,6 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
                 context,
                 appWidgetId,
                 intent,
-                // HATA BURADAYDI: Pendingent -> PendingIntent olarak düzeltildi.
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         } else {
