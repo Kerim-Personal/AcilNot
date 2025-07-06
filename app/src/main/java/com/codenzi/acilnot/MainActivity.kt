@@ -1,12 +1,25 @@
 package com.codenzi.acilnot
 
+import android.Manifest
 import android.appwidget.AppWidgetManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
+import android.text.Html
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +29,10 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.SearchView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.core.view.drawToBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -24,10 +40,12 @@ import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 import java.util.Locale
-import android.Manifest
-import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,12 +61,13 @@ class MainActivity : AppCompatActivity() {
     private var currentSortOrder = SortOrder.CREATION_NEWEST
     private var currentSearchQuery: String? = null
     private var isSelectionMode = false
-    private val PREF_THEME_MODE = "theme_selection"
 
-    // YENİ: Sayfayı kaydırmak için kullanılacak bayrak
+    companion object {
+        private const val PREF_THEME_MODE = "theme_selection"
+    }
+
     private var shouldScrollToTop = false
 
-    // Audio permission handling
     private val audioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -84,10 +103,9 @@ class MainActivity : AppCompatActivity() {
                     allNotes = notes
                     sortAndFilterList()
 
-                    // DEĞİŞTİRİLDİ: Bayrak kontrolü ile güvenilir kaydırma
                     if (shouldScrollToTop) {
                         recyclerView.scrollToPosition(0)
-                        shouldScrollToTop = false // Bayrağı sıfırla ki sadece bir kere çalışsın
+                        shouldScrollToTop = false
                     }
                 }
             }
@@ -105,11 +123,9 @@ class MainActivity : AppCompatActivity() {
         }
         onBackPressedDispatcher.addCallback(this, callback)
 
-        // Check for audio permission for voice widget
         checkAudioPermission()
     }
 
-    // DEĞİŞTİRİLDİ: onResume artık doğrudan kaydırma yapmıyor, sadece bayrağı ayarlıyor.
     override fun onResume() {
         super.onResume()
         shouldScrollToTop = true
@@ -171,7 +187,7 @@ class MainActivity : AppCompatActivity() {
             exitSelectionMode()
         } else {
             toolbar.title = resources.getQuantityString(R.plurals.selection_title, count, count)
-            invalidateOptionsMenu() // Her seçimde menüyü yeniden kontrol et
+            invalidateOptionsMenu()
         }
     }
 
@@ -276,11 +292,9 @@ class MainActivity : AppCompatActivity() {
             val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
             val componentName = ComponentName(applicationContext, NoteWidgetProvider::class.java)
             appWidgetManager.getAppWidgetIds(componentName).forEach { appWidgetId ->
-                // Widget'ı tamamen güncelle (arka plan dahil)
                 NoteWidgetProvider.updateAppWidget(applicationContext, appWidgetManager, appWidgetId)
             }
         } catch (e: Exception) {
-            // Widget güncellenirken hata olursa kullanıcıya bildir
             Toast.makeText(applicationContext, "Widget güncellenirken bir sorun oluştu.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -299,22 +313,211 @@ class MainActivity : AppCompatActivity() {
         if (notes.isEmpty()) return
         val noteIds = notes.map { it.id }
         lifecycleScope.launch {
-            noteDao.unpinAllNotes() // Önce mevcut tüm pinleri kaldır
+            noteDao.unpinAllNotes()
             noteDao.setPinnedStatus(noteIds, true)
             updateAllWidgets()
             Toast.makeText(applicationContext, "Seçili notlar widget'a sabitlendi.", Toast.LENGTH_SHORT).show()
         }
     }
 
+    private fun Note.toSharableString(): String {
+        val gson = Gson()
+        val builder = StringBuilder()
+        if (this.title.isNotBlank()) {
+            builder.append(this.title).append("\n\n")
+        }
+        try {
+            val noteContent = gson.fromJson(this.content, NoteContent::class.java)
+            if (noteContent.text.isNotBlank()) {
+                val plainText = Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()
+                builder.append(plainText).append("\n\n")
+            }
+            if (noteContent.checklist.isNotEmpty()) {
+                noteContent.checklist.forEach { item ->
+                    val checkbox = if (item.isChecked) "✓" else "☐"
+                    builder.append("$checkbox ${item.text}\n")
+                }
+                builder.append("\n")
+            }
+        } catch (e: JsonSyntaxException) {
+            val plainText = Html.fromHtml(this.content, Html.FROM_HTML_MODE_LEGACY).toString().trim()
+            builder.append(plainText)
+        }
+        return builder.toString().trim()
+    }
+
     private fun shareNotes(notes: List<Note>) {
         if (notes.isEmpty()) return
-        val shareText = notes.joinToString("\n\n---\n\n") { it.content }
-        val shareIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, shareText)
-            type = "text/plain"
+
+        if (notes.size == 1) {
+            val note = notes.first()
+            val noteTitle = note.title.ifBlank { "Paylaşılan Not" }
+
+            val noteBitmap = createBitmapFromNote(note)
+
+            if (noteBitmap != null) {
+                val noteImageFile = saveBitmapToCache(noteBitmap)
+                val urisToShare = ArrayList<Uri>()
+                noteImageFile?.let {
+                    val imageUri = FileProvider.getUriForFile(this, "$packageName.provider", it)
+                    urisToShare.add(imageUri)
+                }
+                val gson = Gson()
+                try {
+                    val noteContent = gson.fromJson(note.content, NoteContent::class.java)
+                    noteContent.audioFilePath?.let { File(it) }?.let { audioFile ->
+                        if (audioFile.exists()) {
+                            val audioUri = FileProvider.getUriForFile(this, "$packageName.provider", audioFile)
+                            urisToShare.add(audioUri)
+                        }
+                    }
+                } catch (_: Exception) {}
+
+                if (urisToShare.isNotEmpty()) {
+                    val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                        type = "*/*"
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, urisToShare)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(Intent.createChooser(shareIntent, "Notu Paylaş"))
+                }
+            } else {
+                Toast.makeText(this, "Not çok uzun olduğu için metin olarak paylaşılıyor ve panoya kopyalandı.", Toast.LENGTH_LONG).show()
+
+                val plainTextBuilder = StringBuilder()
+                val htmlTextBuilder = StringBuilder()
+                val gson = Gson()
+                try {
+                    val noteContent = gson.fromJson(note.content, NoteContent::class.java)
+                    if (note.title.isNotBlank()) {
+                        plainTextBuilder.append(note.title).append("\n\n")
+                        htmlTextBuilder.append("<b>").append(note.title).append("</b><br><br>")
+                    }
+                    if (noteContent.text.isNotBlank()) {
+                        plainTextBuilder.append(Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()).append("\n\n")
+                        htmlTextBuilder.append(noteContent.text)
+                    }
+                } catch(e: Exception) {
+                    plainTextBuilder.append(note.toSharableString())
+                    htmlTextBuilder.append(note.toSharableString())
+                }
+
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newHtmlText(noteTitle, plainTextBuilder.toString(), htmlTextBuilder.toString())
+                clipboard.setPrimaryClip(clip)
+
+                try {
+                    val noteContent = gson.fromJson(note.content, NoteContent::class.java)
+                    noteContent.audioFilePath?.let { File(it) }?.let { audioFile ->
+                        if (audioFile.exists()) {
+                            val audioUri = FileProvider.getUriForFile(this, "$packageName.provider", audioFile)
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "audio/*"
+                                putExtra(Intent.EXTRA_STREAM, audioUri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            startActivity(Intent.createChooser(shareIntent, "Sesi Paylaş"))
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        } else {
+            val shareText = notes.joinToString("\n\n---\n\n") { it.toSharableString() }
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, shareText)
+            }
+            startActivity(Intent.createChooser(intent, "Notları Paylaş"))
         }
-        startActivity(Intent.createChooser(shareIntent, "Notları Paylaş"))
+    }
+
+    // DÜZELTME: Arka plan ve metin rengini notun rengine göre ayarlar.
+    private fun createBitmapFromNote(note: Note): Bitmap? {
+        return try {
+            val view = LayoutInflater.from(this).inflate(R.layout.note_render_layout, FrameLayout(this), false)
+            val titleView = view.findViewById<TextView>(R.id.render_note_title)
+            val contentView = view.findViewById<TextView>(R.id.render_note_content)
+
+            // 1. Notun rengini al ve arka planı ayarla
+            val backgroundColor = try {
+                Color.parseColor(note.color)
+            } catch (e: Exception) {
+                Color.WHITE // Hatalı renk koduna karşı beyaz kullan
+            }
+            view.setBackgroundColor(backgroundColor)
+
+            // 2. Akıllı metin rengini belirle ve ata
+            val textColor = getContrastingTextColor(backgroundColor)
+            titleView.setTextColor(textColor)
+            contentView.setTextColor(textColor)
+            contentView.setLinkTextColor(textColor) // Linklerin rengini de ayarla
+
+            // 3. İçeriği doldur
+            val gson = Gson()
+            val noteContent = gson.fromJson(note.content, NoteContent::class.java)
+
+            if (note.title.isNotBlank()) {
+                titleView.visibility = View.VISIBLE
+                titleView.text = note.title
+            } else {
+                titleView.visibility = View.GONE
+            }
+
+            val contentBuilder = StringBuilder()
+            if (noteContent.text.isNotBlank()) {
+                contentBuilder.append(noteContent.text)
+            }
+            if (noteContent.checklist.isNotEmpty()) {
+                contentBuilder.append("<br><b>Liste:</b><br>")
+                noteContent.checklist.forEach { item ->
+                    val checkbox = if (item.isChecked) "✓" else "☐"
+                    val text = Html.escapeHtml(item.text)
+                    contentBuilder.append(if (item.isChecked) "$checkbox <s>$text</s><br>" else "$checkbox $text<br>")
+                }
+            }
+
+            contentView.text = Html.fromHtml(contentBuilder.toString(), Html.FROM_HTML_MODE_COMPACT)
+
+            // 4. Görüntüyü ölç ve çiz
+            val displayMetrics = resources.displayMetrics
+            val width = (displayMetrics.widthPixels * 0.9).toInt()
+
+            view.measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+
+            if (view.measuredHeight > 8192) {
+                return null
+            }
+            view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+
+            view.drawToBitmap()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    // DÜZELTME: Arka plan rengine göre okunabilir metin rengi (siyah/beyaz) seçer.
+    private fun getContrastingTextColor(backgroundColor: Int): Int {
+        val luma = (0.299 * Color.red(backgroundColor) + 0.587 * Color.green(backgroundColor) + 0.114 * Color.blue(backgroundColor)) / 255
+        return if (luma > 0.5) Color.BLACK else Color.WHITE
+    }
+
+    private fun saveBitmapToCache(bitmap: Bitmap): File? {
+        return try {
+            val cachePath = File(cacheDir, "images")
+            cachePath.mkdirs()
+            val file = File(cachePath, "note_to_share.png")
+            val stream = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            stream.close()
+            file
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     private fun deleteNotes(notes: List<Note>) {
@@ -342,7 +545,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.sort_dialog_title))
             .setSingleChoiceItems(sortOptions, checkedItem) { dialog, which ->
-                currentSortOrder = SortOrder.values()[which]
+                currentSortOrder = SortOrder.entries[which]
                 sortAndFilterList()
                 dialog.dismiss()
             }
@@ -374,7 +577,6 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.RECORD_AUDIO
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // Request permission if not granted
             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }

@@ -1,12 +1,14 @@
-// kerim-personal/acilnot/AcilNot-44c6524bf431f2f8005232b49dde9c80bbce21fe/app/src/main/java/com/codenzi/acilnot/PasswordCheckActivity.kt
-
 package com.codenzi.acilnot
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback // 1. ADIM: Gerekli sınıfı import edin
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.PreferenceManager
@@ -37,10 +39,18 @@ class PasswordCheckActivity : AppCompatActivity() {
             checkPasswordAndUnlock()
         }
 
-        // 2. ADIM: OnBackPressedDispatcher'ı burada yapılandırın
+        // DÜZELTME: Klavyedeki "Bitti" tuşuna basıldığında kilit açma işlemini tetikle
+        etUnlockPassword.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                checkPasswordAndUnlock()
+                return@setOnEditorActionListener true
+            }
+            return@setOnEditorActionListener false
+        }
+
+
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Geri tuşuna basıldığında uygulamanın tamamen kapanması için
                 finishAffinity()
             }
         }
@@ -59,6 +69,7 @@ class PasswordCheckActivity : AppCompatActivity() {
     }
 
     private fun checkPasswordAndUnlock() {
+        hideKeyboard() // DÜZELTME: İşlem öncesi klavyeyi gizle
         val enteredPassword = etUnlockPassword.text.toString()
 
         if (PasswordManager.checkPassword(this, enteredPassword)) {
@@ -70,6 +81,13 @@ class PasswordCheckActivity : AppCompatActivity() {
         }
     }
 
-    // 3. ADIM: Eski onBackPressed metodunu tamamen silin.
-    // override fun onBackPressed() { ... }
+    // DÜZELTME: Klavyeyi gizlemek için yardımcı fonksiyon
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        var view = currentFocus
+        if (view == null) {
+            view = View(this)
+        }
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
+    }
 }
