@@ -3,11 +3,13 @@ package com.codenzi.acilnot
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -24,6 +26,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import java.util.Locale
+import android.Manifest
+import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,6 +47,18 @@ class MainActivity : AppCompatActivity() {
 
     // YENİ: Sayfayı kaydırmak için kullanılacak bayrak
     private var shouldScrollToTop = false
+
+    // Audio permission handling
+    private val audioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(this, "Mikrofon izni verildi. Sesli not widget'ı artık kullanılabilir.", Toast.LENGTH_SHORT).show()
+            updateVoiceWidgets()
+        } else {
+            Toast.makeText(this, "Mikrofon izni reddedildi. Sesli not widget'ı çalışmayacak.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedTheme()
@@ -88,6 +104,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
         onBackPressedDispatcher.addCallback(this, callback)
+
+        // Check for audio permission for voice widget
+        checkAudioPermission()
     }
 
     // DEĞİŞTİRİLDİ: onResume artık doğrudan kaydırma yapmıyor, sadece bayrağı ayarlıyor.
@@ -347,5 +366,31 @@ class MainActivity : AppCompatActivity() {
             }
         }
         noteAdapter.updateNotes(filteredList)
+    }
+
+    private fun checkAudioPermission() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Request permission if not granted
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    private fun updateVoiceWidgets() {
+        try {
+            val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
+            val componentName = ComponentName(applicationContext, VoiceMemoWidgetProvider::class.java)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+
+            val intent = Intent(applicationContext, VoiceMemoWidgetProvider::class.java)
+            intent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+            applicationContext.sendBroadcast(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
