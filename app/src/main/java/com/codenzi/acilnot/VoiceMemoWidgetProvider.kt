@@ -62,11 +62,10 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
             remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_stop_24)
             remoteViews.setTextViewText(R.id.tv_widget_status, "Durdurmak için dokun")
         } else {
-            remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_24)
+            remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_red_24)
             remoteViews.setTextViewText(R.id.tv_widget_status, "Kaydetmek için dokun")
         }
 
-        // Tıklama görevini doğrudan AudioRecordingService'e yönlendir.
         val intent = Intent(context, AudioRecordingService::class.java).apply {
             action = if (isCurrentlyRecording) {
                 AudioRecordingService.ACTION_STOP_RECORDING
@@ -80,6 +79,7 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
                 context,
                 appWidgetId,
                 intent,
+                // HATA BURADAYDI: Pendingent -> PendingIntent olarak düzeltildi.
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         } else {
