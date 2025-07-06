@@ -36,7 +36,6 @@ class AudioRecordingService : Service() {
     private var mediaRecorder: MediaRecorder? = null
     private var audioFile: File? = null
 
-    // Sayaç için değişkenler
     private var recordingStartTime: Long = 0L
     private val timerHandler = Handler(Looper.getMainLooper())
     private lateinit var timerRunnable: Runnable
@@ -57,10 +56,12 @@ class AudioRecordingService : Service() {
     }
 
     private fun startRecording() {
-        if (mediaRecorder != null) return
+        // Sadece IDLE (boşta) durumundayken kaydı başlat
+        if (VoiceMemoWidgetProvider.getWidgetState(this) != WidgetState.IDLE) {
+            return
+        }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Mikrofon izni gerekli", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -83,13 +84,14 @@ class AudioRecordingService : Service() {
 
             createNotificationChannel()
             startForeground(NOTIFICATION_ID, createNotification())
-            updateWidgetState(true)
-            Toast.makeText(this, "Kayıt başladı...", Toast.LENGTH_SHORT).show()
+
+            // Widget durumunu RECORDING olarak ayarla
+            VoiceMemoWidgetProvider.setWidgetState(this, WidgetState.RECORDING)
 
         } catch (e: IOException) {
             e.printStackTrace()
-            Toast.makeText(this, "Kayıt başlatılamadı.", Toast.LENGTH_SHORT).show()
-            cleanup()
+            // Hata durumunda servisi temizle ve durdur
+            try { cleanup() } catch (ignored: Exception) {}
         }
     }
 
@@ -102,33 +104,28 @@ class AudioRecordingService : Service() {
         } finally {
             mediaRecorder = null
             saveAudioNote()
-            Toast.makeText(this, "Sesli not kaydedildi", Toast.LENGTH_SHORT).show()
             cleanup()
         }
     }
 
     private fun cleanup() {
         timerHandler.removeCallbacks(timerRunnable)
-        updateWidgetState(false)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
 
-    private fun updateWidgetState(isRecording: Boolean) {
-        VoiceMemoWidgetProvider.setRecording(this, isRecording)
-        val intent = Intent(this, VoiceMemoWidgetProvider::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-            val appWidgetManager = AppWidgetManager.getInstance(this@AudioRecordingService)
-            val componentName = ComponentName(this@AudioRecordingService, VoiceMemoWidgetProvider::class.java)
-            val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
-        }
-        sendBroadcast(intent)
+        // Widget durumunu SAVED olarak ayarla
+        VoiceMemoWidgetProvider.setWidgetState(this, WidgetState.SAVED)
+
+        // 2 saniye sonra widget'ı IDLE durumuna döndür ve servisi durdur
+        Handler(Looper.getMainLooper()).postDelayed({
+            VoiceMemoWidgetProvider.setWidgetState(this, WidgetState.IDLE)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }, 2000) // "Kaydedildi" yazısı 2 saniye görünecek
     }
 
     private fun startTimer() {
         timerRunnable = object : Runnable {
             override fun run() {
+                if (mediaRecorder == null) return
                 val elapsedMillis = System.currentTimeMillis() - recordingStartTime
                 val formattedTime = String.format("%02d:%02d",
                     TimeUnit.MILLISECONDS.toMinutes(elapsedMillis),
