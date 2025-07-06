@@ -122,18 +122,24 @@ class SettingsActivity : AppCompatActivity() {
             try {
                 val context = requireContext()
                 val appWidgetManager = AppWidgetManager.getInstance(context)
-                val componentName = ComponentName(context, NoteWidgetProvider::class.java)
-                val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
 
-                // Tüm widget'ları güncelle
-                appWidgetIds.forEach { appWidgetId ->
+                // Not widget'larını güncelle
+                val noteWidgetComponentName = ComponentName(context, NoteWidgetProvider::class.java)
+                val noteWidgetIds = appWidgetManager.getAppWidgetIds(noteWidgetComponentName)
+                noteWidgetIds.forEach { appWidgetId ->
                     NoteWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
-                }
-
-                // Widget verilerini de güncelle
-                appWidgetIds.forEach { appWidgetId ->
                     appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
                 }
+
+                // Sesli not widget'larını güncelle
+                val voiceMemoWidgetComponentName = ComponentName(context, VoiceMemoWidgetProvider::class.java)
+                val voiceMemoWidgetIds = appWidgetManager.getAppWidgetIds(voiceMemoWidgetComponentName)
+                val intent = Intent(context, VoiceMemoWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, voiceMemoWidgetIds)
+                }
+                context.sendBroadcast(intent)
+
             } catch (e: Exception) {
                 e.printStackTrace()
             }

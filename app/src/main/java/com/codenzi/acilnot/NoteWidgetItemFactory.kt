@@ -19,7 +19,6 @@ class NoteWidgetItemFactory(
 
     private var notes: List<Note> = emptyList()
     private val noteDao = NoteDatabase.getDatabase(context).noteDao()
-    // YENİ: JSON çözümlemesi için Gson nesnesi
     private val gson = Gson()
 
     override fun onCreate() {
@@ -53,7 +52,7 @@ class NoteWidgetItemFactory(
         try {
             val note = notes[position]
 
-            // YENİ: Başlığı ayarla
+            // Başlığı ayarla
             if (note.title.isNotBlank()) {
                 views.setViewVisibility(R.id.tv_widget_item_title, View.VISIBLE)
                 views.setTextViewText(R.id.tv_widget_item_title, note.title)
@@ -61,8 +60,8 @@ class NoteWidgetItemFactory(
                 views.setViewVisibility(R.id.tv_widget_item_title, View.GONE)
             }
 
-            // YENİ VE DÜZELTİLMİŞ: İçeriği JSON'dan parse edip okunabilir metin haline getir
-            val contentPreview: String = try {
+            // İçeriği JSON'dan parse edip okunabilir metin haline getir
+            var contentPreview: String = try {
                 val noteContent = gson.fromJson(note.content, NoteContent::class.java)
 
                 // Metin kısmını HTML'den arındır
@@ -91,9 +90,16 @@ class NoteWidgetItemFactory(
                 Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY).toString()
             }
 
+            // --- İSTENEN DEĞİŞİKLİK BURADA ---
+            // Eğer metin içinde yeni satır karakteri varsa, ilk satırı al ve sonuna "..." ekle.
+            val firstNewlineIndex = contentPreview.indexOf('\n')
+            if (firstNewlineIndex != -1) {
+                contentPreview = contentPreview.substring(0, firstNewlineIndex) + "..."
+            }
+            // --- DEĞİŞİKLİK SONU ---
+
             views.setTextViewText(R.id.tv_widget_item_content, contentPreview)
 
-            // Mevcut kodun geri kalanı
             try {
                 views.setInt(R.id.widget_item_container, "setBackgroundColor", note.color.toColorInt())
             } catch (e: Exception) {

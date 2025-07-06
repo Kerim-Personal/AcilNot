@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
+import androidx.preference.PreferenceManager
 
 // Widget'ın farklı durumlarını yönetmek için bir enum sınıfı
 enum class WidgetState {
@@ -36,6 +37,23 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
     ) {
         val remoteViews = RemoteViews(context.packageName, R.layout.widget_voice_memo)
         val currentState = getWidgetState(context)
+
+        // --- YENİ EKLENEN KOD BAŞLANGICI ---
+        // Widget arka planını ayarla
+        val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val backgroundDrawableName = sharedPrefs.getString("widget_background_selection", "widget_background")
+        val backgroundResId = context.resources.getIdentifier(
+            backgroundDrawableName, "drawable", context.packageName
+        )
+
+        if (backgroundResId != 0) {
+            remoteViews.setInt(R.id.voice_widget_container, "setBackgroundResource", backgroundResId)
+        } else {
+            // Eğer kaynak bulunamazsa varsayılanı kullan
+            remoteViews.setInt(R.id.voice_widget_container, "setBackgroundResource", R.drawable.widget_background)
+        }
+        // --- YENİ EKLENEN KOD SONU ---
+
 
         // Widget'ın görünümünü mevcut durumuna göre ayarla
         when (currentState) {
