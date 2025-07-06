@@ -24,7 +24,6 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(
-
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
@@ -40,10 +39,12 @@ android {
 }
 
 dependencies {
+    // GÜVENLİK GÜNCELLEMESİ
+    implementation(libs.androidx.security.crypto)
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx) // Bu satırın düzgün biçimlendirildiğinden emin olun
+    implementation(libs.androidx.room.ktx)
     // 'kapt' yerine 'ksp' kullanılıyor.
     ksp(libs.androidx.room.compiler)
     implementation(libs.gson)

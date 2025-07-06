@@ -1,26 +1,43 @@
-// app/src/main/java/com/codenzi/acilnot/PasswordManager.kt
 package com.codenzi.acilnot
 
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import java.security.MessageDigest
 import java.security.SecureRandom
 
 /**
  * Uygulama parolalarını güvenli bir şekilde yönetmek için yardımcı sınıf.
- * Parolalar doğrudan saklanmaz, bunun yerine SHA-256 ile hash'lenir ve tuzlanır.
- * Tuz ve hash, SharedPreferences'ta saklanır.
+ * Parolalar, SHA-256 ile hash'lenip tuzlandıktan sonra,
+ * anahtar ve değerleri şifrelenmiş olan EncryptedSharedPreferences'ta saklanır.
  */
 object PasswordManager {
 
-    private const val PREFS_NAME = "AppSecurityPrefs"
+    private const val PREFS_NAME = "AppSecurityPrefs" // Bu dosya adı artık şifreli olacak
     private const val KEY_PASSWORD_HASH = "password_hash"
     private const val KEY_SALT = "salt"
     private const val KEY_IS_PASSWORD_ENABLED = "is_password_enabled"
 
+    /**
+     * DÜZELTME: Standart SharedPreferences yerine EncryptedSharedPreferences kullanılıyor.
+     * Bu fonksiyon, verileri disk üzerinde şifrelenmiş olarak saklayan güvenli bir SharedPreferences örneği oluşturur.
+     */
     private fun getSharedPreferences(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        // Ana şifreleme anahtarını oluşturur veya mevcut olanı alır.
+        val masterKey = MasterKey.Builder(context.applicationContext)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        // Şifreli SharedPreferences örneğini oluşturur ve döndürür.
+        return EncryptedSharedPreferences.create(
+            context.applicationContext,
+            PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
     }
 
     /**
