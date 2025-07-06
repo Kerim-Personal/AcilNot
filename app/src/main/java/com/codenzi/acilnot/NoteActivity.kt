@@ -7,8 +7,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
-import android.media.MediaPlayer // YENİ: MediaPlayer importu
+import android.media.MediaPlayer
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -39,7 +41,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import java.io.IOException // YENİ: IOException importu
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -78,17 +80,22 @@ class NoteActivity : AppCompatActivity() {
     private val gson = Gson()
     private var isUpdatingToggleButtons = false
 
-    // YENİ: MediaPlayer için değişkenler
     private lateinit var audioPlayerContainer: View
     private lateinit var playPauseButton: ImageButton
     private lateinit var audioTitleText: TextView
     private var mediaPlayer: MediaPlayer? = null
     private var audioPath: String? = null
 
+    private var isListening = false
+    private val recognizedTextBuilder = StringBuilder()
+    private var utteranceStartPosition = 0
+
+    private val restartHandler = Handler(Looper.getMainLooper())
+
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
-                startSpeechToText()
+                toggleSpeechToText()
             } else {
                 Toast.makeText(this, "Mikrofon izni gerekli.", Toast.LENGTH_SHORT).show()
             }
@@ -114,7 +121,6 @@ class NoteActivity : AppCompatActivity() {
         italicButton = findViewById(R.id.btn_italic)
         strikethroughButton = findViewById(R.id.btn_strikethrough)
 
-        // YENİ: Ses oynatıcı view'larını bağla
         audioPlayerContainer = findViewById(R.id.ll_audio_player)
         playPauseButton = findViewById(R.id.btn_play_pause)
         audioTitleText = findViewById(R.id.tv_audio_title)
@@ -138,7 +144,10 @@ class NoteActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        releaseMediaPlayer() // Aktivite durduğunda oynatıcıyı serbest bırak
+        releaseMediaPlayer()
+        if (isListening) {
+            stopListening()
+        }
         performSave()
     }
 
@@ -170,13 +179,15 @@ class NoteActivity : AppCompatActivity() {
             }
         }
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
-
-        // YENİ: Ses oynatma butonu listener'ı
         playPauseButton.setOnClickListener { togglePlayback() }
     }
 
     private fun performSave() {
         val titleText = noteTitle.text.toString().trim()
+
+        if (isListening) {
+            stopListening()
+        }
         val noteContentText = noteInput.text
 
         if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() }) {
@@ -296,51 +307,130 @@ class NoteActivity : AppCompatActivity() {
         isUpdatingToggleButtons = false
     }
 
+    private fun restartListeningWithDelay() {
+        restartHandler.postDelayed({
+            if (isListening) {
+                try {
+                    speechRecognizer.startListening(speechRecognizerIntent)
+                } catch (e: Exception) {
+                    stopListening()
+                }
+            }
+        }, 100)
+    }
 
     private fun setupVoiceNote() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            voiceNoteButton.visibility = View.GONE; return
+            voiceNoteButton.visibility = View.GONE
+            return
         }
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            // DENGELEME: Zaman aşımı 4 saniyeye ayarlandı.
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L)
         }
+
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {
-                Toast.makeText(applicationContext, "Dinliyorum...", Toast.LENGTH_SHORT).show()
+            override fun onReadyForSpeech(params: Bundle?) {}
+
+            override fun onBeginningOfSpeech() {
+                utteranceStartPosition = recognizedTextBuilder.length
             }
-            override fun onResults(results: Bundle?) {
-                results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let {
-                    noteInput.text?.insert(noteInput.selectionStart, it)
+
+            override fun onPartialResults(partialResults: Bundle?) {
+                val partialText = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+                if (partialText.isNotBlank()) {
+                    recognizedTextBuilder.setLength(utteranceStartPosition)
+                    recognizedTextBuilder.append(partialText)
+                    noteInput.setText(recognizedTextBuilder.toString())
+                    noteInput.setSelection(noteInput.length())
                 }
             }
-            override fun onError(error: Int) { Toast.makeText(applicationContext, "Bir hata oluştu, tekrar deneyin.", Toast.LENGTH_SHORT).show() }
-            override fun onBeginningOfSpeech() {}
-            override fun onEndOfSpeech() {}
+
+            override fun onResults(results: Bundle?) {
+                val finalText = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+                recognizedTextBuilder.setLength(utteranceStartPosition)
+                recognizedTextBuilder.append(finalText)
+
+                if (finalText.isNotBlank()) {
+                    recognizedTextBuilder.append(" ")
+                }
+
+                noteInput.setText(recognizedTextBuilder.toString())
+                noteInput.setSelection(noteInput.length())
+            }
+
+            override fun onEndOfSpeech() {
+                // Kullanıcı manuel durdurmadığı sürece döngü devam eder.
+                if (isListening) {
+                    restartListeningWithDelay()
+                }
+            }
+
+            override fun onError(error: Int) {
+                // Sadece kritik hatalarda durdur, diğer tüm hatalarda yeniden başlatmayı dene.
+                if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS || error == SpeechRecognizer.ERROR_AUDIO) {
+                    stopListening()
+                    Toast.makeText(applicationContext, "Kritik bir hata nedeniyle kayıt durdu.", Toast.LENGTH_SHORT).show()
+                } else if (isListening) {
+                    restartListeningWithDelay()
+                }
+            }
+
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onPartialResults(partialResults: Bundle?) {}
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
-        voiceNoteButton.setOnClickListener { startSpeechToText() }
+
+        voiceNoteButton.setOnClickListener {
+            toggleSpeechToText()
+        }
     }
 
-    private fun startSpeechToText() {
-        when {
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> {
-                speechRecognizer.startListening(speechRecognizerIntent)
-            }
-            else -> {
-                requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            }
+    private fun toggleSpeechToText() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
         }
+        if (!isListening) {
+            startListening()
+        } else {
+            stopListening()
+        }
+    }
+
+    private fun startListening() {
+        isListening = true
+        voiceNoteButton.setImageResource(R.drawable.ic_microphone_red_24)
+        Toast.makeText(applicationContext, "Dinliyorum...", Toast.LENGTH_SHORT).show()
+
+        recognizedTextBuilder.clear()
+        val currentText = noteInput.text.toString()
+        recognizedTextBuilder.append(currentText)
+        if (currentText.isNotEmpty() && !currentText.endsWith(" ")) {
+            recognizedTextBuilder.append(" ")
+        }
+
+        speechRecognizer.startListening(speechRecognizerIntent)
+    }
+
+    private fun stopListening() {
+        if (!isListening) return
+        isListening = false
+        restartHandler.removeCallbacksAndMessages(null)
+        speechRecognizer.stopListening()
+        voiceNoteButton.setImageResource(R.drawable.ic_microphone_24)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::speechRecognizer.isInitialized) speechRecognizer.destroy()
-        releaseMediaPlayer() // YENİ: onDestroy'da da serbest bırakma
+        restartHandler.removeCallbacksAndMessages(null)
+        speechRecognizer.destroy()
+        releaseMediaPlayer()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -453,7 +543,6 @@ class NoteActivity : AppCompatActivity() {
                     checklistItems.addAll(content.checklist)
                     checklistAdapter.notifyItemRangeInserted(0, checklistItems.size)
 
-                    // YENİ: Ses dosyasını kontrol et ve oynatıcıyı ayarla
                     if (content.audioFilePath != null) {
                         audioPath = content.audioFilePath
                         audioPlayerContainer.visibility = View.VISIBLE
@@ -469,7 +558,7 @@ class NoteActivity : AppCompatActivity() {
                     val oldSize = checklistItems.size
                     checklistItems.clear()
                     checklistAdapter.notifyItemRangeRemoved(0, oldSize)
-                    audioPlayerContainer.visibility = View.GONE // Eski notlarda oynatıcıyı gizle
+                    audioPlayerContainer.visibility = View.GONE
                     audioPath = null
                 }
                 selectedColor = note.color
@@ -534,20 +623,21 @@ class NoteActivity : AppCompatActivity() {
     private fun formatDate(timestamp: Long): String =
         SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
 
-    // YENİ: Ses oynatma ile ilgili tüm fonksiyonlar
     private fun prepareMediaPlayer() {
-        releaseMediaPlayer() // Öncekiyi serbest bırak
+        releaseMediaPlayer()
         mediaPlayer = MediaPlayer().apply {
             try {
                 setDataSource(audioPath)
-                prepareAsync() // Asenkron hazırlık
+                prepareAsync()
                 setOnPreparedListener {
                     playPauseButton.isEnabled = true
                 }
                 setOnCompletionListener {
                     playPauseButton.setImageResource(android.R.drawable.ic_media_play)
+                    playPauseButton.contentDescription = "Oynat"
                 }
                 playPauseButton.setImageResource(android.R.drawable.ic_media_play)
+                playPauseButton.contentDescription = "Oynat"
             } catch (e: IOException) {
                 e.printStackTrace()
                 Toast.makeText(this@NoteActivity, "Ses dosyası oynatılamıyor.", Toast.LENGTH_SHORT).show()
@@ -560,9 +650,11 @@ class NoteActivity : AppCompatActivity() {
             if (it.isPlaying) {
                 it.pause()
                 playPauseButton.setImageResource(android.R.drawable.ic_media_play)
+                playPauseButton.contentDescription = "Oynat"
             } else {
                 it.start()
                 playPauseButton.setImageResource(android.R.drawable.ic_media_pause)
+                playPauseButton.contentDescription = "Duraklat"
             }
         }
     }

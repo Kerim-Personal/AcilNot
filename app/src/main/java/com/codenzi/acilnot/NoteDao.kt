@@ -42,6 +42,10 @@ interface NoteDao {
     @Query("DELETE FROM notes WHERE id = :noteId")
     suspend fun hardDeleteById(noteId: Int)
 
+    // YENİ: Seçilen notları kalıcı olarak sil
+    @Query("DELETE FROM notes WHERE id IN (:noteIds)")
+    suspend fun hardDeleteByIds(noteIds: List<Int>)
+
     // YENİ: Tüm notların widget sabitlemesini kaldır
     @Query("UPDATE notes SET showOnWidget = 0")
     suspend fun unpinAllNotes()

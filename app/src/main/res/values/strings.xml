@@ -11,8 +11,6 @@
 
     <string name="add_note_fab_description">Yeni Not Ekle</string>
     <string name="share_chooser_title">Notu şununla paylaş:</string>
-    <string name="delete_notes_confirmation_message">Seçili notları kalıcı olarak silmek istediğinizden emin misiniz?</string>
-
     <plurals name="selection_title">
         <item quantity="one">%d not seçildi</item>
         <item quantity="other">%d not seçildi</item>
@@ -24,6 +22,11 @@
     <plurals name="notes_deleted_toast">
         <item quantity="one">%d not silindi.</item>
         <item quantity="other">%d not silindi.</item>
+    </plurals>
+
+    <plurals name="delete_notes_confirmation_message">
+        <item quantity="one">Seçili notu kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</item>
+        <item quantity="other">Seçili %d notu kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</item>
     </plurals>
 
     <string name="sort_dialog_title">Notları Sırala</string>

@@ -1,12 +1,16 @@
+// kerim-personal/acilnot/AcilNot-bac63f010f7599eb293834e5058654e744d3d8b5/app/src/main/java/com/codenzi/acilnot/TrashActivity.kt
 package com.codenzi.acilnot
 
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -18,12 +22,12 @@ import kotlinx.coroutines.launch
 class TrashActivity : AppCompatActivity() {
 
     private lateinit var noteDao: NoteDao
-    private lateinit var deletedNoteAdapter: NoteAdapter // NotAdapter'ı burada da kullanacağız
+    private lateinit var deletedNoteAdapter: NoteAdapter
     private lateinit var recyclerView: RecyclerView
     private lateinit var tvEmptyTrash: TextView
     private lateinit var toolbar: Toolbar
 
-    private var deletedNotes: List<Note> = emptyList()
+    private var isSelectionMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,7 +35,7 @@ class TrashActivity : AppCompatActivity() {
 
         toolbar = findViewById(R.id.toolbar_trash)
         setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true) // Geri butonu ekle
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         noteDao = NoteDatabase.getDatabase(this).noteDao()
         recyclerView = findViewById(R.id.rv_deleted_notes)
@@ -39,18 +43,23 @@ class TrashActivity : AppCompatActivity() {
 
         setupRecyclerView()
         observeDeletedNotes()
+        setupBackButtonHandler()
     }
 
     private fun setupRecyclerView() {
         deletedNoteAdapter = NoteAdapter(emptyList(),
-            // Tıklama dinleyicisi (çöp kutusundaki notlar için farklı işlem)
-            { note ->
-                showTrashNoteOptionsDialog(note)
+            { note -> // Tıklama Olayı
+                if (isSelectionMode) {
+                    toggleSelection(note)
+                } else {
+                    showSingleNoteOptionsDialog(note)
+                }
             },
-            // Uzun tıklama dinleyicisi (şimdilik aynı, sonra değiştirilebilir)
-            { note ->
-                // Uzun tıklama için seçim modu eklenebilir, şimdilik tıklama ile aynı
-                showTrashNoteOptionsDialog(note)
+            { note -> // Uzun Tıklama Olayı
+                if (!isSelectionMode) {
+                    enterSelectionMode()
+                }
+                toggleSelection(note)
             }
         )
         recyclerView.adapter = deletedNoteAdapter
@@ -61,28 +70,52 @@ class TrashActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 noteDao.getDeletedNotes().collect { notes ->
-                    deletedNotes = notes
-                    deletedNoteAdapter.updateNotes(deletedNotes)
-                    if (notes.isEmpty()) {
-                        tvEmptyTrash.visibility = View.VISIBLE
-                        recyclerView.visibility = View.GONE
-                    } else {
-                        tvEmptyTrash.visibility = View.GONE
-                        recyclerView.visibility = View.VISIBLE
+                    deletedNoteAdapter.updateNotes(notes)
+                    tvEmptyTrash.visibility = if (notes.isEmpty()) View.VISIBLE else View.GONE
+                    recyclerView.visibility = if (notes.isEmpty()) View.GONE else View.VISIBLE
+                    if (notes.isEmpty() && isSelectionMode) {
+                        exitSelectionMode()
                     }
                 }
             }
         }
     }
 
-    private fun showTrashNoteOptionsDialog(note: Note) {
-        val options = arrayOf("Notu Geri Yükle", "Kalıcı Olarak Sil")
+    private fun enterSelectionMode() {
+        isSelectionMode = true
+        invalidateOptionsMenu() // Menüyü yeniden çiz
+        toolbar.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_close)
+        toolbar.setNavigationOnClickListener { exitSelectionMode() }
+    }
+
+    private fun exitSelectionMode() {
+        isSelectionMode = false
+        deletedNoteAdapter.clearSelections()
+        invalidateOptionsMenu() // Menüyü yeniden çiz
+        supportActionBar?.title = getString(R.string.trash_title)
+        toolbar.navigationIcon = null
+        supportActionBar?.setDisplayHomeAsUpEnabled(true) // Geri okunu tekrar göster
+    }
+
+    private fun toggleSelection(note: Note) {
+        deletedNoteAdapter.toggleSelection(note.id)
+        val count = deletedNoteAdapter.getSelectedItemCount()
+        if (count == 0) {
+            exitSelectionMode()
+        } else {
+            supportActionBar?.title = resources.getQuantityString(R.plurals.selection_title, count, count)
+            invalidateOptionsMenu()
+        }
+    }
+
+    private fun showSingleNoteOptionsDialog(note: Note) {
+        val options = arrayOf(getString(R.string.restore_note), getString(R.string.delete_permanently))
         AlertDialog.Builder(this)
-            .setTitle("Not Seçenekleri")
-            .setItems(options) { dialog, which ->
+            .setTitle(getString(R.string.note_options_title))
+            .setItems(options) { _, which ->
                 when (which) {
                     0 -> restoreNote(note)
-                    1 -> showPermanentDeleteConfirmationDialog(note)
+                    1 -> showPermanentDeleteConfirmationDialog(listOf(note))
                 }
             }
             .show()
@@ -91,30 +124,72 @@ class TrashActivity : AppCompatActivity() {
     private fun restoreNote(note: Note) {
         lifecycleScope.launch {
             noteDao.restoreNotes(listOf(note.id))
-            Toast.makeText(applicationContext, "Not geri yüklendi.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, getString(R.string.note_restored_toast), Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun showPermanentDeleteConfirmationDialog(note: Note) {
+    private fun showPermanentDeleteConfirmationDialog(notesToDelete: List<Note>) {
+        if (notesToDelete.isEmpty()) return
+
+        val message = if (notesToDelete.size == 1) {
+            getString(R.string.dialog_message_delete_permanently)
+        } else {
+            resources.getQuantityString(R.plurals.delete_notes_confirmation_message, notesToDelete.size, notesToDelete.size)
+        }
+
         AlertDialog.Builder(this)
-            .setTitle("Notu Kalıcı Olarak Sil")
-            .setMessage("Bu notu kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")
-            .setPositiveButton("Evet, Kalıcı Olarak Sil") { _, _ -> permanentDeleteNote(note) }
-            .setNegativeButton("İptal", null)
+            .setTitle(resources.getQuantityString(R.plurals.delete_notes_confirmation_title, notesToDelete.size, notesToDelete.size))
+            .setMessage(message)
+            .setPositiveButton(getString(R.string.dialog_confirm_delete_permanently)) { _, _ ->
+                permanentDeleteNotes(notesToDelete)
+            }
+            .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
     }
 
-    private fun permanentDeleteNote(note: Note) {
+    private fun permanentDeleteNotes(notes: List<Note>) {
         lifecycleScope.launch {
-            noteDao.hardDeleteById(note.id)
-            Toast.makeText(applicationContext, "Not kalıcı olarak silindi.", Toast.LENGTH_SHORT).show()
+            val noteIds = notes.map { it.id }
+            noteDao.hardDeleteByIds(noteIds)
+            Toast.makeText(applicationContext, resources.getQuantityString(R.plurals.notes_deleted_toast, notes.size, notes.size), Toast.LENGTH_SHORT).show()
+            exitSelectionMode()
         }
+    }
+
+    private fun setupBackButtonHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (isSelectionMode) {
+                    exitSelectionMode()
+                } else {
+                    finish()
+                }
+            }
+        })
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.trash_menu, menu)
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.findItem(R.id.action_delete_selected).isVisible = isSelectionMode && deletedNoteAdapter.getSelectedItemCount() > 0
+        return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
-                finish() // Geri butonuna basıldığında aktiviteyi kapat
+                if (!isSelectionMode) {
+                    finish()
+                } else {
+                    exitSelectionMode()
+                }
+                true
+            }
+            R.id.action_delete_selected -> {
+                showPermanentDeleteConfirmationDialog(deletedNoteAdapter.getSelectedNotes())
                 true
             }
             else -> super.onOptionsItemSelected(item)
