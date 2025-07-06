@@ -13,17 +13,17 @@
     </string-array>
 
     <string-array name="widget_background_entries">
-        <item>Varsayılan Widget Arka Planı</item>
-        <item>Arka Plan 1</item>
-        <item>Arka Plan 2</item>
-        <item>Arka Plan 3</item>
-        <item>Arka Plan 4</item>
-        <item>Arka Plan 5</item>
-        <item>Arka Plan 6</item>
-        <item>Arka Plan 7</item>
-        <item>Arka Plan 8</item>
-        <item>Arka Plan 9</item>
-        <item>Arka Plan 10</item>
+        <item>Papirüs Kağıdı</item>
+        <item>Renklerin Ahengi</item>
+        <item>Kuzgun Karası</item>
+        <item>Sahil Mavisi</item>
+        <item>Lavanta Rüyası</item>
+        <item>Gül Kurusu</item>
+        <item>Bulut Grisi</item>
+        <item>Nane Ferahlığı</item>
+        <item>Mercan Esintisi</item>
+        <item>Kristal Berraklığı</item>
+        <item>Safir laciverti</item>
     </string-array>
     <string-array name="widget_background_values">
         <item>widget_background</item>
