@@ -14,14 +14,14 @@
         android:layout_height="64dp"
         android:src="@drawable/ic_microphone_24"
         android:background="@android:color/transparent"
-        android:contentDescription="Ses Kaydını Başlat"
+        android:contentDescription="@string/start_voice_recording_desc"
         android:scaleType="fitCenter" />
 
     <TextView
         android:id="@+id/tv_widget_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Kaydetmek için dokun"
+        android:text="@string/tap_to_record"
         android:textColor="@android:color/black"
         android:textSize="12sp"
         android:layout_marginTop="4dp"/>

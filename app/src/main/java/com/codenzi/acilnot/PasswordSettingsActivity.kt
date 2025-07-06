@@ -53,7 +53,8 @@ class PasswordSettingsActivity : AppCompatActivity() {
         disableButton.setOnClickListener {
             val currentPassword = etCurrentPassword.text.toString()
             if (currentPassword.isBlank()) {
-                Toast.makeText(this, "Lütfen parolayı devre dışı bırakmak için mevcut parolanızı girin.", Toast.LENGTH_SHORT).show()
+                // Değişiklik burada
+                Toast.makeText(this, getString(R.string.toast_enter_current_password_to_disable), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (PasswordManager.checkPassword(this, currentPassword)) {
@@ -70,9 +71,11 @@ class PasswordSettingsActivity : AppCompatActivity() {
 
     private fun showSecurityInfoDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Güvenlik Bilgisi")
+            // Değişiklik burada
+            .setTitle(getString(R.string.security_info_title))
             .setMessage(R.string.password_security_explanation)
-            .setPositiveButton("Tamam", null)
+            // Değişiklik burada
+            .setPositiveButton(getString(R.string.dialog_ok), null)
             .show()
     }
 
@@ -94,7 +97,8 @@ class PasswordSettingsActivity : AppCompatActivity() {
         }
 
         if (newPassword.isBlank() || confirmPassword.isBlank()) {
-            Toast.makeText(this, "Parola alanları boş bırakılamaz.", Toast.LENGTH_SHORT).show()
+            // Değişiklik burada
+            Toast.makeText(this, getString(R.string.toast_password_fields_cannot_be_empty), Toast.LENGTH_SHORT).show()
             return
         }
 

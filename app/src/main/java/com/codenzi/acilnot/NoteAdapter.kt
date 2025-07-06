@@ -35,7 +35,6 @@ class NoteAdapter(
         } else {
             selectedItems.add(noteId)
         }
-        // Sadece değişen öğeyi güncelle
         notifyItemChanged(index)
     }
 
@@ -48,7 +47,6 @@ class NoteAdapter(
             notes.indexOfFirst { it.id == selectedId }.takeIf { it != -1 }
         }
         selectedItems.clear()
-        // Sadece daha önce seçili olan öğeleri güncelle
         previouslySelectedIndices.forEach { notifyItemChanged(it) }
     }
 
@@ -58,14 +56,12 @@ class NoteAdapter(
         private val noteTitle: TextView = itemView.findViewById(R.id.tv_note_title)
         private val noteContent: TextView = itemView.findViewById(R.id.tv_note_content)
         private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
-        private val pinnedIcon: ImageView = itemView.findViewById(R.id.iv_pinned_icon) // YENİ EKLENDİ
+        private val pinnedIcon: ImageView = itemView.findViewById(R.id.iv_pinned_icon)
 
         fun bind(note: Note) {
-            // KTX Uzantısı Kullanımı
             noteTitle.isVisible = note.title.isNotBlank()
             noteTitle.text = note.title
 
-            // YENİ: Pin ikonunun görünürlüğünü ayarla
             pinnedIcon.isVisible = note.showOnWidget
 
             try {
@@ -75,13 +71,12 @@ class NoteAdapter(
                 val hasText = textPreview.isNotBlank()
                 val hasChecklist = content.checklist.isNotEmpty()
 
-                // İçerik görünürlüğünü en başta ayarla
                 noteContent.isVisible = hasText || hasChecklist
 
                 if (hasText) {
                     noteContent.text = textPreview
                 } else {
-                    noteContent.text = "" // TextView'i temizle
+                    noteContent.text = ""
                 }
 
                 if (hasChecklist) {
@@ -90,7 +85,8 @@ class NoteAdapter(
                         checklistSummary.append("\n\n")
                     }
                     val checkedCount = content.checklist.count { it.isChecked }
-                    checklistSummary.append("[Liste: ${checkedCount}/${content.checklist.size} tamamlandı]")
+                    // Düzeltme burada
+                    checklistSummary.append(itemView.context.getString(R.string.checklist_summary_preview, checkedCount, content.checklist.size))
                     noteContent.append(checklistSummary.toString())
                 }
 
@@ -133,7 +129,6 @@ class NoteAdapter(
     override fun getItemCount() = notes.size
 
     fun updateNotes(newNotes: List<Note>) {
-        // DiffUtil kullanarak listeyi verimli bir şekilde güncelle
         val diffCallback = NoteDiffCallback(this.notes, newNotes)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
         this.notes = newNotes
@@ -141,7 +136,6 @@ class NoteAdapter(
     }
 }
 
-// DiffUtil için karşılaştırıcı sınıf
 class NoteDiffCallback(
     private val oldList: List<Note>,
     private val newList: List<Note>
@@ -151,12 +145,10 @@ class NoteDiffCallback(
     override fun getNewListSize(): Int = newList.size
 
     override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-        // Öğelerin aynı olup olmadığını ID ile kontrol et
         return oldList[oldItemPosition].id == newList[newItemPosition].id
     }
 
     override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-        // Öğelerin içeriğinin aynı olup olmadığını kontrol et
         return oldList[oldItemPosition] == newList[newItemPosition]
     }
 }

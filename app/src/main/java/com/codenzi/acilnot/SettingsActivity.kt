@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -23,7 +22,7 @@ class SettingsActivity : AppCompatActivity() {
         val toolbar: Toolbar = findViewById(R.id.settings_toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Ayarlar"
+        supportActionBar?.title = getString(R.string.settings_title) // Değişiklik burada
 
         if (savedInstanceState == null) {
             supportFragmentManager
@@ -42,7 +41,6 @@ class SettingsActivity : AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
-            // TEMA DEĞİŞTİRME ÖZELLİĞİ DÜZELTİLDİ
             val themePreference: ListPreference? = findPreference("theme_selection")
             themePreference?.setOnPreferenceChangeListener { _, newValue ->
                 val mode = when (newValue.toString()) {
@@ -54,31 +52,26 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Parola Ayarları butonu
             val passwordSettingsPreference: Preference? = findPreference("password_settings")
             passwordSettingsPreference?.setOnPreferenceClickListener {
                 startActivity(Intent(activity, PasswordSettingsActivity::class.java))
                 true
             }
 
-            // Çöp Kutusu butonu
             val trashPreference: Preference? = findPreference("trash_settings")
             trashPreference?.setOnPreferenceClickListener {
                 startActivity(Intent(activity, TrashActivity::class.java))
                 true
             }
 
-            // Widget Arka Plan Değişikliği Dinleyicisi
             val widgetBackgroundPreference: ListPreference? = findPreference("widget_background_selection")
-            widgetBackgroundPreference?.setOnPreferenceChangeListener { _, newValue ->
-                // SharedPreferences'ın güncellenmesini beklemek için kısa bir gecikme
+            widgetBackgroundPreference?.setOnPreferenceChangeListener { _, _ ->
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     updateWidget()
-                }, 100) // 100ms gecikme
+                }, 100)
                 true
             }
 
-            // Gizlilik Sözleşmesi butonu
             val privacyPolicyPreference: Preference? = findPreference("privacy_policy")
             privacyPolicyPreference?.setOnPreferenceClickListener {
                 val url = "https://www.codenzi.com"
@@ -94,7 +87,6 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 true
             }
-
 
             val contactUsPreference: Preference? = findPreference("contact_us")
             contactUsPreference?.setOnPreferenceClickListener {

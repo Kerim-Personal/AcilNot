@@ -38,7 +38,6 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         val remoteViews = RemoteViews(context.packageName, R.layout.widget_voice_memo)
         val currentState = getWidgetState(context)
 
-        // --- YENİ EKLENEN KOD BAŞLANGICI ---
         // Widget arka planını ayarla
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
         val backgroundDrawableName = sharedPrefs.getString("widget_background_selection", "widget_background")
@@ -49,28 +48,28 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         if (backgroundResId != 0) {
             remoteViews.setInt(R.id.voice_widget_container, "setBackgroundResource", backgroundResId)
         } else {
-            // Eğer kaynak bulunamazsa varsayılanı kullan
             remoteViews.setInt(R.id.voice_widget_container, "setBackgroundResource", R.drawable.widget_background)
         }
-        // --- YENİ EKLENEN KOD SONU ---
-
 
         // Widget'ın görünümünü mevcut durumuna göre ayarla
         when (currentState) {
             WidgetState.IDLE -> {
                 remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_red_24)
-                remoteViews.setTextViewText(R.id.tv_widget_status, "Kaydetmek için dokun")
+                // Değişiklik burada
+                remoteViews.setTextViewText(R.id.tv_widget_status, context.getString(R.string.tap_to_record))
                 remoteViews.setViewVisibility(R.id.tv_widget_timer, View.GONE)
                 remoteViews.setTextViewText(R.id.tv_widget_timer, "00:00")
             }
             WidgetState.RECORDING -> {
                 remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_stop_24)
-                remoteViews.setTextViewText(R.id.tv_widget_status, "Durdurmak için dokun")
+                // Değişiklik burada
+                remoteViews.setTextViewText(R.id.tv_widget_status, context.getString(R.string.tap_to_stop))
                 remoteViews.setViewVisibility(R.id.tv_widget_timer, View.VISIBLE)
             }
             WidgetState.SAVED -> {
                 remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_red_24)
-                remoteViews.setTextViewText(R.id.tv_widget_status, "Kaydedildi")
+                // Değişiklik burada
+                remoteViews.setTextViewText(R.id.tv_widget_status, context.getString(R.string.saved))
                 remoteViews.setViewVisibility(R.id.tv_widget_timer, View.GONE)
             }
         }
@@ -104,7 +103,6 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         private const val PREFS_NAME = "voice_memo_widget_prefs"
         private const val PREF_WIDGET_STATE = "widget_state"
 
-        // Widget durumunu SharedPreferences'tan okuyan ve yazan metodlar
         fun getWidgetState(context: Context): WidgetState {
             val stateName = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(PREF_WIDGET_STATE, WidgetState.IDLE.name)
@@ -116,7 +114,6 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
                 .putString(PREF_WIDGET_STATE, state.name)
                 .apply()
 
-            // Durum her değiştiğinde widget'ı güncellemek için bir broadcast gönder
             val intent = Intent(context, VoiceMemoWidgetProvider::class.java).apply {
                 action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
                 val appWidgetManager = AppWidgetManager.getInstance(context)

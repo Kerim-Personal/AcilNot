@@ -3,11 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory
-        android:title="Görünüm">
+        android:title="@string/appearance_category_title">
 
         <ListPreference
             android:key="theme_selection"
-            android:title="Tema"
+            android:title="@string/theme_title"
             android:defaultValue="system_default"
             android:entries="@array/theme_entries"
             android:entryValues="@array/theme_values"
@@ -15,7 +15,7 @@
 
         <ListPreference
             android:key="widget_background_selection"
-            android:title="Widget Arka Planı"
+            android:title="@string/widget_background_title"
             android:defaultValue="widget_background"
             android:entries="@array/widget_background_entries"
             android:entryValues="@array/widget_background_values"
@@ -35,12 +35,12 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Diğer Ayarlar">
+        android:title="@string/other_settings_category_title">
 
         <Preference
             android:key="trash_settings"
-            android:title="Çöp Kutusu"
-            android:summary="Silinen notları görüntüle ve yönet"
+            android:title="@string/trash_bin_title"
+            android:summary="@string/trash_bin_summary"
             android:icon="@drawable/outline_archive_24" />
 
         <Preference

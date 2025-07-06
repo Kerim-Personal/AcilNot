@@ -1,6 +1,7 @@
 package com.codenzi.acilnot
 
 import android.Manifest
+import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
@@ -97,7 +98,7 @@ class NoteActivity : AppCompatActivity() {
             if (isGranted) {
                 toggleSpeechToText()
             } else {
-                Toast.makeText(this, "Mikrofon izni gerekli.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.microphone_permission_needed), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -154,9 +155,9 @@ class NoteActivity : AppCompatActivity() {
     private fun setupListeners() {
         showHistoryButton.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("Düzenleme Geçmişi")
+                .setTitle(getString(R.string.edit_history_dialog_title))
                 .setMessage(editHistoryText.text)
-                .setPositiveButton("Tamam", null)
+                .setPositiveButton(getString(R.string.dialog_ok), null)
                 .show()
         }
 
@@ -193,6 +194,9 @@ class NoteActivity : AppCompatActivity() {
         if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() }) {
             return
         }
+
+        // Kaydetme işlemi yapıldığı için ana aktiviteye OK sonucu gönderiyoruz.
+        setResult(Activity.RESULT_OK)
 
         val noteTextHtml = if (noteContentText.isNullOrBlank()) "" else Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
         val jsonContent = gson.toJson(NoteContent(text = noteTextHtml, checklist = checklistItems, audioFilePath = audioPath))
@@ -329,7 +333,6 @@ class NoteActivity : AppCompatActivity() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            // DENGELEME: Zaman aşımı 4 saniyeye ayarlandı.
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L)
         }
@@ -365,17 +368,15 @@ class NoteActivity : AppCompatActivity() {
             }
 
             override fun onEndOfSpeech() {
-                // Kullanıcı manuel durdurmadığı sürece döngü devam eder.
                 if (isListening) {
                     restartListeningWithDelay()
                 }
             }
 
             override fun onError(error: Int) {
-                // Sadece kritik hatalarda durdur, diğer tüm hatalarda yeniden başlatmayı dene.
                 if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS || error == SpeechRecognizer.ERROR_AUDIO) {
                     stopListening()
-                    Toast.makeText(applicationContext, "Kritik bir hata nedeniyle kayıt durdu.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(applicationContext, getString(R.string.critical_error_recording_stopped), Toast.LENGTH_SHORT).show()
                 } else if (isListening) {
                     restartListeningWithDelay()
                 }
@@ -406,7 +407,7 @@ class NoteActivity : AppCompatActivity() {
     private fun startListening() {
         isListening = true
         voiceNoteButton.setImageResource(R.drawable.ic_microphone_red_24)
-        Toast.makeText(applicationContext, "Dinliyorum...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(applicationContext, getString(R.string.speech_listening), Toast.LENGTH_SHORT).show()
 
         recognizedTextBuilder.clear()
         val currentText = noteInput.text.toString()
@@ -546,7 +547,7 @@ class NoteActivity : AppCompatActivity() {
                     if (content.audioFilePath != null) {
                         audioPath = content.audioFilePath
                         audioPlayerContainer.visibility = View.VISIBLE
-                        audioTitleText.text = note.title.ifBlank { "Ses Kaydı" }
+                        audioTitleText.text = note.title.ifBlank { getString(R.string.voice_recording_title) }
                         prepareMediaPlayer()
                     } else {
                         audioPlayerContainer.visibility = View.GONE
@@ -610,9 +611,9 @@ class NoteActivity : AppCompatActivity() {
     }
 
     private fun displayEditHistory(note: Note) {
-        val historyBuilder = StringBuilder("Oluşturulma: ${formatDate(note.createdAt)}")
+        val historyBuilder = StringBuilder("${getString(R.string.creation_date_label, formatDate(note.createdAt))}")
         if (note.modifiedAt.isNotEmpty()) {
-            historyBuilder.append("\n\nDüzenleme Geçmişi:")
+            historyBuilder.append("\n\n${getString(R.string.edit_history_title)}")
             note.modifiedAt.forEach { timestamp ->
                 historyBuilder.append("\n- ${formatDate(timestamp)}")
             }
@@ -634,13 +635,13 @@ class NoteActivity : AppCompatActivity() {
                 }
                 setOnCompletionListener {
                     playPauseButton.setImageResource(android.R.drawable.ic_media_play)
-                    playPauseButton.contentDescription = "Oynat"
+                    playPauseButton.contentDescription = getString(R.string.play)
                 }
                 playPauseButton.setImageResource(android.R.drawable.ic_media_play)
-                playPauseButton.contentDescription = "Oynat"
+                playPauseButton.contentDescription = getString(R.string.play)
             } catch (e: IOException) {
                 e.printStackTrace()
-                Toast.makeText(this@NoteActivity, "Ses dosyası oynatılamıyor.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@NoteActivity, getString(R.string.audio_file_cannot_be_played), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -650,11 +651,11 @@ class NoteActivity : AppCompatActivity() {
             if (it.isPlaying) {
                 it.pause()
                 playPauseButton.setImageResource(android.R.drawable.ic_media_play)
-                playPauseButton.contentDescription = "Oynat"
+                playPauseButton.contentDescription = getString(R.string.play)
             } else {
                 it.start()
                 playPauseButton.setImageResource(android.R.drawable.ic_media_pause)
-                playPauseButton.contentDescription = "Duraklat"
+                playPauseButton.contentDescription = getString(R.string.pause)
             }
         }
     }

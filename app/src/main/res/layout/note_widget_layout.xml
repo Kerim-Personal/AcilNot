@@ -38,7 +38,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="Yeni Not Ekle"
+        android:text="@string/widget_new_note_button"
         android:textColor="@android:color/holo_blue_dark"
         android:layout_marginTop="4dp"/>
 

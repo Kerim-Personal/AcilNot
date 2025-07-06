@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/action_delete_selected"
-        android:title="Seçilenleri Sil"
+        android:title="@string/action_delete"
         android:icon="@drawable/outline_delete_24"
         app:showAsAction="ifRoom"
         android:visible="false" />

@@ -22,7 +22,6 @@ class NoteWidgetItemFactory(
     private val gson = Gson()
 
     override fun onCreate() {
-        // Gerekli değil
     }
 
     override fun onDataSetChanged() {
@@ -31,7 +30,6 @@ class NoteWidgetItemFactory(
                 notes = noteDao.getNotesForWidget()
             }
         } catch (e: Exception) {
-            // Widget yüklenirken hata olursa boş liste kullan
             notes = emptyList()
         }
     }
@@ -52,7 +50,6 @@ class NoteWidgetItemFactory(
         try {
             val note = notes[position]
 
-            // Başlığı ayarla
             if (note.title.isNotBlank()) {
                 views.setViewVisibility(R.id.tv_widget_item_title, View.VISIBLE)
                 views.setTextViewText(R.id.tv_widget_item_title, note.title)
@@ -60,43 +57,36 @@ class NoteWidgetItemFactory(
                 views.setViewVisibility(R.id.tv_widget_item_title, View.GONE)
             }
 
-            // İçeriği JSON'dan parse edip okunabilir metin haline getir
             var contentPreview: String = try {
                 val noteContent = gson.fromJson(note.content, NoteContent::class.java)
 
-                // Metin kısmını HTML'den arındır
                 val textPart = if (noteContent.text.isNotBlank()) {
                     Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()
                 } else {
                     ""
                 }
 
-                // Checklist kısmının özetini oluştur
+                // Düzeltme burada
                 val checklistPart = if (noteContent.checklist.isNotEmpty()) {
                     val checkedCount = noteContent.checklist.count { it.isChecked }
-                    "[Liste: ${checkedCount}/${noteContent.checklist.size}]"
+                    context.getString(R.string.checklist_summary_preview, checkedCount, noteContent.checklist.size)
                 } else {
                     ""
                 }
 
-                // İki kısmı anlamlı bir şekilde birleştir
                 if (textPart.isNotEmpty() && checklistPart.isNotEmpty()) {
                     "$textPart\n$checklistPart"
                 } else {
-                    textPart + checklistPart // Sadece biri doluysa veya ikisi de boşsa
+                    textPart + checklistPart
                 }
             } catch (e: JsonSyntaxException) {
-                // JSON parse hatası olursa (eski format notlar için), içeriği doğrudan HTML'den arındır
                 Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY).toString()
             }
 
-            // --- İSTENEN DEĞİŞİKLİK BURADA ---
-            // Eğer metin içinde yeni satır karakteri varsa, ilk satırı al ve sonuna "..." ekle.
             val firstNewlineIndex = contentPreview.indexOf('\n')
             if (firstNewlineIndex != -1) {
                 contentPreview = contentPreview.substring(0, firstNewlineIndex) + "..."
             }
-            // --- DEĞİŞİKLİK SONU ---
 
             views.setTextViewText(R.id.tv_widget_item_content, contentPreview)
 
@@ -116,7 +106,6 @@ class NoteWidgetItemFactory(
 
             return views
         } catch (e: Exception) {
-            // Widget item yüklenirken hata olursa boş bir view döndür
             views.setTextViewText(R.id.tv_widget_item_title, "")
             views.setTextViewText(R.id.tv_widget_item_content, "Not yüklenirken hata oluştu")
             return views

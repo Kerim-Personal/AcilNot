@@ -66,16 +66,17 @@ class MainActivity : AppCompatActivity() {
         private const val PREF_THEME_MODE = "theme_selection"
     }
 
-    private var shouldScrollToTop = false
+    // --- DÜZELTME 1: Bu satır kaldırıldı. ---
+    // private var shouldScrollToTop = false
 
     private val audioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            Toast.makeText(this, "Mikrofon izni verildi. Sesli not widget'ı artık kullanılabilir.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.mic_permission_granted_widget_available), Toast.LENGTH_SHORT).show()
             updateVoiceWidgets()
         } else {
-            Toast.makeText(this, "Mikrofon izni reddedildi. Sesli not widget'ı çalışmayacak.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.mic_permission_denied_widget_unavailable), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -103,10 +104,11 @@ class MainActivity : AppCompatActivity() {
                     allNotes = notes
                     sortAndFilterList()
 
-                    if (shouldScrollToTop) {
-                        recyclerView.scrollToPosition(0)
-                        shouldScrollToTop = false
-                    }
+                    // --- DÜZELTME 2: Başa sarma kontrolü kaldırıldı. ---
+                    // if (shouldScrollToTop) {
+                    //     recyclerView.scrollToPosition(0)
+                    //     shouldScrollToTop = false
+                    // }
                 }
             }
         }
@@ -126,10 +128,11 @@ class MainActivity : AppCompatActivity() {
         checkAudioPermission()
     }
 
-    override fun onResume() {
-        super.onResume()
-        shouldScrollToTop = true
-    }
+    // --- DÜZELTME 3: onResume metodu tamamen kaldırılabilir veya boş bırakılabilir. ---
+    // override fun onResume() {
+    //     super.onResume()
+    //     shouldScrollToTop = true
+    // }
 
     private fun applySavedTheme() {
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
@@ -236,10 +239,10 @@ class MainActivity : AppCompatActivity() {
             val areAllSelectedPinned = selectedNotes.isNotEmpty() && selectedNotes.all { it.showOnWidget }
 
             if (areAllSelectedPinned) {
-                pinItem.title = "Sabitlemeyi Kaldır"
+                pinItem.title = getString(R.string.unpin_from_widget)
                 pinItem.icon = ContextCompat.getDrawable(this, R.drawable.ic_pin_off)
             } else {
-                pinItem.title = "Widget'a Sabitle"
+                pinItem.title = getString(R.string.pin_to_widget)
                 pinItem.icon = ContextCompat.getDrawable(this, R.drawable.ic_push_pin)
             }
 
@@ -295,7 +298,7 @@ class MainActivity : AppCompatActivity() {
                 NoteWidgetProvider.updateAppWidget(applicationContext, appWidgetManager, appWidgetId)
             }
         } catch (e: Exception) {
-            Toast.makeText(applicationContext, "Widget güncellenirken bir sorun oluştu.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, "An error occurred while updating the widget.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -305,7 +308,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             noteDao.setPinnedStatus(noteIds, false)
             updateAllWidgets()
-            Toast.makeText(applicationContext, "Notların widget sabitlemesi kaldırıldı.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, getString(R.string.unpinned_from_widget_toast), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -315,7 +318,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             noteDao.setPinnedStatus(noteIds, true)
             updateAllWidgets()
-            Toast.makeText(applicationContext, "Seçili notlar widget'a sabitlendi.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, getString(R.string.notes_pinned_to_widget_toast), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -350,7 +353,7 @@ class MainActivity : AppCompatActivity() {
 
         if (notes.size == 1) {
             val note = notes.first()
-            val noteTitle = note.title.ifBlank { "Paylaşılan Not" }
+            val noteTitle = note.title.ifBlank { getString(R.string.shared_note_default_title) }
 
             val noteBitmap = createBitmapFromNote(note)
 
@@ -378,10 +381,10 @@ class MainActivity : AppCompatActivity() {
                         putParcelableArrayListExtra(Intent.EXTRA_STREAM, urisToShare)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    startActivity(Intent.createChooser(shareIntent, "Notu Paylaş"))
+                    startActivity(Intent.createChooser(shareIntent, getString(R.string.share_note_chooser_title)))
                 }
             } else {
-                Toast.makeText(this, "Not çok uzun olduğu için metin olarak paylaşılıyor ve panoya kopyalandı.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.note_too_long_for_image_share_toast), Toast.LENGTH_LONG).show()
 
                 val plainTextBuilder = StringBuilder()
                 val htmlTextBuilder = StringBuilder()
@@ -415,7 +418,7 @@ class MainActivity : AppCompatActivity() {
                                 putExtra(Intent.EXTRA_STREAM, audioUri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            startActivity(Intent.createChooser(shareIntent, "Sesi Paylaş"))
+                            startActivity(Intent.createChooser(shareIntent, getString(R.string.share_audio_chooser_title)))
                         }
                     }
                 } catch (_: Exception) {}
@@ -426,32 +429,28 @@ class MainActivity : AppCompatActivity() {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, shareText)
             }
-            startActivity(Intent.createChooser(intent, "Notları Paylaş"))
+            startActivity(Intent.createChooser(intent, getString(R.string.share_notes_chooser_title)))
         }
     }
 
-    // DÜZELTME: Arka plan ve metin rengini notun rengine göre ayarlar.
     private fun createBitmapFromNote(note: Note): Bitmap? {
         return try {
             val view = LayoutInflater.from(this).inflate(R.layout.note_render_layout, FrameLayout(this), false)
             val titleView = view.findViewById<TextView>(R.id.render_note_title)
             val contentView = view.findViewById<TextView>(R.id.render_note_content)
 
-            // 1. Notun rengini al ve arka planı ayarla
             val backgroundColor = try {
                 Color.parseColor(note.color)
             } catch (e: Exception) {
-                Color.WHITE // Hatalı renk koduna karşı beyaz kullan
+                Color.WHITE
             }
             view.setBackgroundColor(backgroundColor)
 
-            // 2. Akıllı metin rengini belirle ve ata
             val textColor = getContrastingTextColor(backgroundColor)
             titleView.setTextColor(textColor)
             contentView.setTextColor(textColor)
-            contentView.setLinkTextColor(textColor) // Linklerin rengini de ayarla
+            contentView.setLinkTextColor(textColor)
 
-            // 3. İçeriği doldur
             val gson = Gson()
             val noteContent = gson.fromJson(note.content, NoteContent::class.java)
 
@@ -467,7 +466,7 @@ class MainActivity : AppCompatActivity() {
                 contentBuilder.append(noteContent.text)
             }
             if (noteContent.checklist.isNotEmpty()) {
-                contentBuilder.append("<br><b>Liste:</b><br>")
+                contentBuilder.append("<br><b>${getString(R.string.checklist_render_title)}</b><br>")
                 noteContent.checklist.forEach { item ->
                     val checkbox = if (item.isChecked) "✓" else "☐"
                     val text = Html.escapeHtml(item.text)
@@ -477,7 +476,6 @@ class MainActivity : AppCompatActivity() {
 
             contentView.text = Html.fromHtml(contentBuilder.toString(), Html.FROM_HTML_MODE_COMPACT)
 
-            // 4. Görüntüyü ölç ve çiz
             val displayMetrics = resources.displayMetrics
             val width = (displayMetrics.widthPixels * 0.9).toInt()
 
@@ -498,7 +496,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // DÜZELTME: Arka plan rengine göre okunabilir metin rengi (siyah/beyaz) seçer.
     private fun getContrastingTextColor(backgroundColor: Int): Int {
         val luma = (0.299 * Color.red(backgroundColor) + 0.587 * Color.green(backgroundColor) + 0.114 * Color.blue(backgroundColor)) / 255
         return if (luma > 0.5) Color.BLACK else Color.WHITE

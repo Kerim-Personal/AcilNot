@@ -323,14 +323,14 @@
                     android:layout_height="48dp"
                     android:src="@android:drawable/ic_media_play"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Ses Kaydını Oynat" />
+                    android:contentDescription="@string/play" />
 
                 <TextView
                     android:id="@+id/tv_audio_title"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Sesli Not"
+                    android:text="@string/voice_recording_title"
                     android:layout_marginStart="8dp"
                     android:textColor="?android:attr/textColorSecondary"/>
             </LinearLayout>
@@ -354,7 +354,6 @@
                     android:textCursorDrawable="@null" />
 
             </com.google.android.material.textfield.TextInputLayout>
-
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_checklist"

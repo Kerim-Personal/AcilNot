@@ -16,7 +16,6 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.widget.RemoteViews
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import android.Manifest
@@ -56,7 +55,6 @@ class AudioRecordingService : Service() {
     }
 
     private fun startRecording() {
-        // Sadece IDLE (boşta) durumundayken kaydı başlat
         if (VoiceMemoWidgetProvider.getWidgetState(this) != WidgetState.IDLE) {
             return
         }
@@ -85,12 +83,10 @@ class AudioRecordingService : Service() {
             createNotificationChannel()
             startForeground(NOTIFICATION_ID, createNotification())
 
-            // Widget durumunu RECORDING olarak ayarla
             VoiceMemoWidgetProvider.setWidgetState(this, WidgetState.RECORDING)
 
         } catch (e: IOException) {
             e.printStackTrace()
-            // Hata durumunda servisi temizle ve durdur
             try { cleanup() } catch (ignored: Exception) {}
         }
     }
@@ -110,16 +106,13 @@ class AudioRecordingService : Service() {
 
     private fun cleanup() {
         timerHandler.removeCallbacks(timerRunnable)
-
-        // Widget durumunu SAVED olarak ayarla
         VoiceMemoWidgetProvider.setWidgetState(this, WidgetState.SAVED)
 
-        // 2 saniye sonra widget'ı IDLE durumuna döndür ve servisi durdur
         Handler(Looper.getMainLooper()).postDelayed({
             VoiceMemoWidgetProvider.setWidgetState(this, WidgetState.IDLE)
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
-        }, 2000) // "Kaydedildi" yazısı 2 saniye görünecek
+        }, 2000)
     }
 
     private fun startTimer() {
@@ -127,7 +120,7 @@ class AudioRecordingService : Service() {
             override fun run() {
                 if (mediaRecorder == null) return
                 val elapsedMillis = System.currentTimeMillis() - recordingStartTime
-                val formattedTime = String.format("%02d:%02d",
+                val formattedTime = String.format(Locale.getDefault(), "%02d:%02d",
                     TimeUnit.MILLISECONDS.toMinutes(elapsedMillis),
                     TimeUnit.MILLISECONDS.toSeconds(elapsedMillis) % 60
                 )
@@ -149,7 +142,8 @@ class AudioRecordingService : Service() {
     private fun saveAudioNote() {
         if (audioFile == null || !audioFile!!.exists() || audioFile!!.length() == 0L) return
         val noteDao = NoteDatabase.getDatabase(this).noteDao()
-        val title = "Sesli Not - ${formatDate(System.currentTimeMillis())}"
+        // Düzeltme burada
+        val title = "${getString(R.string.voice_recording_title)} - ${formatDate(System.currentTimeMillis())}"
         val contentJson = Gson().toJson(NoteContent(text = "", checklist = mutableListOf(), audioFilePath = audioFile?.absolutePath))
         CoroutineScope(Dispatchers.IO).launch {
             noteDao.insert(Note(title = title, content = contentJson, createdAt = System.currentTimeMillis()))
@@ -167,17 +161,17 @@ class AudioRecordingService : Service() {
         val stopIntent = Intent(this, AudioRecordingService::class.java).apply { action = ACTION_STOP_RECORDING }
         val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Acil Not")
-            .setContentText("Ses kaydı yapılıyor...")
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.recording_in_progress))
             .setSmallIcon(R.drawable.ic_microphone_24)
-            .addAction(R.drawable.ic_stop_24, "Durdur", stopPendingIntent)
+            .addAction(R.drawable.ic_stop_24, getString(R.string.stop), stopPendingIntent)
             .setOngoing(true)
             .build()
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(NOTIFICATION_CHANNEL_ID, "Ses Kayıt Servisi", NotificationManager.IMPORTANCE_LOW)
+            val serviceChannel = NotificationChannel(NOTIFICATION_CHANNEL_ID, getString(R.string.audio_recording_service_channel_name), NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(serviceChannel)
         }
     }
