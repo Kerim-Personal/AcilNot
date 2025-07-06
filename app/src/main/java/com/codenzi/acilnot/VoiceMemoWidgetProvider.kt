@@ -8,10 +8,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.RemoteViews
-import android.content.ComponentName
 import android.Manifest
 import androidx.core.content.ContextCompat
-import android.widget.Toast
 
 class VoiceMemoWidgetProvider : AppWidgetProvider() {
 
@@ -32,6 +30,19 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        setRecording(context, false)
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(PREF_IS_RECORDING)
+            .apply()
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -47,100 +58,32 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
     ) {
-        try {
-            val remoteViews = RemoteViews(context.packageName, R.layout.widget_voice_memo)
+        val remoteViews = RemoteViews(context.packageName, R.layout.widget_voice_memo)
+        val isCurrentlyRecording = isRecording(context)
 
-            // Check if we have permission
-            val hasPermission = ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!hasPermission) {
-                // Show permission required state
-                remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_24)
-                remoteViews.setTextViewText(R.id.tv_widget_status, "İzin gerekli")
-
-                // Create intent to open main activity for permission
-                val intent = Intent(context, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                val pendingIntent = PendingIntent.getActivity(
-                    context,
-                    appWidgetId,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                remoteViews.setOnClickPendingIntent(R.id.btn_record_voice, pendingIntent)
-            } else {
-                // Permission granted, handle recording
-                val isCurrentlyRecording = isRecording(context)
-
-                val intent = Intent(context, AudioRecordingService::class.java).apply {
-                    action = if (isCurrentlyRecording) {
-                        AudioRecordingService.ACTION_STOP_RECORDING
-                    } else {
-                        AudioRecordingService.ACTION_START_RECORDING
-                    }
-                    putExtra("widget_id", appWidgetId)
-                }
-
-                val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    PendingIntent.getForegroundService(
-                        context,
-                        appWidgetId,
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                } else {
-                    PendingIntent.getService(
-                        context,
-                        appWidgetId,
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                }
-
-                // Update UI based on recording state
-                if (isCurrentlyRecording) {
-                    remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_stop_24)
-                    remoteViews.setTextViewText(R.id.tv_widget_status, "Durdurmak için dokun")
-                } else {
-                    remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_24)
-                    remoteViews.setTextViewText(R.id.tv_widget_status, "Kaydetmek için dokun")
-                }
-
-                remoteViews.setOnClickPendingIntent(R.id.btn_record_voice, pendingIntent)
-            }
-
-            appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // Create a fallback view in case of errors
-            val remoteViews = RemoteViews(context.packageName, R.layout.widget_voice_memo)
+        // Arayüzü duruma göre güncelle
+        if (isCurrentlyRecording) {
+            remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_stop_24)
+            remoteViews.setTextViewText(R.id.tv_widget_status, "Durdurmak için dokun")
+        } else {
             remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_24)
-            remoteViews.setTextViewText(R.id.tv_widget_status, "Hata oluştu")
-            appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
+            remoteViews.setTextViewText(R.id.tv_widget_status, "Kaydetmek için dokun")
         }
-    }
 
-    override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
+        // Butonun tıklama görevini ayarla: Her zaman RecordingStarterActivity'yi başlatacak.
+        val intent = Intent(context, RecordingStarterActivity::class.java)
+        // Her tıklamanın yeni bir olay olmasını sağlamak için FLAG_ACTIVITY_NEW_TASK ekliyoruz.
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
 
-        try {
-            when (intent.action) {
-                AudioRecordingService.ACTION_UPDATE_WIDGET -> {
-                    val isRecording = intent.getBooleanExtra("is_recording", false)
-                    setRecording(context, isRecording)
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            appWidgetId, // Benzersiz bir istek kodu
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-                    // Update all widgets
-                    val appWidgetManager = AppWidgetManager.getInstance(context)
-                    val componentName = ComponentName(context, VoiceMemoWidgetProvider::class.java)
-                    val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-                    onUpdate(context, appWidgetManager, appWidgetIds)
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        remoteViews.setOnClickPendingIntent(R.id.btn_record_voice, pendingIntent)
+
+        appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
     }
 }

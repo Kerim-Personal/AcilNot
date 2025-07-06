@@ -1,13 +1,15 @@
 package com.codenzi.acilnot
 
-import androidx.multidex.MultiDexApplication
-import androidx.multidex.MultiDex // Yeni import
-import android.content.Context // Yeni import
+import android.app.Application
 
-class MyApplication : MultiDexApplication() { // MultiDexApplication'dan miras alın
+// MultiDexApplication'dan miras almaya gerek yok.
+// Standart Application sınıfını kullanın.
+class MyApplication : Application() {
 
-    override fun attachBaseContext(base: Context?) { //
-        super.attachBaseContext(base) //
-        MultiDex.install(this) // MultiDex'i başlat
+    // attachBaseContext ve MultiDex.install() metodlarına da gerek yok.
+    // Bu metodu tamamen silebilirsiniz.
+    override fun onCreate() {
+        super.onCreate()
+        // Gelecekte uygulama genelinde bir başlangıç kodunuz olursa buraya ekleyebilirsiniz.
     }
 }

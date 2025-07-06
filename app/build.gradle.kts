@@ -18,13 +18,13 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        multiDexEnabled = true
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(
+
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
@@ -40,19 +40,13 @@ android {
 }
 
 dependencies {
-    // Tüm kütüphaneler artık libs.versions.toml dosyasından (version catalog) okunuyor.
-    // Sabit sürüm numaraları ve yerel değişkenler kaldırıldı.
 
-    // Lifecycle, Room ve Gson kütüphaneleri güncellendi ve version catalog'a taşındı.
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx) // Bu satırın düzgün biçimlendirildiğinden emin olun
     // 'kapt' yerine 'ksp' kullanılıyor.
     ksp(libs.androidx.room.compiler)
     implementation(libs.gson)
-
-    // Çoklu DEX bağımlılığı
-    implementation("androidx.multidex:multidex:2.0.1")
 
     // Mevcut kütüphaneler (zaten version catalog kullanıyordu)
     implementation(libs.androidx.core.ktx)

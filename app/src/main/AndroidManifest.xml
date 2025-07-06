@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
 
@@ -41,6 +43,13 @@
         <activity android:name=".PasswordSettingsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".RecordingStarterActivity"
+            android:theme="@style/Theme.Transparent"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"/>
+
         <receiver
             android:name=".NoteDeleteReceiver"
             android:exported="false">
@@ -74,9 +83,6 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.codenzi.acilnot.action.START_RECORDING" />
-                <action android:name="com.codenzi.acilnot.action.STOP_RECORDING" />
-                <action android:name="com.codenzi.acilnot.action.UPDATE_WIDGET" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

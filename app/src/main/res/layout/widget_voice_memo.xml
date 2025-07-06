@@ -13,7 +13,7 @@
         android:layout_width="64dp"
         android:layout_height="64dp"
         android:src="@drawable/ic_microphone_24"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:background="@android:color/transparent"
         android:contentDescription="Ses Kaydını Başlat"
         android:scaleType="fitCenter" />
 
