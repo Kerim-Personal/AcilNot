@@ -164,4 +164,7 @@
     <string name="widget_bg_coral_breeze">Mercan Esintisi</string>
     <string name="widget_bg_crystal_clarity">Kristal Berraklığı</string>
     <string name="widget_bg_sapphire_blue">Safir Laciverti</string>
+
+    <string name="trash_info_message">Çöp kutusundaki notlar 30 gün sonra kalıcı olarak silinir.</string>
+
 </resources>

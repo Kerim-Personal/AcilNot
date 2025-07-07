@@ -164,4 +164,7 @@
     <string name="widget_bg_coral_breeze">Coral Breeze</string>
     <string name="widget_bg_crystal_clarity">Crystal Clarity</string>
     <string name="widget_bg_sapphire_blue">Sapphire Blue</string>
+
+    <string name="trash_info_message">Notes in the trash are permanently deleted after 30 days.</string>
+
 </resources>

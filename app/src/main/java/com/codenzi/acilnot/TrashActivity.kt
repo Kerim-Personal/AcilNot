@@ -1,4 +1,3 @@
-// kerim-personal/acilnot/AcilNot-bac63f010f7599eb293834e5058654e744d3d8b5/app/src/main/java/com/codenzi/acilnot/TrashActivity.kt
 package com.codenzi.acilnot
 
 import android.os.Bundle
@@ -26,6 +25,7 @@ class TrashActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var tvEmptyTrash: TextView
     private lateinit var toolbar: Toolbar
+    private lateinit var tvTrashInfo: TextView // YENİ DEĞİŞKEN
 
     private var isSelectionMode = false
 
@@ -40,6 +40,7 @@ class TrashActivity : AppCompatActivity() {
         noteDao = NoteDatabase.getDatabase(this).noteDao()
         recyclerView = findViewById(R.id.rv_deleted_notes)
         tvEmptyTrash = findViewById(R.id.tv_empty_trash)
+        tvTrashInfo = findViewById(R.id.tv_trash_info) // YENİ ATAMA
 
         setupRecyclerView()
         observeDeletedNotes()
@@ -71,8 +72,17 @@ class TrashActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 noteDao.getDeletedNotes().collect { notes ->
                     deletedNoteAdapter.updateNotes(notes)
-                    tvEmptyTrash.visibility = if (notes.isEmpty()) View.VISIBLE else View.GONE
-                    recyclerView.visibility = if (notes.isEmpty()) View.GONE else View.VISIBLE
+                    // GÜNCELLENDİ: Bilgilendirme metninin görünürlüğünü ayarla
+                    if (notes.isEmpty()) {
+                        tvEmptyTrash.visibility = View.VISIBLE
+                        recyclerView.visibility = View.GONE
+                        tvTrashInfo.visibility = View.GONE // Çöp kutusu boşsa bilgi metnini gizle
+                    } else {
+                        tvEmptyTrash.visibility = View.GONE
+                        recyclerView.visibility = View.VISIBLE
+                        tvTrashInfo.visibility = View.VISIBLE // Çöp kutusunda not varsa bilgi metnini göster
+                    }
+
                     if (notes.isEmpty() && isSelectionMode) {
                         exitSelectionMode()
                     }

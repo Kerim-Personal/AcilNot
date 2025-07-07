@@ -19,7 +19,7 @@ interface NoteDao {
     suspend fun getNoteById(noteId: Int): Note?
 
     // Sadece widget'a sabitlenmiş ve silinmemiş notları getir
-    @Query("SELECT * FROM notes WHERE isDeleted = 0 AND showOnWidget = 1 ORDER BY createdAt DESC") // GÜNCELLENDİ
+    @Query("SELECT * FROM notes WHERE isDeleted = 0 AND showOnWidget = 1 ORDER BY createdAt DESC")
     suspend fun getNotesForWidget(): List<Note>
 
     // Sadece silinmemiş notları getir
@@ -42,15 +42,19 @@ interface NoteDao {
     @Query("DELETE FROM notes WHERE id = :noteId")
     suspend fun hardDeleteById(noteId: Int)
 
-    // YENİ: Seçilen notları kalıcı olarak sil
+    // Seçilen notları kalıcı olarak sil
     @Query("DELETE FROM notes WHERE id IN (:noteIds)")
     suspend fun hardDeleteByIds(noteIds: List<Int>)
 
-    // YENİ: Tüm notların widget sabitlemesini kaldır
+    // Tüm notların widget sabitlemesini kaldır
     @Query("UPDATE notes SET showOnWidget = 0")
     suspend fun unpinAllNotes()
 
-    // YENİ: Belirtilen notların sabitleme durumunu ayarla
+    // Belirtilen notların sabitleme durumunu ayarla
     @Query("UPDATE notes SET showOnWidget = :isPinned WHERE id IN (:noteIds)")
     suspend fun setPinnedStatus(noteIds: List<Int>, isPinned: Boolean)
+
+    // YENİ: 30 günden eski notları kalıcı olarak siler
+    @Query("DELETE FROM notes WHERE isDeleted = 1 AND deletedAt IS NOT NULL AND deletedAt < :thirtyDaysAgoTimestamp")
+    suspend fun deleteOldTrashedNotes(thirtyDaysAgoTimestamp: Long)
 }
