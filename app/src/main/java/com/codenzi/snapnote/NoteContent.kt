@@ -1,4 +1,4 @@
-package com.codenzi.acilnot
+package com.codenzi.snapnote
 
 data class NoteContent(
     var text: String,

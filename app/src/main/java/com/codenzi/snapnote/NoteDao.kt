@@ -1,4 +1,4 @@
-package com.codenzi.acilnot
+package com.codenzi.snapnote
 
 import androidx.room.Dao
 import androidx.room.Insert

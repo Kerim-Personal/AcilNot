@@ -250,7 +250,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <com.codenzi.acilnot.SelectionAwareEditText
+        <com.codenzi.snapnote.SelectionAwareEditText
             android:id="@+id/et_note_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -340,7 +340,7 @@
                 app:hintEnabled="false"
                 app:boxBackgroundMode="none">
 
-                <com.codenzi.acilnot.SelectionAwareEditText
+                <com.codenzi.snapnote.SelectionAwareEditText
                     android:id="@+id/et_note_input"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

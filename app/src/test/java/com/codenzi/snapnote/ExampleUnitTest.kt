@@ -1,4 +1,4 @@
-package com.codenzi.acilnot
+package com.codenzi.snapnote
 
 import org.junit.Test
 

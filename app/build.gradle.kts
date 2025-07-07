@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    namespace = "com.codenzi.acilnot"
+    namespace = "com.codenzi.snapnote"
     // DÜZELTME: compileSdk, en son stabil sürüme (35) çekildi.
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.codenzi.acilnot"
+        applicationId = "com.codenzi.snapnote"
         minSdk = 24
         // DÜZELTME: targetSdk, en son stabil sürüme (35) çekildi.
         targetSdk = 35

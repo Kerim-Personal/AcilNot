@@ -1,4 +1,4 @@
-package com.codenzi.acilnot
+package com.codenzi.snapnote
 
 import android.content.Context
 import android.content.SharedPreferences

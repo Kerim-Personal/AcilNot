@@ -1,4 +1,4 @@
-package com.codenzi.acilnot
+package com.codenzi.snapnote
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
@@ -71,6 +70,14 @@ class AudioRecordingService : Service() {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+
+                // --- SES KALİTESİ İYİLEŞTİRMESİ ---
+                // Örnekleme oranını CD kalitesi olan 44.1kHz'e ayarla.
+                setAudioSamplingRate(44100)
+                // Bit hızını 192kbps'e ayarlayarak ses kalitesini artır.
+                setAudioEncodingBitRate(192000)
+                // --- İYİLEŞTİRME SONU ---
+
                 setOutputFile(audioFile?.absolutePath)
                 prepare()
                 start()
@@ -142,7 +149,6 @@ class AudioRecordingService : Service() {
     private fun saveAudioNote() {
         if (audioFile == null || !audioFile!!.exists() || audioFile!!.length() == 0L) return
         val noteDao = NoteDatabase.getDatabase(this).noteDao()
-        // Düzeltme burada
         val title = "${getString(R.string.voice_recording_title)} - ${formatDate(System.currentTimeMillis())}"
         val contentJson = Gson().toJson(NoteContent(text = "", checklist = mutableListOf(), audioFilePath = audioFile?.absolutePath))
         CoroutineScope(Dispatchers.IO).launch {

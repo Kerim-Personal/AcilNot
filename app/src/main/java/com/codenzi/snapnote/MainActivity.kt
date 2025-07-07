@@ -1,4 +1,4 @@
-package com.codenzi.acilnot
+package com.codenzi.snapnote
 
 import android.Manifest
 import android.appwidget.AppWidgetManager
@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle

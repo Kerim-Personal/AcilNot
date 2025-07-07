@@ -1,4 +1,4 @@
-package com.codenzi.acilnot
+package com.codenzi.snapnote
 
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod

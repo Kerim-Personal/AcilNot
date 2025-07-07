@@ -1,4 +1,4 @@
-package com.codenzi.acilnot
+package com.codenzi.snapnote
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
