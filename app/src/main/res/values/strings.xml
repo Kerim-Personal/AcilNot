@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Acil Not</string>
+    <string name="app_name">SnapNote</string>
     <string name="search_title">Search</string>
     <string name="sort_title">Sort</string>
     <string name="action_share">Share</string>
@@ -166,5 +166,6 @@
     <string name="widget_bg_sapphire_blue">Sapphire Blue</string>
 
     <string name="trash_info_message">Notes in the trash are permanently deleted after 30 days.</string>
+    <string name="empty_notes_message">You have no notes yet.</string>
 
 </resources>

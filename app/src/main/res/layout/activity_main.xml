@@ -20,12 +20,29 @@
             app:popupTheme="@style/ThemeOverlay.AppCompat.Light"/>
 
     </com.google.android.material.appbar.AppBarLayout>
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_notes"
+
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:listitem="@layout/note_item" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_notes"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:listitem="@layout/note_item" />
+
+        <TextView
+            android:id="@+id/tv_empty_notes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/empty_notes_message"
+            android:textSize="18sp"
+            android:visibility="gone"
+            tools:visibility="visible"/>
+
+    </FrameLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_add_note"
@@ -36,4 +53,6 @@
         android:contentDescription="@string/add_note_fab_description"
         android:src="@android:drawable/ic_input_add"
         app:backgroundTint="?attr/floatingActionButtonBackground"
-        app:tint="?attr/floatingActionButtonIconTint" /> </androidx.coordinatorlayout.widget.CoordinatorLayout>
+        app:tint="?attr/floatingActionButtonIconTint" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

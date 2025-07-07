@@ -31,6 +31,7 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.graphics.toColorInt
 import androidx.core.view.drawToBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -56,6 +57,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var recyclerView: RecyclerView
     private lateinit var toolbar: Toolbar
+    private lateinit var tvEmptyNotes: TextView
     private var allNotes: List<Note> = emptyList()
     private var currentSortOrder = SortOrder.CREATION_NEWEST
     private var currentSearchQuery: String? = null
@@ -64,9 +66,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val PREF_THEME_MODE = "theme_selection"
     }
-
-    // --- DÜZELTME 1: Bu satır kaldırıldı. ---
-    // private var shouldScrollToTop = false
 
     private val audioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -89,6 +88,7 @@ class MainActivity : AppCompatActivity() {
 
         noteDao = NoteDatabase.getDatabase(this).noteDao()
         recyclerView = findViewById(R.id.rv_notes)
+        tvEmptyNotes = findViewById(R.id.tv_empty_notes)
         val fab: FloatingActionButton = findViewById(R.id.fab_add_note)
 
         setupRecyclerView()
@@ -103,11 +103,13 @@ class MainActivity : AppCompatActivity() {
                     allNotes = notes
                     sortAndFilterList()
 
-                    // --- DÜZELTME 2: Başa sarma kontrolü kaldırıldı. ---
-                    // if (shouldScrollToTop) {
-                    //     recyclerView.scrollToPosition(0)
-                    //     shouldScrollToTop = false
-                    // }
+                    if (notes.isEmpty()) {
+                        recyclerView.visibility = View.GONE
+                        tvEmptyNotes.visibility = View.VISIBLE
+                    } else {
+                        recyclerView.visibility = View.VISIBLE
+                        tvEmptyNotes.visibility = View.GONE
+                    }
                 }
             }
         }
@@ -126,12 +128,6 @@ class MainActivity : AppCompatActivity() {
 
         checkAudioPermission()
     }
-
-    // --- DÜZELTME 3: onResume metodu tamamen kaldırılabilir veya boş bırakılabilir. ---
-    // override fun onResume() {
-    //     super.onResume()
-    //     shouldScrollToTop = true
-    // }
 
     private fun applySavedTheme() {
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
@@ -439,7 +435,7 @@ class MainActivity : AppCompatActivity() {
             val contentView = view.findViewById<TextView>(R.id.render_note_content)
 
             val backgroundColor = try {
-                Color.parseColor(note.color)
+                note.color.toColorInt()
             } catch (e: Exception) {
                 Color.WHITE
             }
