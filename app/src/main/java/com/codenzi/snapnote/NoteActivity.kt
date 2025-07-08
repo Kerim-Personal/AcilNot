@@ -24,7 +24,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
-import android.widget.ImageView // ImageView importu eklendi
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -38,7 +38,7 @@ import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import coil.load // Coil kütüphanesi için import eklendi
+import coil.load
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
@@ -89,7 +89,6 @@ class NoteActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var audioPath: String? = null
 
-    // Fotoğraf önizlemesi için ImageView
     private lateinit var ivImagePreview: ImageView
     private var imagePath: String? = null
 
@@ -132,8 +131,17 @@ class NoteActivity : AppCompatActivity() {
         playPauseButton = findViewById(R.id.btn_play_pause)
         audioTitleText = findViewById(R.id.tv_audio_title)
 
-        // ImageView'in atanması
         ivImagePreview = findViewById(R.id.iv_image_preview)
+
+        // Fotoğraf önizlemesine tıklandığında tam ekran açma özelliği
+        ivImagePreview.setOnClickListener {
+            imagePath?.let { path ->
+                val intent = Intent(this, PhotoViewActivity::class.java).apply {
+                    putExtra("IMAGE_URI", path)
+                }
+                startActivity(intent)
+            }
+        }
 
         setupListeners()
         setupChecklist()
@@ -194,13 +202,8 @@ class NoteActivity : AppCompatActivity() {
 
     private fun performSave() {
         val titleText = noteTitle.text.toString().trim()
-
-        if (isListening) {
-            stopListening()
-        }
         val noteContentText = noteInput.text
 
-        // Not içeriği, başlık, checklist ve resim yolu boşsa kaydetme
         if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() } && imagePath == null) {
             return
         }
@@ -208,7 +211,6 @@ class NoteActivity : AppCompatActivity() {
         setResult(Activity.RESULT_OK)
 
         val noteTextHtml = if (noteContentText.isNullOrBlank()) "" else Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
-        // JSON içeriğine resim yolu (imagePath) eklendi
         val jsonContent = gson.toJson(NoteContent(text = noteTextHtml, checklist = checklistItems, audioFilePath = audioPath, imagePath = imagePath))
 
         lifecycleScope.launch {
@@ -349,10 +351,10 @@ class NoteActivity : AppCompatActivity() {
 
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {}
-
-            override fun onBeginningOfSpeech() {
-                utteranceStartPosition = recognizedTextBuilder.length
-            }
+            override fun onBeginningOfSpeech() { utteranceStartPosition = recognizedTextBuilder.length }
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
 
             override fun onPartialResults(partialResults: Bundle?) {
                 val partialText = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
@@ -368,11 +370,9 @@ class NoteActivity : AppCompatActivity() {
                 val finalText = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                 recognizedTextBuilder.setLength(utteranceStartPosition)
                 recognizedTextBuilder.append(finalText)
-
                 if (finalText.isNotBlank()) {
                     recognizedTextBuilder.append(" ")
                 }
-
                 noteInput.setText(recognizedTextBuilder.toString())
                 noteInput.setSelection(noteInput.length())
             }
@@ -391,10 +391,6 @@ class NoteActivity : AppCompatActivity() {
                     restartListeningWithDelay()
                 }
             }
-
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
         })
 
         voiceNoteButton.setOnClickListener {
@@ -418,14 +414,12 @@ class NoteActivity : AppCompatActivity() {
         isListening = true
         voiceNoteButton.setImageResource(R.drawable.ic_microphone_red_24)
         Toast.makeText(applicationContext, getString(R.string.speech_listening), Toast.LENGTH_SHORT).show()
-
         recognizedTextBuilder.clear()
         val currentText = noteInput.text.toString()
         recognizedTextBuilder.append(currentText)
         if (currentText.isNotEmpty() && !currentText.endsWith(" ")) {
             recognizedTextBuilder.append(" ")
         }
-
         speechRecognizer.startListening(speechRecognizerIntent)
     }
 
@@ -462,7 +456,7 @@ class NoteActivity : AppCompatActivity() {
             updateWindowBackground()
             noteTitle.text?.clear()
             noteInput.text?.clear()
-            ivImagePreview.visibility = View.GONE // Yeni notta resmi gizle
+            ivImagePreview.visibility = View.GONE
             imagePath = null
             if (checklistItems.isNotEmpty()) {
                 val oldSize = checklistItems.size
@@ -547,7 +541,6 @@ class NoteActivity : AppCompatActivity() {
                 displayEditHistory(note)
                 try {
                     val content = gson.fromJson(note.content, NoteContent::class.java)
-                    // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                     noteInput.setText(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY))
 
                     val oldSize = checklistItems.size
@@ -567,7 +560,6 @@ class NoteActivity : AppCompatActivity() {
                         audioPath = null
                     }
 
-                    // Fotoğraf varsa yükle ve göster
                     if (content.imagePath != null) {
                         imagePath = content.imagePath
                         ivImagePreview.visibility = View.VISIBLE
@@ -582,14 +574,13 @@ class NoteActivity : AppCompatActivity() {
                     }
 
                 } catch (e: JsonSyntaxException) {
-                    // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                     noteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
                     val oldSize = checklistItems.size
                     checklistItems.clear()
                     checklistAdapter.notifyItemRangeRemoved(0, oldSize)
                     audioPlayerContainer.visibility = View.GONE
                     audioPath = null
-                    ivImagePreview.visibility = View.GONE // Hata durumunda resmi gizle
+                    ivImagePreview.visibility = View.GONE
                     imagePath = null
                 }
                 selectedColor = note.color

@@ -6,14 +6,13 @@ plugins {
 
 android {
     namespace = "com.codenzi.snapnote"
-    // DÜZELTME: compileSdk, en son stabil sürüme (35) çekildi.
-    compileSdk = 35
+    // compileSdk versiyonunu da en güncel sürüme çekelim
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.codenzi.snapnote"
         minSdk = 24
-        // DÜZELTME: targetSdk, en son stabil sürüme (35) çekildi.
-        targetSdk = 35
+        targetSdk = 36 // targetSdk versiyonunu da güncelleyelim
         versionCode = 2
         versionName = "1.1.0"
 
@@ -25,7 +24,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro" //
+                "proguard-rules.pro"
             )
         }
     }
@@ -36,24 +35,21 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    // ViewBinding özelliğini etkinleştir
     buildFeatures {
         viewBinding = true
     }
 }
 
 dependencies {
-    // GÜVENLİK GÜNCELLEMESİ
+    // Güvenlik Kütüphanesi
     implementation(libs.androidx.security.crypto)
 
+    // AndroidX ve Kotlin Kütüphaneleri
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx) //
-    // 'kapt' yerine 'ksp' kullanılıyor.
-    ksp(libs.androidx.room.compiler) //
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.gson)
-
-    // Mevcut kütüphaneler
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -66,13 +62,16 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime.ktx)
 
+    // --- KÜTÜPHANELER ARTIK MERKEZİ SİSTEMDEN ÇAĞIRILIYOR ---
     // KameraX Kütüphaneleri
-    val cameraxVersion = "1.3.4"
-    implementation("androidx.camera:camera-core:$cameraxVersion")
-    implementation("androidx.camera:camera-camera2:$cameraxVersion")
-    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
-    implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     // Coil (Resim Yükleme Kütüphanesi)
-    implementation("io.coil-kt:coil:2.6.0")
+    implementation(libs.coil)
+
+    // PhotoView (Yakınlaştırma için)
+    implementation(libs.photoview)
 }

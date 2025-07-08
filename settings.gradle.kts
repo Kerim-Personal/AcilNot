@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage") // Bu satır @Incubating uyarılarını gizler
+
 pluginManagement {
     repositories {
         google {
@@ -16,9 +18,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // PhotoView GİBİ GITHUB KÜTÜPHANELERİ İÇİN GEREKLİ REPO
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
 rootProject.name = "AcilNotUygulamasi"
 include(":app")
- 

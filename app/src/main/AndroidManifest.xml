@@ -50,6 +50,11 @@
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar"/>
 
+        <activity
+            android:name=".PhotoViewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar"/>
+
         <receiver
             android:name=".NoteDeleteReceiver"
             android:exported="false">
