@@ -326,6 +326,7 @@ class MainActivity : AppCompatActivity() {
         try {
             val noteContent = gson.fromJson(this.content, NoteContent::class.java)
             if (noteContent.text.isNotBlank()) {
+                // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                 val plainText = Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()
                 builder.append(plainText).append("\n\n")
             }
@@ -337,6 +338,7 @@ class MainActivity : AppCompatActivity() {
                 builder.append("\n")
             }
         } catch (e: JsonSyntaxException) {
+            // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
             val plainText = Html.fromHtml(this.content, Html.FROM_HTML_MODE_LEGACY).toString().trim()
             builder.append(plainText)
         }

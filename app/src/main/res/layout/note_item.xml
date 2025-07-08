@@ -54,6 +54,17 @@
             app:layout_constraintTop_toBottomOf="@id/tv_note_title"
             tools:text="Not içeriği burada görünecek" />
 
+        <ImageView
+            android:id="@+id/iv_note_item_image"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_marginTop="8dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/tv_note_content"
+            tools:src="@tools:sample/backgrounds/scenic"
+            tools:visibility="visible" />
+
         <TextView
             android:id="@+id/tv_creation_date"
             android:layout_width="wrap_content"
@@ -62,7 +73,7 @@
             android:textColor="@android:color/darker_gray"
             android:textSize="12sp"
             android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/tv_note_content" />
+            app:layout_constraintTop_toBottomOf="@id/iv_note_item_image" />
 
         <TextView
             android:id="@+id/tv_modification_date"

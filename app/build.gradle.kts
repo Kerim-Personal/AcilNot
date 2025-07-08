@@ -25,7 +25,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro" //
             )
         }
     }
@@ -36,6 +36,10 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    // ViewBinding özelliğini etkinleştir
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
@@ -44,12 +48,12 @@ dependencies {
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.ktx) //
     // 'kapt' yerine 'ksp' kullanılıyor.
-    ksp(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler) //
     implementation(libs.gson)
 
-    // Mevcut kütüphaneler (zaten version catalog kullanıyordu)
+    // Mevcut kütüphaneler
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -61,4 +65,14 @@ dependencies {
     implementation(libs.androidx.preference.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime.ktx)
+
+    // KameraX Kütüphaneleri
+    val cameraxVersion = "1.3.4"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // Coil (Resim Yükleme Kütüphanesi)
+    implementation("io.coil-kt:coil:2.6.0")
 }

@@ -305,6 +305,18 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="16dp">
 
+            <ImageView
+                android:id="@+id/iv_image_preview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/image_preview"
+                android:scaleType="fitCenter"
+                android:visibility="gone"
+                tools:src="@tools:sample/backgrounds/scenic"
+                tools:visibility="visible" />
+
             <LinearLayout
                 android:id="@+id/ll_audio_player"
                 android:layout_width="match_parent"

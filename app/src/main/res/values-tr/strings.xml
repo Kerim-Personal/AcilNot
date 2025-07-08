@@ -168,4 +168,11 @@
     <string name="trash_info_message">Çöp kutusundaki notlar 30 gün sonra kalıcı olarak silinir.</string>
     <string name="empty_notes_message">Henüz notunuz yok.</string>
 
+    <string name="camera_widget_title">Kamera Notu</string>
+    <string name="camera_widget_description">Fotoğraf çek ve not olarak kaydet.</string>
+    <string name="take_photo">Fotoğraf Çek</string>
+    <string name="photo_note_title">Fotoğraflı Not</string>
+    <string name="image_preview">Resim Önizleme</string>
+    <string name="camera_permission_denied">Bu özelliği kullanmak için kamera izni gereklidir.</string>
+
 </resources>

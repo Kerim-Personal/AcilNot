@@ -12,8 +12,8 @@ import kotlinx.coroutines.launch
 class NoteDeleteReceiver : BroadcastReceiver() {
 
     companion object {
-        // Düzeltilmiş eylem adı
-        const val ACTION_DELETE_NOTE = "com.codenzi.acilnot.ACTION_DELETE_NOTE"
+        // DÜZELTME: Eylem adı doğru paket adıyla güncellendi.
+        const val ACTION_DELETE_NOTE = "com.codenzi.snapnote.ACTION_DELETE_NOTE"
         const val EXTRA_NOTE_ID = "EXTRA_NOTE_ID"
     }
 
@@ -23,23 +23,19 @@ class NoteDeleteReceiver : BroadcastReceiver() {
             if (noteId == -1) return
 
             val dao = NoteDatabase.getDatabase(context).noteDao()
-            // Sisteme arka plan işlemi bitene kadar beklemesini söyleyen komut
             val pendingResult: PendingResult = goAsync()
 
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    dao.hardDeleteById(noteId) // Düzeltme: hardDeleteById kullanıldı
+                    dao.hardDeleteById(noteId)
 
-                    // İşlem bittikten sonra widget'ı güncelle
                     val appWidgetManager = AppWidgetManager.getInstance(context)
                     val componentName = ComponentName(context, NoteWidgetProvider::class.java)
                     val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
                     appWidgetIds.forEach { appWidgetId ->
-                        // Widget'ı tamamen güncelle (arka plan dahil)
                         NoteWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
                     }
                 } finally {
-                    // Sisteme arka plan işinin bittiğini haber ver
                     pendingResult.finish()
                 }
             }

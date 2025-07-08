@@ -168,4 +168,11 @@
     <string name="trash_info_message">Notes in the trash are permanently deleted after 30 days.</string>
     <string name="empty_notes_message">You have no notes yet.</string>
 
+    <string name="camera_widget_title">Camera Note</string>
+    <string name="camera_widget_description">Take a photo and save it as a note.</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="photo_note_title">Photo Note</string>
+    <string name="image_preview">Image Preview</string>
+    <string name="camera_permission_denied">Camera permission is required to use this feature.</string>
+
 </resources>

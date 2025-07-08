@@ -13,6 +13,7 @@ import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import com.google.android.material.card.MaterialCardView
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
@@ -57,6 +58,7 @@ class NoteAdapter(
         private val noteContent: TextView = itemView.findViewById(R.id.tv_note_content)
         private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
         private val pinnedIcon: ImageView = itemView.findViewById(R.id.iv_pinned_icon)
+        private val noteImage: ImageView = itemView.findViewById(R.id.iv_note_item_image)
 
         fun bind(note: Note) {
             noteTitle.isVisible = note.title.isNotBlank()
@@ -66,6 +68,7 @@ class NoteAdapter(
 
             try {
                 val content = gson.fromJson(note.content, NoteContent::class.java)
+                // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                 val textPreview: Spanned = Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY)
 
                 val hasText = textPreview.isNotBlank()
@@ -85,15 +88,27 @@ class NoteAdapter(
                         checklistSummary.append("\n\n")
                     }
                     val checkedCount = content.checklist.count { it.isChecked }
-                    // Düzeltme burada
                     checklistSummary.append(itemView.context.getString(R.string.checklist_summary_preview, checkedCount, content.checklist.size))
                     noteContent.append(checklistSummary.toString())
                 }
 
+                if (content.imagePath != null) {
+                    noteImage.visibility = View.VISIBLE
+                    noteImage.load(content.imagePath) {
+                        crossfade(true)
+                        placeholder(R.drawable.ic_image_24)
+                        error(R.drawable.ic_image_24)
+                    }
+                } else {
+                    noteImage.visibility = View.GONE
+                }
+
             } catch (e: JsonSyntaxException) {
+                // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                 val preview: Spanned = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
                 noteContent.text = preview
                 noteContent.isVisible = preview.isNotBlank()
+                noteImage.visibility = View.GONE
             }
 
             if (selectedItems.contains(note.id)) {

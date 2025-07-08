@@ -22,9 +22,12 @@ class NoteWidgetItemFactory(
     private val gson = Gson()
 
     override fun onCreate() {
+        // Bu metod başlangıçta bir kez çalışır.
     }
 
     override fun onDataSetChanged() {
+        // Widget verileri güncellendiğinde bu metod çağrılır.
+        // Veritabanından widget'ta gösterilecek notları alırız.
         try {
             runBlocking {
                 notes = noteDao.getNotesForWidget()
@@ -61,12 +64,12 @@ class NoteWidgetItemFactory(
                 val noteContent = gson.fromJson(note.content, NoteContent::class.java)
 
                 val textPart = if (noteContent.text.isNotBlank()) {
+                    // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                     Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()
                 } else {
                     ""
                 }
 
-                // Düzeltme burada
                 val checklistPart = if (noteContent.checklist.isNotEmpty()) {
                     val checkedCount = noteContent.checklist.count { it.isChecked }
                     context.getString(R.string.checklist_summary_preview, checkedCount, noteContent.checklist.size)
@@ -80,6 +83,7 @@ class NoteWidgetItemFactory(
                     textPart + checklistPart
                 }
             } catch (e: JsonSyntaxException) {
+                // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                 Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY).toString()
             }
 
