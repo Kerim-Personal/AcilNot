@@ -16,7 +16,6 @@
         <ListPreference
             android:key="color_selection"
             android:title="Uygulama Rengi"
-            android:summary="Uygulamanın ana rengini değiştir"
             android:defaultValue="purple"
             android:entries="@array/color_theme_entries"
             android:entryValues="@array/color_theme_values"

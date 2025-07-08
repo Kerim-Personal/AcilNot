@@ -26,11 +26,14 @@ class TrashActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTrashBinding
     private lateinit var deletedNoteAdapter: NoteAdapter
-
     private var isSelectionMode = false
+    private var currentThemeResId: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeManager.applyTheme(this)
         super.onCreate(savedInstanceState)
+        currentThemeResId = ThemeManager.getThemeResId(this)
+
         binding = ActivityTrashBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -40,6 +43,13 @@ class TrashActivity : AppCompatActivity() {
         setupRecyclerView()
         observeDeletedNotes()
         setupBackButtonHandler()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (currentThemeResId != ThemeManager.getThemeResId(this)) {
+            recreate()
+        }
     }
 
     private fun setupRecyclerView() {
@@ -61,6 +71,7 @@ class TrashActivity : AppCompatActivity() {
         binding.rvDeletedNotes.adapter = deletedNoteAdapter
         binding.rvDeletedNotes.layoutManager = LinearLayoutManager(this)
     }
+    // ... (TrashActivity'deki diğer metodlar aynı kalacak)
 
     private fun observeDeletedNotes() {
         lifecycleScope.launch {

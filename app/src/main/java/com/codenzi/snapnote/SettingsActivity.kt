@@ -4,6 +4,8 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -16,6 +18,7 @@ import androidx.preference.PreferenceFragmentCompat
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeManager.applyTheme(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
@@ -51,6 +54,15 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            findPreference<ListPreference>("color_selection")?.setOnPreferenceChangeListener { _, _ ->
+                // Tema değişikliğini anında yansıtmak için aktiviteyi yeniden başlat
+                // Kısa bir gecikme, preference'ın kaydedilmesine olanak tanır.
+                Handler(Looper.getMainLooper()).postDelayed({
+                    activity?.recreate()
+                }, 100)
+                true
+            }
+
             findPreference<Preference>("password_settings")?.setOnPreferenceClickListener {
                 startActivity(Intent(activity, PasswordSettingsActivity::class.java))
                 true
@@ -72,7 +84,6 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<Preference>("privacy_policy")?.setOnPreferenceClickListener {
                 val url = "https://www.codenzi.com"
                 try {
-                    // DÜZELTME: KTX uzantı fonksiyonu kullanıldı.
                     val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                     startActivity(intent)
                 } catch (e: Exception) {
@@ -86,7 +97,6 @@ class SettingsActivity : AppCompatActivity() {
                 val subject = getString(R.string.contact_us_email_subject)
                 try {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        // DÜZELTME: KTX uzantı fonksiyonu kullanıldı.
                         data = "mailto:".toUri()
                         putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
                         putExtra(Intent.EXTRA_SUBJECT, subject)
@@ -104,7 +114,6 @@ class SettingsActivity : AppCompatActivity() {
                 val context = requireContext()
                 val appWidgetManager = AppWidgetManager.getInstance(context)
 
-                // Tüm widget türlerini tek bir listede toplayıp döngüye alarak kodu daha temiz hale getirelim.
                 val widgetProviders = listOf(
                     NoteWidgetProvider::class.java,
                     VoiceMemoWidgetProvider::class.java,

@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var noteAdapter: NoteAdapter
     private var isSelectionMode = false
+    private var currentThemeResId: Int = 0
 
     companion object {
         private const val PREF_THEME_MODE = "theme_selection"
@@ -73,16 +74,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // TEMAYI EN BAŞTA UYGULA
         ThemeManager.applyTheme(this)
-
         applySavedTheme()
         super.onCreate(savedInstanceState)
+        currentThemeResId = ThemeManager.getThemeResId(this)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Arkaplan rengini tema ile uyumlu hale getir
         window.decorView.setBackgroundColor(getColorFromAttr(com.google.android.material.R.attr.colorSurface))
 
         setSupportActionBar(binding.toolbar)
@@ -117,14 +116,18 @@ class MainActivity : AppCompatActivity() {
         checkAudioPermission()
     }
 
-    // Tema niteliğinden rengi almak için yardımcı fonksiyon
+    override fun onResume() {
+        super.onResume()
+        if (currentThemeResId != ThemeManager.getThemeResId(this)) {
+            recreate()
+        }
+    }
+
     private fun getColorFromAttr(attrResId: Int): Int {
         val typedValue = android.util.TypedValue()
         theme.resolveAttribute(attrResId, typedValue, true)
         return typedValue.data
     }
-
-    // ... Geri kalan tüm kodunuz aynı ...
 
     private fun applySavedTheme() {
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
@@ -137,6 +140,7 @@ class MainActivity : AppCompatActivity() {
         AppCompatDelegate.setDefaultNightMode(mode)
     }
 
+    // ... (MainActivity'deki diğer metodlar aynı kalacak)
     private fun setupRecyclerView() {
         noteAdapter = NoteAdapter(emptyList(),
             { note ->

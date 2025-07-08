@@ -12,9 +12,13 @@ import dagger.hilt.android.AndroidEntryPoint
 class PasswordSettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPasswordSettingsBinding
+    private var currentThemeResId: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeManager.applyTheme(this)
         super.onCreate(savedInstanceState)
+        currentThemeResId = ThemeManager.getThemeResId(this)
+
         binding = ActivityPasswordSettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -52,6 +56,13 @@ class PasswordSettingsActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (currentThemeResId != ThemeManager.getThemeResId(this)) {
+            recreate()
+        }
+    }
+
     private fun showSecurityInfoDialog() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.security_info_title))
@@ -64,7 +75,7 @@ class PasswordSettingsActivity : AppCompatActivity() {
         onBackPressedDispatcher.onBackPressed()
         return true
     }
-
+    // ... (PasswordSettingsActivity'deki diğer metodlar aynı kalacak)
     private fun savePassword() {
         val currentPassword = binding.etCurrentPassword.text.toString()
         val newPassword = binding.etNewPassword.text.toString()
