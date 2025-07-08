@@ -19,7 +19,7 @@
             android:defaultValue="purple"
             android:entries="@array/color_theme_entries"
             android:entryValues="@array/color_theme_values"
-            app:icon="@drawable/ic_image_24" />
+            app:icon="@drawable/outline_palette_24" />
 
         <ListPreference
             android:key="widget_background_selection"
