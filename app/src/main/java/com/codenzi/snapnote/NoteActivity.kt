@@ -96,6 +96,9 @@ class NoteActivity : AppCompatActivity() {
     private val recognizedTextBuilder = StringBuilder()
     private var utteranceStartPosition = 0
 
+    // YENİ: Notun widget'tan gelip gelmediğini tutacak bir değişken ekliyoruz.
+    private var isFromWidget = false
+
     private val restartHandler = Handler(Looper.getMainLooper())
 
     private val requestPermissionLauncher =
@@ -133,7 +136,6 @@ class NoteActivity : AppCompatActivity() {
 
         ivImagePreview = findViewById(R.id.iv_image_preview)
 
-        // Fotoğraf önizlemesine tıklandığında tam ekran açma özelliği
         ivImagePreview.setOnClickListener {
             imagePath?.let { path ->
                 val intent = Intent(this, PhotoViewActivity::class.java).apply {
@@ -230,7 +232,9 @@ class NoteActivity : AppCompatActivity() {
                     title = titleText,
                     content = jsonContent,
                     createdAt = System.currentTimeMillis(),
-                    color = selectedColor
+                    color = selectedColor,
+                    // YENİ: Eğer not widget'tan oluşturulduysa, `showOnWidget` değerini true yap.
+                    showOnWidget = isFromWidget
                 )
                 val newId = noteDao.insert(newNote)
                 currentNoteId = newId.toInt()
@@ -445,6 +449,9 @@ class NoteActivity : AppCompatActivity() {
     }
 
     private fun processIntent(intent: Intent) {
+        // YENİ: Intent'ten gelen "FROM_WIDGET" extrasını kontrol ediyoruz.
+        isFromWidget = intent.getBooleanExtra("FROM_WIDGET", false)
+
         if (intent.hasExtra("NOTE_ID")) {
             currentNoteId = intent.getIntExtra("NOTE_ID", 0)
             deleteButton.visibility = View.VISIBLE

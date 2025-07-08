@@ -8,7 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.widget.RemoteViews
 import androidx.core.net.toUri
-import androidx.preference.PreferenceManager // PreferenceManager'ı import etmeyi unutmayın!
+import androidx.preference.PreferenceManager
 
 class NoteWidgetProvider : AppWidgetProvider() {
 
@@ -78,6 +78,8 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
                 val newNoteIntent = Intent(context, NoteActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    // YENİ EKLENEN SATIR: Notun widget üzerinden oluşturulduğunu belirtir.
+                    putExtra("FROM_WIDGET", true)
                 }
                 val newNotePendingIntent = PendingIntent.getActivity(
                     context,
