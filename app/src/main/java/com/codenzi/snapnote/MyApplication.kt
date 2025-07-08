@@ -2,8 +2,10 @@ package com.codenzi.snapnote
 
 import android.app.Application
 import androidx.work.*
+import dagger.hilt.android.HiltAndroidApp // Bu satırı ekleyin
 import java.util.concurrent.TimeUnit
 
+@HiltAndroidApp // Hilt'i etkinleştirmek için bu anotasyonu ekliyoruz
 class MyApplication : Application() {
 
     override fun onCreate() {

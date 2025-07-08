@@ -2,17 +2,18 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.ksp)
+    // Hilt eklentisini bu modüle uyguluyoruz
+    id("com.google.dagger.hilt.android")
 }
 
 android {
     namespace = "com.codenzi.snapnote"
-    // compileSdk versiyonunu da en güncel sürüme çekelim
     compileSdk = 36
 
     defaultConfig {
         applicationId = "com.codenzi.snapnote"
         minSdk = 24
-        targetSdk = 36 // targetSdk versiyonunu da güncelleyelim
+        targetSdk = 36
         versionCode = 2
         versionName = "1.1.0"
 
@@ -41,6 +42,10 @@ android {
 }
 
 dependencies {
+    // Hilt Kütüphaneleri
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.51.1")
+
     // Güvenlik Kütüphanesi
     implementation(libs.androidx.security.crypto)
 

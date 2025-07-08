@@ -2,6 +2,7 @@
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
-    // KSP eklentisi burada tüm projeye tanıtılıyor.
     alias(libs.plugins.google.ksp) apply false
+    // Hilt eklentisini buraya ekliyoruz
+    id("com.google.dagger.hilt.android") version "2.51.1" apply false
 }

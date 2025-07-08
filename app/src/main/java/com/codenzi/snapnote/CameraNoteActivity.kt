@@ -19,11 +19,17 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.codenzi.snapnote.databinding.ActivityCameraBinding
 import com.google.gson.Gson
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class CameraNoteActivity : AppCompatActivity() {
+
+    @Inject
+    lateinit var noteDao: NoteDao
 
     private lateinit var binding: ActivityCameraBinding
     private var imageCapture: ImageCapture? = null
@@ -138,7 +144,6 @@ class CameraNoteActivity : AppCompatActivity() {
     }
 
     private fun saveNote(imagePath: String) {
-        val noteDao = NoteDatabase.getDatabase(this).noteDao()
         val title = "${getString(R.string.photo_note_title)} - ${
             SimpleDateFormat(
                 "dd/MM/yyyy HH:mm",

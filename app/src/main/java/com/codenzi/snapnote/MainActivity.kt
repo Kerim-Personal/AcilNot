@@ -24,11 +24,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -40,29 +40,24 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.codenzi.snapnote.databinding.ActivityMainBinding
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
 
+@AndroidEntryPoint // Hilt'in bu Activity'i yönetmesini sağlar
 class MainActivity : AppCompatActivity() {
 
-    enum class SortOrder {
-        CREATION_NEWEST, CREATION_OLDEST, CONTENT_AZ
-    }
+    // ViewModel, Hilt tarafından standart `viewModels` delegesi ile sağlanır
+    private val viewModel: MainViewModel by viewModels()
 
-    private lateinit var noteDao: NoteDao
+    // ViewBinding nesnesi, findViewById'in yerini alır
+    private lateinit var binding: ActivityMainBinding
     private lateinit var noteAdapter: NoteAdapter
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var toolbar: Toolbar
-    private lateinit var tvEmptyNotes: TextView
-    private var allNotes: List<Note> = emptyList()
-    private var currentSortOrder = SortOrder.CREATION_NEWEST
-    private var currentSearchQuery: String? = null
     private var isSelectionMode = false
 
     companion object {
@@ -83,34 +78,30 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedTheme()
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        toolbar = findViewById(R.id.toolbar)
-        setSupportActionBar(toolbar)
+        // Layout, ViewBinding ile bağlanır
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        noteDao = NoteDatabase.getDatabase(this).noteDao()
-        recyclerView = findViewById(R.id.rv_notes)
-        tvEmptyNotes = findViewById(R.id.tv_empty_notes)
-        val fab: FloatingActionButton = findViewById(R.id.fab_add_note)
+        setSupportActionBar(binding.toolbar)
 
         setupRecyclerView()
 
-        fab.setOnClickListener {
+        binding.fabAddNote.setOnClickListener {
             startActivity(Intent(this, NoteActivity::class.java))
         }
 
+        // ViewModel'den gelen notlar dinlenir ve UI güncellenir
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                noteDao.getAllNotes().collect { notes ->
-                    allNotes = notes
-                    sortAndFilterList()
-
+                viewModel.notes.collect { notes ->
+                    noteAdapter.updateNotes(notes)
                     if (notes.isEmpty()) {
-                        recyclerView.visibility = View.GONE
-                        tvEmptyNotes.visibility = View.VISIBLE
+                        binding.rvNotes.visibility = View.GONE
+                        binding.tvEmptyNotes.visibility = View.VISIBLE
                     } else {
-                        recyclerView.visibility = View.VISIBLE
-                        tvEmptyNotes.visibility = View.GONE
+                        binding.rvNotes.visibility = View.VISIBLE
+                        binding.tvEmptyNotes.visibility = View.GONE
                     }
                 }
             }
@@ -161,23 +152,23 @@ class MainActivity : AppCompatActivity() {
                 toggleSelection(note)
             }
         )
-        recyclerView.adapter = noteAdapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        binding.rvNotes.adapter = noteAdapter
+        binding.rvNotes.layoutManager = LinearLayoutManager(this)
     }
 
     private fun enterSelectionMode() {
         isSelectionMode = true
         invalidateOptionsMenu()
-        toolbar.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_close)
-        toolbar.setNavigationOnClickListener { exitSelectionMode() }
+        binding.toolbar.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_close)
+        binding.toolbar.setNavigationOnClickListener { exitSelectionMode() }
     }
 
     private fun exitSelectionMode() {
         isSelectionMode = false
         noteAdapter.clearSelections()
         invalidateOptionsMenu()
-        toolbar.title = getString(R.string.app_name)
-        toolbar.navigationIcon = null
+        binding.toolbar.title = getString(R.string.app_name)
+        binding.toolbar.navigationIcon = null
     }
 
     private fun toggleSelection(note: Note) {
@@ -186,7 +177,7 @@ class MainActivity : AppCompatActivity() {
         if (count == 0) {
             exitSelectionMode()
         } else {
-            toolbar.title = resources.getQuantityString(R.plurals.selection_title, count, count)
+            binding.toolbar.title = resources.getQuantityString(R.plurals.selection_title, count, count)
             invalidateOptionsMenu()
         }
     }
@@ -199,23 +190,19 @@ class MainActivity : AppCompatActivity() {
 
         searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
-                currentSearchQuery = query
-                sortAndFilterList()
                 return false
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
-                currentSearchQuery = newText
-                sortAndFilterList()
-                return false
+                viewModel.setSearchQuery(newText.orEmpty())
+                return true
             }
         })
 
         searchItem?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
             override fun onMenuItemActionExpand(item: MenuItem): Boolean = true
             override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                currentSearchQuery = null
-                sortAndFilterList()
+                viewModel.setSearchQuery("")
                 return true
             }
         })
@@ -265,11 +252,7 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.action_pin_to_widget -> {
                 val areAllSelectedPinned = selectedNotes.isNotEmpty() && selectedNotes.all { it.showOnWidget }
-                if (areAllSelectedPinned) {
-                    unpinSelectedNotes(selectedNotes)
-                } else {
-                    pinNotesToWidget(selectedNotes)
-                }
+                pinNotesToWidget(selectedNotes, !areAllSelectedPinned)
                 exitSelectionMode()
                 true
             }
@@ -299,25 +282,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun unpinSelectedNotes(notes: List<Note>) {
+    private fun pinNotesToWidget(notes: List<Note>, pin: Boolean) {
         if (notes.isEmpty()) return
-        val noteIds = notes.map { it.id }
-        lifecycleScope.launch {
-            noteDao.setPinnedStatus(noteIds, false)
-            updateAllWidgets()
-            Toast.makeText(applicationContext, getString(R.string.unpinned_from_widget_toast), Toast.LENGTH_SHORT).show()
-        }
+        viewModel.setPinnedStatus(notes, pin)
+        updateAllWidgets()
+        val message = if (pin) R.string.notes_pinned_to_widget_toast else R.string.unpinned_from_widget_toast
+        Toast.makeText(applicationContext, getString(message), Toast.LENGTH_SHORT).show()
     }
 
-    private fun pinNotesToWidget(notes: List<Note>) {
-        if (notes.isEmpty()) return
-        val noteIds = notes.map { it.id }
-        lifecycleScope.launch {
-            noteDao.setPinnedStatus(noteIds, true)
-            updateAllWidgets()
-            Toast.makeText(applicationContext, getString(R.string.notes_pinned_to_widget_toast), Toast.LENGTH_SHORT).show()
-        }
-    }
 
     private fun Note.toSharableString(): String {
         val gson = Gson()
@@ -459,7 +431,6 @@ class MainActivity : AppCompatActivity() {
                 titleView.visibility = View.GONE
             }
 
-            // --- KESİN ÇÖZÜM: FOTOĞRAFI SENKRON YÜKLEME ---
             if (noteContent.imagePath != null) {
                 try {
                     val imageUri = Uri.parse(noteContent.imagePath)
@@ -475,7 +446,6 @@ class MainActivity : AppCompatActivity() {
             } else {
                 imageView.visibility = View.GONE
             }
-            // --- DÜZELTME SONU ---
 
             val contentBuilder = StringBuilder()
             if (noteContent.text.isNotBlank()) {
@@ -537,10 +507,8 @@ class MainActivity : AppCompatActivity() {
             .setTitle(resources.getQuantityString(R.plurals.move_notes_to_trash_confirmation_title, notes.size, notes.size))
             .setMessage(getString(R.string.move_notes_to_trash_confirmation_message))
             .setPositiveButton(getString(R.string.dialog_move_to_trash)) { _, _ ->
-                lifecycleScope.launch {
-                    notes.forEach { noteDao.softDeleteById(it.id, System.currentTimeMillis()) }
-                    Toast.makeText(applicationContext, resources.getQuantityString(R.plurals.notes_deleted_toast, notes.size, notes.size), Toast.LENGTH_SHORT).show()
-                }
+                viewModel.moveNotesToTrash(notes)
+                Toast.makeText(applicationContext, resources.getQuantityString(R.plurals.notes_deleted_toast, notes.size, notes.size), Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
@@ -552,34 +520,15 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.sort_by_creation_date_oldest),
             getString(R.string.sort_by_content_az)
         )
-        val checkedItem = currentSortOrder.ordinal
+        val checkedItem = viewModel.sortOrder.value.ordinal
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.sort_dialog_title))
             .setSingleChoiceItems(sortOptions, checkedItem) { dialog, which ->
-                currentSortOrder = SortOrder.entries[which]
-                sortAndFilterList()
+                viewModel.setSortOrder(MainViewModel.SortOrder.entries[which])
                 dialog.dismiss()
             }
             .create()
             .show()
-    }
-
-    private fun sortAndFilterList() {
-        val sortedList = when (currentSortOrder) {
-            SortOrder.CREATION_NEWEST -> allNotes.sortedByDescending { it.createdAt }
-            SortOrder.CREATION_OLDEST -> allNotes.sortedBy { it.createdAt }
-            SortOrder.CONTENT_AZ -> allNotes.sortedBy { it.content.lowercase(Locale.getDefault()) }
-        }
-        val filteredList = if (currentSearchQuery.isNullOrBlank()) {
-            sortedList
-        } else {
-            val searchQuery = currentSearchQuery!!.lowercase(Locale.getDefault())
-            sortedList.filter {
-                it.content.lowercase(Locale.getDefault()).contains(searchQuery) ||
-                        it.title.lowercase(Locale.getDefault()).contains(searchQuery)
-            }
-        }
-        noteAdapter.updateNotes(filteredList)
     }
 
     private fun checkAudioPermission() {

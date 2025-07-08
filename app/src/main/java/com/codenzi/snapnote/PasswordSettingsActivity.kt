@@ -2,58 +2,41 @@ package com.codenzi.snapnote
 
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
-import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
+import com.codenzi.snapnote.databinding.ActivityPasswordSettingsBinding
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class PasswordSettingsActivity : AppCompatActivity() {
 
-    private lateinit var etCurrentPassword: TextInputEditText
-    private lateinit var tilCurrentPassword: TextInputLayout
-    private lateinit var etNewPassword: TextInputEditText
-    private lateinit var etConfirmPassword: TextInputEditText
-    private lateinit var saveButton: Button
-    private lateinit var disableButton: Button
-    private lateinit var infoButton: ImageButton
+    private lateinit var binding: ActivityPasswordSettingsBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_password_settings)
+        binding = ActivityPasswordSettingsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val toolbar: Toolbar = findViewById(R.id.toolbar_password_settings)
-        setSupportActionBar(toolbar)
+        setSupportActionBar(binding.toolbarPasswordSettings)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.password_settings_title)
 
-        etCurrentPassword = findViewById(R.id.et_current_password)
-        tilCurrentPassword = findViewById(R.id.til_current_password)
-        etNewPassword = findViewById(R.id.et_new_password)
-        etConfirmPassword = findViewById(R.id.et_confirm_password)
-        saveButton = findViewById(R.id.btn_save_password)
-        disableButton = findViewById(R.id.btn_disable_password)
-        infoButton = findViewById(R.id.btn_security_info)
-
         if (PasswordManager.isPasswordSet(this)) {
-            tilCurrentPassword.visibility = View.VISIBLE
-            disableButton.visibility = View.VISIBLE
+            binding.tilCurrentPassword.visibility = View.VISIBLE
+            binding.btnDisablePassword.visibility = View.VISIBLE
         } else {
-            tilCurrentPassword.visibility = View.GONE
-            disableButton.visibility = View.GONE
+            binding.tilCurrentPassword.visibility = View.GONE
+            binding.btnDisablePassword.visibility = View.GONE
         }
 
-        saveButton.setOnClickListener {
+        binding.btnSavePassword.setOnClickListener {
             savePassword()
         }
 
-        disableButton.setOnClickListener {
-            val currentPassword = etCurrentPassword.text.toString()
+        binding.btnDisablePassword.setOnClickListener {
+            val currentPassword = binding.etCurrentPassword.text.toString()
             if (currentPassword.isBlank()) {
-                // Değişiklik burada
                 Toast.makeText(this, getString(R.string.toast_enter_current_password_to_disable), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -64,17 +47,15 @@ class PasswordSettingsActivity : AppCompatActivity() {
             }
         }
 
-        infoButton.setOnClickListener {
+        binding.btnSecurityInfo.setOnClickListener {
             showSecurityInfoDialog()
         }
     }
 
     private fun showSecurityInfoDialog() {
         AlertDialog.Builder(this)
-            // Değişiklik burada
             .setTitle(getString(R.string.security_info_title))
             .setMessage(R.string.password_security_explanation)
-            // Değişiklik burada
             .setPositiveButton(getString(R.string.dialog_ok), null)
             .show()
     }
@@ -85,9 +66,9 @@ class PasswordSettingsActivity : AppCompatActivity() {
     }
 
     private fun savePassword() {
-        val currentPassword = etCurrentPassword.text.toString()
-        val newPassword = etNewPassword.text.toString()
-        val confirmPassword = etConfirmPassword.text.toString()
+        val currentPassword = binding.etCurrentPassword.text.toString()
+        val newPassword = binding.etNewPassword.text.toString()
+        val confirmPassword = binding.etConfirmPassword.text.toString()
 
         if (PasswordManager.isPasswordSet(this)) {
             if (!PasswordManager.checkPassword(this, currentPassword)) {
@@ -97,7 +78,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
         }
 
         if (newPassword.isBlank() || confirmPassword.isBlank()) {
-            // Değişiklik burada
             Toast.makeText(this, getString(R.string.toast_password_fields_cannot_be_empty), Toast.LENGTH_SHORT).show()
             return
         }

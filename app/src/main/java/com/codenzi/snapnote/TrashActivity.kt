@@ -4,43 +4,38 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import com.codenzi.snapnote.databinding.ActivityTrashBinding
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class TrashActivity : AppCompatActivity() {
 
-    private lateinit var noteDao: NoteDao
+    @Inject
+    lateinit var noteDao: NoteDao
+
+    private lateinit var binding: ActivityTrashBinding
     private lateinit var deletedNoteAdapter: NoteAdapter
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var tvEmptyTrash: TextView
-    private lateinit var toolbar: Toolbar
-    private lateinit var tvTrashInfo: TextView // YENİ DEĞİŞKEN
 
     private var isSelectionMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_trash)
+        binding = ActivityTrashBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        toolbar = findViewById(R.id.toolbar_trash)
-        setSupportActionBar(toolbar)
+        setSupportActionBar(binding.toolbarTrash)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
-        noteDao = NoteDatabase.getDatabase(this).noteDao()
-        recyclerView = findViewById(R.id.rv_deleted_notes)
-        tvEmptyTrash = findViewById(R.id.tv_empty_trash)
-        tvTrashInfo = findViewById(R.id.tv_trash_info) // YENİ ATAMA
 
         setupRecyclerView()
         observeDeletedNotes()
@@ -49,22 +44,22 @@ class TrashActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         deletedNoteAdapter = NoteAdapter(emptyList(),
-            { note -> // Tıklama Olayı
+            { note ->
                 if (isSelectionMode) {
                     toggleSelection(note)
                 } else {
                     showSingleNoteOptionsDialog(note)
                 }
             },
-            { note -> // Uzun Tıklama Olayı
+            { note ->
                 if (!isSelectionMode) {
                     enterSelectionMode()
                 }
                 toggleSelection(note)
             }
         )
-        recyclerView.adapter = deletedNoteAdapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        binding.rvDeletedNotes.adapter = deletedNoteAdapter
+        binding.rvDeletedNotes.layoutManager = LinearLayoutManager(this)
     }
 
     private fun observeDeletedNotes() {
@@ -72,15 +67,14 @@ class TrashActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 noteDao.getDeletedNotes().collect { notes ->
                     deletedNoteAdapter.updateNotes(notes)
-                    // GÜNCELLENDİ: Bilgilendirme metninin görünürlüğünü ayarla
                     if (notes.isEmpty()) {
-                        tvEmptyTrash.visibility = View.VISIBLE
-                        recyclerView.visibility = View.GONE
-                        tvTrashInfo.visibility = View.GONE // Çöp kutusu boşsa bilgi metnini gizle
+                        binding.tvEmptyTrash.visibility = View.VISIBLE
+                        binding.rvDeletedNotes.visibility = View.GONE
+                        binding.tvTrashInfo.visibility = View.GONE
                     } else {
-                        tvEmptyTrash.visibility = View.GONE
-                        recyclerView.visibility = View.VISIBLE
-                        tvTrashInfo.visibility = View.VISIBLE // Çöp kutusunda not varsa bilgi metnini göster
+                        binding.tvEmptyTrash.visibility = View.GONE
+                        binding.rvDeletedNotes.visibility = View.VISIBLE
+                        binding.tvTrashInfo.visibility = View.VISIBLE
                     }
 
                     if (notes.isEmpty() && isSelectionMode) {
@@ -93,18 +87,17 @@ class TrashActivity : AppCompatActivity() {
 
     private fun enterSelectionMode() {
         isSelectionMode = true
-        invalidateOptionsMenu() // Menüyü yeniden çiz
-        toolbar.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_close)
-        toolbar.setNavigationOnClickListener { exitSelectionMode() }
+        invalidateOptionsMenu()
+        binding.toolbarTrash.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_close)
+        binding.toolbarTrash.setNavigationOnClickListener { exitSelectionMode() }
     }
 
     private fun exitSelectionMode() {
         isSelectionMode = false
         deletedNoteAdapter.clearSelections()
-        invalidateOptionsMenu() // Menüyü yeniden çiz
+        invalidateOptionsMenu()
         supportActionBar?.title = getString(R.string.trash_title)
-        toolbar.navigationIcon = null
-        supportActionBar?.setDisplayHomeAsUpEnabled(true) // Geri okunu tekrar göster
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
 
     private fun toggleSelection(note: Note) {

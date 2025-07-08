@@ -21,11 +21,6 @@ import android.text.Spanned
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.view.View
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,11 +32,8 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import coil.load
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.textfield.TextInputEditText
+import com.codenzi.snapnote.databinding.ActivityNoteBinding // Bu satır doğru
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.launch
@@ -53,43 +45,25 @@ import java.util.Locale
 @Suppress("DEPRECATION")
 class NoteActivity : AppCompatActivity() {
 
+    // ViewBinding nesnesi
+    private lateinit var binding: ActivityNoteBinding
     private lateinit var noteDao: NoteDao
     private var currentNoteId: Int? = null
 
-    private lateinit var noteTitle: TextInputEditText
-    private lateinit var noteInput: SelectionAwareEditText
-    private lateinit var saveButton: Button
-    private lateinit var deleteButton: Button
-    private lateinit var editHistoryText: TextView
-
-    private lateinit var formatToggleButtonGroup: MaterialButtonToggleGroup
-    private lateinit var boldButton: MaterialButton
-    private lateinit var italicButton: MaterialButton
-    private lateinit var strikethroughButton: MaterialButton
-
-    private lateinit var showHistoryButton: ImageButton
-    private lateinit var voiceNoteButton: ImageButton
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var speechRecognizerIntent: Intent
 
     private lateinit var colorPickers: List<View>
     private var selectedColor: String = "#FFECEFF1"
 
-    private lateinit var checklistRecyclerView: RecyclerView
-    private lateinit var addChecklistItemButton: Button
     private lateinit var checklistAdapter: ChecklistItemAdapter
     private var checklistItems = mutableListOf<ChecklistItem>()
 
     private val gson = Gson()
     private var isUpdatingToggleButtons = false
 
-    private lateinit var audioPlayerContainer: View
-    private lateinit var playPauseButton: ImageButton
-    private lateinit var audioTitleText: TextView
     private var mediaPlayer: MediaPlayer? = null
     private var audioPath: String? = null
-
-    private lateinit var ivImagePreview: ImageView
     private var imagePath: String? = null
 
     private var isListening = false
@@ -97,7 +71,6 @@ class NoteActivity : AppCompatActivity() {
     private var utteranceStartPosition = 0
 
     private var isFromWidget = false
-
     private val restartHandler = Handler(Looper.getMainLooper())
 
     private val requestPermissionLauncher =
@@ -111,38 +84,10 @@ class NoteActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_note)
+        binding = ActivityNoteBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         noteDao = NoteDatabase.getDatabase(this).noteDao()
-        noteTitle = findViewById(R.id.et_note_title)
-        noteInput = findViewById(R.id.et_note_input)
-        saveButton = findViewById(R.id.btn_save_note)
-        deleteButton = findViewById(R.id.btn_delete_note)
-        editHistoryText = findViewById(R.id.tv_edit_history)
-        showHistoryButton = findViewById(R.id.btn_show_history)
-        voiceNoteButton = findViewById(R.id.btn_voice_note)
-        checklistRecyclerView = findViewById(R.id.rv_checklist)
-        addChecklistItemButton = findViewById(R.id.btn_add_checklist_item)
-
-        formatToggleButtonGroup = findViewById(R.id.toggle_button_group)
-        boldButton = findViewById(R.id.btn_bold)
-        italicButton = findViewById(R.id.btn_italic)
-        strikethroughButton = findViewById(R.id.btn_strikethrough)
-
-        audioPlayerContainer = findViewById(R.id.ll_audio_player)
-        playPauseButton = findViewById(R.id.btn_play_pause)
-        audioTitleText = findViewById(R.id.tv_audio_title)
-
-        ivImagePreview = findViewById(R.id.iv_image_preview)
-
-        ivImagePreview.setOnClickListener {
-            imagePath?.let { path ->
-                val intent = Intent(this, PhotoViewActivity::class.java).apply {
-                    putExtra("IMAGE_URI", path)
-                }
-                startActivity(intent)
-            }
-        }
 
         setupListeners()
         setupChecklist()
@@ -153,10 +98,8 @@ class NoteActivity : AppCompatActivity() {
 
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // *** DEĞİŞİKLİK: Geri tuşuna basıldığında da kaydetme işleminin bitmesini bekle ***
                 lifecycleScope.launch {
                     performSave()
-                    // Coroutine bittikten sonra geri gitme işlemini manuel olarak tetikle
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
                 }
@@ -171,58 +114,59 @@ class NoteActivity : AppCompatActivity() {
         if (isListening) {
             stopListening()
         }
-        // *** DEĞİŞİKLİK: onStop durumunda veri kaybını önlemek için senkronize kaydetme ***
-        // Kullanıcı uygulamadan hızla çıktığında veya başka bir ekrana geçtiğinde
-        // veri kaybı yaşanmaması için burada da kaydetme işlemi yapılır.
         lifecycleScope.launch {
             performSave()
         }
     }
 
     private fun setupListeners() {
-        showHistoryButton.setOnClickListener {
+        binding.btnShowHistory.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle(getString(R.string.edit_history_dialog_title))
-                .setMessage(editHistoryText.text)
+                .setMessage(binding.tvEditHistory.text)
                 .setPositiveButton(getString(R.string.dialog_ok), null)
                 .show()
         }
 
-        boldButton.setOnClickListener { toggleStyle(Typeface.BOLD) }
-        italicButton.setOnClickListener { toggleStyle(Typeface.ITALIC) }
-        strikethroughButton.setOnClickListener { toggleStyle(-1) }
+        binding.btnBold.setOnClickListener { toggleStyle(Typeface.BOLD) }
+        binding.btnItalic.setOnClickListener { toggleStyle(Typeface.ITALIC) }
+        binding.btnStrikethrough.setOnClickListener { toggleStyle(-1) }
 
-        noteInput.setOnSelectionChangedListener { _, _ ->
+        binding.etNoteInput.setOnSelectionChangedListener { _, _ ->
             updateFormattingButtonsState()
         }
 
-        // *** DEĞİŞİKLİK: Kaydetme butonu artık bir coroutine içinde çalışıyor ***
-        // Bu değişiklik, kaydetme işlemi (performSave) bitmeden finish() çağrılmasını
-        // engelleyerek "race condition" sorununu ve veri kaybını önler.
-        saveButton.setOnClickListener {
-            val titleText = noteTitle.text.toString().trim()
-            val noteContentText = noteInput.text
+        binding.btnSaveNote.setOnClickListener {
+            val titleText = binding.etNoteTitle.text.toString().trim()
+            val noteContentText = binding.etNoteInput.text
             if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() } && imagePath == null) {
                 Toast.makeText(this, R.string.toast_empty_note, Toast.LENGTH_SHORT).show()
             } else {
                 lifecycleScope.launch {
-                    performSave() // Kaydetme işleminin bitmesini bekle
-                    finish()      // İşlem bittikten sonra ekranı güvenle kapat
+                    performSave()
+                    finish()
                 }
             }
         }
-        deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
-        playPauseButton.setOnClickListener { togglePlayback() }
+
+        binding.btnDeleteNote.setOnClickListener { showDeleteConfirmationDialog() }
+        binding.btnPlayPause.setOnClickListener { togglePlayback() }
+        binding.ivImagePreview.setOnClickListener {
+            imagePath?.let { path ->
+                val intent = Intent(this, PhotoViewActivity::class.java).apply {
+                    putExtra("IMAGE_URI", path)
+                }
+                startActivity(intent)
+            }
+        }
     }
 
-    // *** DEĞİŞİKLİK: Fonksiyon "suspend" olarak işaretlendi ***
-    // Bu, içindeki veritabanı işlemlerinin tamamlanmasını bekleyebilmemizi sağlar.
     private suspend fun performSave() {
-        val titleText = noteTitle.text.toString().trim()
-        val noteContentText = noteInput.text
+        val titleText = binding.etNoteTitle.text.toString().trim()
+        val noteContentText = binding.etNoteInput.text
 
         if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() } && imagePath == null && audioPath == null) {
-            return // Kaydedilecek bir şey yoksa işlemi sonlandır.
+            return
         }
 
         setResult(Activity.RESULT_OK)
@@ -255,8 +199,8 @@ class NoteActivity : AppCompatActivity() {
         updateAllWidgets()
     }
 
-
     private fun toggleStyle(styleType: Int) {
+        val noteInput = binding.etNoteInput
         val spannable = noteInput.text as SpannableStringBuilder
         val start = noteInput.selectionStart
         val end = noteInput.selectionEnd
@@ -310,29 +254,29 @@ class NoteActivity : AppCompatActivity() {
     private fun updateFormattingButtonsState() {
         isUpdatingToggleButtons = true
 
-        val spannable = noteInput.text ?: return
-        val position = noteInput.selectionStart
-        val selectionEnd = noteInput.selectionEnd
+        val spannable = binding.etNoteInput.text ?: return
+        val position = binding.etNoteInput.selectionStart
+        val selectionEnd = binding.etNoteInput.selectionEnd
 
         if (position != selectionEnd) {
             val boldSpans = spannable.getSpans(position, selectionEnd, StyleSpan::class.java)
-            boldButton.isChecked = boldSpans.any { it.style == Typeface.BOLD }
+            binding.btnBold.isChecked = boldSpans.any { it.style == Typeface.BOLD }
 
             val italicSpans = spannable.getSpans(position, selectionEnd, StyleSpan::class.java)
-            italicButton.isChecked = italicSpans.any { it.style == Typeface.ITALIC }
+            binding.btnItalic.isChecked = italicSpans.any { it.style == Typeface.ITALIC }
 
             val strikeSpans = spannable.getSpans(position, selectionEnd, StrikethroughSpan::class.java)
-            strikethroughButton.isChecked = strikeSpans.isNotEmpty()
+            binding.btnStrikethrough.isChecked = strikeSpans.isNotEmpty()
         } else {
             val spansAtCursor = spannable.getSpans(position, position, Any::class.java)
 
-            boldButton.isChecked = spansAtCursor.any {
+            binding.btnBold.isChecked = spansAtCursor.any {
                 it is StyleSpan && it.style == Typeface.BOLD && spannable.getSpanFlags(it) == Spanned.SPAN_INCLUSIVE_INCLUSIVE
             }
-            italicButton.isChecked = spansAtCursor.any {
+            binding.btnItalic.isChecked = spansAtCursor.any {
                 it is StyleSpan && it.style == Typeface.ITALIC && spannable.getSpanFlags(it) == Spanned.SPAN_INCLUSIVE_INCLUSIVE
             }
-            strikethroughButton.isChecked = spansAtCursor.any {
+            binding.btnStrikethrough.isChecked = spansAtCursor.any {
                 it is StrikethroughSpan && spannable.getSpanFlags(it) == Spanned.SPAN_INCLUSIVE_INCLUSIVE
             }
         }
@@ -354,7 +298,7 @@ class NoteActivity : AppCompatActivity() {
 
     private fun setupVoiceNote() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            voiceNoteButton.visibility = View.GONE
+            binding.btnVoiceNote.visibility = View.GONE
             return
         }
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
@@ -378,8 +322,8 @@ class NoteActivity : AppCompatActivity() {
                 if (partialText.isNotBlank()) {
                     recognizedTextBuilder.setLength(utteranceStartPosition)
                     recognizedTextBuilder.append(partialText)
-                    noteInput.setText(recognizedTextBuilder.toString())
-                    noteInput.setSelection(noteInput.length())
+                    binding.etNoteInput.setText(recognizedTextBuilder.toString())
+                    binding.etNoteInput.setSelection(binding.etNoteInput.length())
                 }
             }
 
@@ -390,8 +334,8 @@ class NoteActivity : AppCompatActivity() {
                 if (finalText.isNotBlank()) {
                     recognizedTextBuilder.append(" ")
                 }
-                noteInput.setText(recognizedTextBuilder.toString())
-                noteInput.setSelection(noteInput.length())
+                binding.etNoteInput.setText(recognizedTextBuilder.toString())
+                binding.etNoteInput.setSelection(binding.etNoteInput.length())
             }
 
             override fun onEndOfSpeech() {
@@ -410,7 +354,7 @@ class NoteActivity : AppCompatActivity() {
             }
         })
 
-        voiceNoteButton.setOnClickListener {
+        binding.btnVoiceNote.setOnClickListener {
             toggleSpeechToText()
         }
     }
@@ -429,10 +373,10 @@ class NoteActivity : AppCompatActivity() {
 
     private fun startListening() {
         isListening = true
-        voiceNoteButton.setImageResource(R.drawable.ic_microphone_red_24)
+        binding.btnVoiceNote.setImageResource(R.drawable.ic_microphone_red_24)
         Toast.makeText(applicationContext, getString(R.string.speech_listening), Toast.LENGTH_SHORT).show()
         recognizedTextBuilder.clear()
-        val currentText = noteInput.text.toString()
+        val currentText = binding.etNoteInput.text.toString()
         recognizedTextBuilder.append(currentText)
         if (currentText.isNotEmpty() && !currentText.endsWith(" ")) {
             recognizedTextBuilder.append(" ")
@@ -445,7 +389,7 @@ class NoteActivity : AppCompatActivity() {
         isListening = false
         restartHandler.removeCallbacksAndMessages(null)
         speechRecognizer.stopListening()
-        voiceNoteButton.setImageResource(R.drawable.ic_microphone_24)
+        binding.btnVoiceNote.setImageResource(R.drawable.ic_microphone_24)
     }
 
     override fun onDestroy() {
@@ -466,16 +410,16 @@ class NoteActivity : AppCompatActivity() {
 
         if (intent.hasExtra("NOTE_ID")) {
             currentNoteId = intent.getIntExtra("NOTE_ID", 0)
-            deleteButton.visibility = View.VISIBLE
+            binding.btnDeleteNote.visibility = View.VISIBLE
             loadNote()
         } else {
             currentNoteId = null
-            deleteButton.visibility = View.GONE
-            updateColorSelection(findViewById(R.id.color_default))
+            binding.btnDeleteNote.visibility = View.GONE
+            updateColorSelection(binding.colorDefault)
             updateWindowBackground()
-            noteTitle.text?.clear()
-            noteInput.text?.clear()
-            ivImagePreview.visibility = View.GONE
+            binding.etNoteTitle.text?.clear()
+            binding.etNoteInput.text?.clear()
+            binding.ivImagePreview.visibility = View.GONE
             imagePath = null
             if (checklistItems.isNotEmpty()) {
                 val oldSize = checklistItems.size
@@ -483,35 +427,35 @@ class NoteActivity : AppCompatActivity() {
                 checklistAdapter.notifyItemRangeRemoved(0, oldSize)
             }
         }
-        showHistoryButton.visibility = if (currentNoteId != null) View.VISIBLE else View.GONE
+        binding.btnShowHistory.visibility = if (currentNoteId != null) View.VISIBLE else View.GONE
     }
 
     private fun setupChecklist() {
         checklistAdapter = ChecklistItemAdapter(checklistItems)
-        checklistRecyclerView.adapter = checklistAdapter
-        checklistRecyclerView.layoutManager = LinearLayoutManager(this)
-        addChecklistItemButton.setOnClickListener { checklistAdapter.addItem() }
+        binding.rvChecklist.adapter = checklistAdapter
+        binding.rvChecklist.layoutManager = LinearLayoutManager(this)
+        binding.btnAddChecklistItem.setOnClickListener { checklistAdapter.addItem() }
     }
 
     private fun setupColorPickers() {
-        val colorDefault: FrameLayout = findViewById(R.id.color_default)
-        val colorYellow: FrameLayout = findViewById(R.id.color_yellow)
-        val colorBlue: FrameLayout = findViewById(R.id.color_blue)
-        val colorGreen: FrameLayout = findViewById(R.id.color_green)
-        val colorPink: FrameLayout = findViewById(R.id.color_pink)
-        val colorPurple: FrameLayout = findViewById(R.id.color_purple)
-        val colorOrange: FrameLayout = findViewById(R.id.color_orange)
-
-        colorPickers = listOf(colorDefault, colorYellow, colorBlue, colorGreen, colorPink, colorPurple, colorOrange)
+        colorPickers = listOf(
+            binding.colorDefault,
+            binding.colorYellow,
+            binding.colorBlue,
+            binding.colorGreen,
+            binding.colorPink,
+            binding.colorPurple,
+            binding.colorOrange
+        )
 
         val listeners = mapOf(
-            colorDefault to R.color.note_color_default,
-            colorYellow to R.color.note_color_yellow,
-            colorBlue to R.color.note_color_blue,
-            colorGreen to R.color.note_color_green,
-            colorPink to R.color.note_color_pink,
-            colorPurple to R.color.note_color_purple,
-            colorOrange to R.color.note_color_orange
+            binding.colorDefault to R.color.note_color_default,
+            binding.colorYellow to R.color.note_color_yellow,
+            binding.colorBlue to R.color.note_color_blue,
+            binding.colorGreen to R.color.note_color_green,
+            binding.colorPink to R.color.note_color_pink,
+            binding.colorPurple to R.color.note_color_purple,
+            binding.colorOrange to R.color.note_color_orange
         )
         listeners.forEach { (view, colorResId) -> view.setOnClickListener { onColorSelected(it, colorResId) } }
     }
@@ -549,18 +493,18 @@ class NoteActivity : AppCompatActivity() {
         if (checklistAdapter.itemCount > 0) {
             checklistAdapter.notifyItemRangeChanged(0, checklistAdapter.itemCount)
         }
-        noteTitle.setTextColor(textColor)
-        noteInput.setTextColor(textColor)
+        binding.etNoteTitle.setTextColor(textColor)
+        binding.etNoteInput.setTextColor(textColor)
     }
 
     private fun loadNote() {
         lifecycleScope.launch {
             noteDao.getNoteById(currentNoteId ?: return@launch)?.let { note ->
-                noteTitle.setText(note.title)
+                binding.etNoteTitle.setText(note.title)
                 displayEditHistory(note)
                 try {
                     val content = gson.fromJson(note.content, NoteContent::class.java)
-                    noteInput.setText(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY))
+                    binding.etNoteInput.setText(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY))
 
                     val oldSize = checklistItems.size
                     checklistItems.clear()
@@ -571,35 +515,35 @@ class NoteActivity : AppCompatActivity() {
 
                     if (content.audioFilePath != null) {
                         audioPath = content.audioFilePath
-                        audioPlayerContainer.visibility = View.VISIBLE
-                        audioTitleText.text = note.title.ifBlank { getString(R.string.voice_recording_title) }
+                        binding.llAudioPlayer.visibility = View.VISIBLE
+                        binding.tvAudioTitle.text = note.title.ifBlank { getString(R.string.voice_recording_title) }
                         prepareMediaPlayer()
                     } else {
-                        audioPlayerContainer.visibility = View.GONE
+                        binding.llAudioPlayer.visibility = View.GONE
                         audioPath = null
                     }
 
                     if (content.imagePath != null) {
                         imagePath = content.imagePath
-                        ivImagePreview.visibility = View.VISIBLE
-                        ivImagePreview.load(content.imagePath) {
+                        binding.ivImagePreview.visibility = View.VISIBLE
+                        binding.ivImagePreview.load(content.imagePath) {
                             crossfade(true)
                             placeholder(R.drawable.ic_image_24)
                             error(R.drawable.ic_image_24)
                         }
                     } else {
                         imagePath = null
-                        ivImagePreview.visibility = View.GONE
+                        binding.ivImagePreview.visibility = View.GONE
                     }
 
                 } catch (e: JsonSyntaxException) {
-                    noteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
+                    binding.etNoteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
                     val oldSize = checklistItems.size
                     checklistItems.clear()
                     checklistAdapter.notifyItemRangeRemoved(0, oldSize)
-                    audioPlayerContainer.visibility = View.GONE
+                    binding.llAudioPlayer.visibility = View.GONE
                     audioPath = null
-                    ivImagePreview.visibility = View.GONE
+                    binding.ivImagePreview.visibility = View.GONE
                     imagePath = null
                 }
                 selectedColor = note.color
@@ -658,7 +602,7 @@ class NoteActivity : AppCompatActivity() {
                 historyBuilder.append("\n- ${formatDate(timestamp)}")
             }
         }
-        editHistoryText.text = historyBuilder.toString()
+        binding.tvEditHistory.text = historyBuilder.toString()
     }
 
     private fun formatDate(timestamp: Long): String =
@@ -671,14 +615,14 @@ class NoteActivity : AppCompatActivity() {
                 setDataSource(audioPath)
                 prepareAsync()
                 setOnPreparedListener {
-                    playPauseButton.isEnabled = true
+                    binding.btnPlayPause.isEnabled = true
                 }
                 setOnCompletionListener {
-                    playPauseButton.setImageResource(android.R.drawable.ic_media_play)
-                    playPauseButton.contentDescription = getString(R.string.play)
+                    binding.btnPlayPause.setImageResource(android.R.drawable.ic_media_play)
+                    binding.btnPlayPause.contentDescription = getString(R.string.play)
                 }
-                playPauseButton.setImageResource(android.R.drawable.ic_media_play)
-                playPauseButton.contentDescription = getString(R.string.play)
+                binding.btnPlayPause.setImageResource(android.R.drawable.ic_media_play)
+                binding.btnPlayPause.contentDescription = getString(R.string.play)
             } catch (e: IOException) {
                 e.printStackTrace()
                 Toast.makeText(this@NoteActivity, getString(R.string.audio_file_cannot_be_played), Toast.LENGTH_SHORT).show()
@@ -690,12 +634,12 @@ class NoteActivity : AppCompatActivity() {
         mediaPlayer?.let {
             if (it.isPlaying) {
                 it.pause()
-                playPauseButton.setImageResource(android.R.drawable.ic_media_play)
-                playPauseButton.contentDescription = getString(R.string.play)
+                binding.btnPlayPause.setImageResource(android.R.drawable.ic_media_play)
+                binding.btnPlayPause.contentDescription = getString(R.string.play)
             } else {
                 it.start()
-                playPauseButton.setImageResource(android.R.drawable.ic_media_pause)
-                playPauseButton.contentDescription = getString(R.string.pause)
+                binding.btnPlayPause.setImageResource(android.R.drawable.ic_media_pause)
+                binding.btnPlayPause.contentDescription = getString(R.string.pause)
             }
         }
     }
