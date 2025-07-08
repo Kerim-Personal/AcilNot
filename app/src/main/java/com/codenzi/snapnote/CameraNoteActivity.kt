@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -16,20 +17,15 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
 import com.codenzi.snapnote.databinding.ActivityCameraBinding
-import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class CameraNoteActivity : AppCompatActivity() {
 
-    @Inject
-    lateinit var noteDao: NoteDao
+    private val viewModel: CameraNoteViewModel by viewModels()
 
     private lateinit var binding: ActivityCameraBinding
     private var imageCapture: ImageCapture? = null
@@ -83,7 +79,9 @@ class CameraNoteActivity : AppCompatActivity() {
                     val msg = "Photo capture succeeded: ${output.savedUri}"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
-                    saveNote(output.savedUri.toString())
+                    output.savedUri?.toString()?.let {
+                        viewModel.savePhotoNote(it, getString(R.string.photo_note_title))
+                    }
                     finish()
                 }
             }
@@ -140,31 +138,6 @@ class CameraNoteActivity : AppCompatActivity() {
                 ).show()
                 finish()
             }
-        }
-    }
-
-    private fun saveNote(imagePath: String) {
-        val title = "${getString(R.string.photo_note_title)} - ${
-            SimpleDateFormat(
-                "dd/MM/yyyy HH:mm",
-                Locale.getDefault()
-            ).format(System.currentTimeMillis())
-        }"
-        val contentJson = Gson().toJson(
-            NoteContent(
-                text = "",
-                checklist = mutableListOf(),
-                imagePath = imagePath
-            )
-        )
-        lifecycleScope.launch {
-            noteDao.insert(
-                Note(
-                    title = title,
-                    content = contentJson,
-                    createdAt = System.currentTimeMillis()
-                )
-            )
         }
     }
 
