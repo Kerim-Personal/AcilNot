@@ -1,11 +1,9 @@
 package com.codenzi.snapnote
 
 import android.Manifest
-import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -19,6 +17,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.codenzi.snapnote.databinding.ActivityCameraBinding
 import dagger.hilt.android.AndroidEntryPoint
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -49,23 +48,14 @@ class CameraNoteActivity : AppCompatActivity() {
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
 
-        val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
-            .format(System.currentTimeMillis())
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/SnapNote")
-            }
-        }
+        // Fotoğrafı galeri yerine uygulamanın özel dizinine kaydet
+        val photoFile = File(
+            getExternalFilesDir(null), // Uygulamanın özel dizini
+            SimpleDateFormat(FILENAME_FORMAT, Locale.US)
+                .format(System.currentTimeMillis()) + ".jpg"
+        )
 
-        val outputOptions = ImageCapture.OutputFileOptions
-            .Builder(
-                contentResolver,
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues
-            )
-            .build()
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
         imageCapture.takePicture(
             outputOptions,
@@ -76,12 +66,12 @@ class CameraNoteActivity : AppCompatActivity() {
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val msg = "Photo capture succeeded: ${output.savedUri}"
+                    // Dosya URI'sini string'e çevirerek kaydet
+                    val savedUri = photoFile.toURI().toString()
+                    val msg = "Photo capture succeeded: $savedUri"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
-                    output.savedUri?.toString()?.let {
-                        viewModel.savePhotoNote(it, getString(R.string.photo_note_title))
-                    }
+                    viewModel.savePhotoNote(savedUri, getString(R.string.photo_note_title))
                     finish()
                 }
             }
@@ -97,7 +87,6 @@ class CameraNoteActivity : AppCompatActivity() {
             val preview = Preview.Builder()
                 .build()
                 .also {
-                    // DÜZELTME: Hatalı property erişimi yerine doğru olan setSurfaceProvider metodu kullanıldı.
                     it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
                 }
 
