@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -18,6 +19,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -326,7 +328,6 @@ class MainActivity : AppCompatActivity() {
         try {
             val noteContent = gson.fromJson(this.content, NoteContent::class.java)
             if (noteContent.text.isNotBlank()) {
-                // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                 val plainText = Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()
                 builder.append(plainText).append("\n\n")
             }
@@ -338,7 +339,6 @@ class MainActivity : AppCompatActivity() {
                 builder.append("\n")
             }
         } catch (e: JsonSyntaxException) {
-            // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
             val plainText = Html.fromHtml(this.content, Html.FROM_HTML_MODE_LEGACY).toString().trim()
             builder.append(plainText)
         }
@@ -435,6 +435,7 @@ class MainActivity : AppCompatActivity() {
             val view = LayoutInflater.from(this).inflate(R.layout.note_render_layout, FrameLayout(this), false)
             val titleView = view.findViewById<TextView>(R.id.render_note_title)
             val contentView = view.findViewById<TextView>(R.id.render_note_content)
+            val imageView = view.findViewById<ImageView>(R.id.render_note_image)
 
             val backgroundColor = try {
                 note.color.toColorInt()
@@ -458,6 +459,24 @@ class MainActivity : AppCompatActivity() {
                 titleView.visibility = View.GONE
             }
 
+            // --- KESİN ÇÖZÜM: FOTOĞRAFI SENKRON YÜKLEME ---
+            if (noteContent.imagePath != null) {
+                try {
+                    val imageUri = Uri.parse(noteContent.imagePath)
+                    val inputStream = contentResolver.openInputStream(imageUri)
+                    val imageBitmap = BitmapFactory.decodeStream(inputStream)
+                    imageView.setImageBitmap(imageBitmap)
+                    imageView.visibility = View.VISIBLE
+                    inputStream?.close()
+                } catch (e: Exception) {
+                    imageView.visibility = View.GONE
+                    e.printStackTrace()
+                }
+            } else {
+                imageView.visibility = View.GONE
+            }
+            // --- DÜZELTME SONU ---
+
             val contentBuilder = StringBuilder()
             if (noteContent.text.isNotBlank()) {
                 contentBuilder.append(noteContent.text)
@@ -470,7 +489,6 @@ class MainActivity : AppCompatActivity() {
                     contentBuilder.append(if (item.isChecked) "$checkbox <s>$text</s><br>" else "$checkbox $text<br>")
                 }
             }
-
             contentView.text = Html.fromHtml(contentBuilder.toString(), Html.FROM_HTML_MODE_COMPACT)
 
             val displayMetrics = resources.displayMetrics
