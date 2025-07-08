@@ -126,11 +126,20 @@ class SettingsActivity : AppCompatActivity() {
                 // Sesli not widget'larını güncelle
                 val voiceMemoWidgetComponentName = ComponentName(context, VoiceMemoWidgetProvider::class.java)
                 val voiceMemoWidgetIds = appWidgetManager.getAppWidgetIds(voiceMemoWidgetComponentName)
-                val intent = Intent(context, VoiceMemoWidgetProvider::class.java).apply {
+                val voiceMemoIntent = Intent(context, VoiceMemoWidgetProvider::class.java).apply {
                     action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, voiceMemoWidgetIds)
                 }
-                context.sendBroadcast(intent)
+                context.sendBroadcast(voiceMemoIntent)
+
+                // Kamera widget'larını güncelle
+                val cameraWidgetComponentName = ComponentName(context, CameraWidgetProvider::class.java)
+                val cameraWidgetIds = appWidgetManager.getAppWidgetIds(cameraWidgetComponentName)
+                val cameraIntent = Intent(context, CameraWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, cameraWidgetIds)
+                }
+                context.sendBroadcast(cameraIntent)
 
             } catch (e: Exception) {
                 e.printStackTrace()
