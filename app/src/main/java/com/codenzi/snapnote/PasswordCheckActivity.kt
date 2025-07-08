@@ -3,6 +3,8 @@ package com.codenzi.snapnote
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -20,6 +22,10 @@ class PasswordCheckActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPasswordCheckBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // DİNAMİK RENK TEMASINI UYGULA
+        ThemeManager.applyTheme(this)
+
+        // Mevcut Açık/Koyu tema ayarını uygula
         applySavedTheme()
         super.onCreate(savedInstanceState)
 

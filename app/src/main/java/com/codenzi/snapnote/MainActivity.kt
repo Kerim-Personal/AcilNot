@@ -49,13 +49,10 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
-@AndroidEntryPoint // Hilt'in bu Activity'i yönetmesini sağlar
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
-    // ViewModel, Hilt tarafından standart `viewModels` delegesi ile sağlanır
     private val viewModel: MainViewModel by viewModels()
-
-    // ViewBinding nesnesi, findViewById'in yerini alır
     private lateinit var binding: ActivityMainBinding
     private lateinit var noteAdapter: NoteAdapter
     private var isSelectionMode = false
@@ -76,33 +73,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // TEMAYI EN BAŞTA UYGULA
+        ThemeManager.applyTheme(this)
+
         applySavedTheme()
         super.onCreate(savedInstanceState)
 
-        // Layout, ViewBinding ile bağlanır
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
+        // Arkaplan rengini tema ile uyumlu hale getir
+        window.decorView.setBackgroundColor(getColorFromAttr(com.google.android.material.R.attr.colorSurface))
 
+        setSupportActionBar(binding.toolbar)
         setupRecyclerView()
 
         binding.fabAddNote.setOnClickListener {
             startActivity(Intent(this, NoteActivity::class.java))
         }
 
-        // ViewModel'den gelen notlar dinlenir ve UI güncellenir
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.notes.collect { notes ->
                     noteAdapter.updateNotes(notes)
-                    if (notes.isEmpty()) {
-                        binding.rvNotes.visibility = View.GONE
-                        binding.tvEmptyNotes.visibility = View.VISIBLE
-                    } else {
-                        binding.rvNotes.visibility = View.VISIBLE
-                        binding.tvEmptyNotes.visibility = View.GONE
-                    }
+                    binding.tvEmptyNotes.visibility = if (notes.isEmpty()) View.VISIBLE else View.GONE
+                    binding.rvNotes.visibility = if (notes.isEmpty()) View.GONE else View.VISIBLE
                 }
             }
         }
@@ -121,6 +116,15 @@ class MainActivity : AppCompatActivity() {
 
         checkAudioPermission()
     }
+
+    // Tema niteliğinden rengi almak için yardımcı fonksiyon
+    private fun getColorFromAttr(attrResId: Int): Int {
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(attrResId, typedValue, true)
+        return typedValue.data
+    }
+
+    // ... Geri kalan tüm kodunuz aynı ...
 
     private fun applySavedTheme() {
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)

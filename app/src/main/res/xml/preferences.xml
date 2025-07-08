@@ -14,6 +14,15 @@
             app:icon="@drawable/ic_theme" />
 
         <ListPreference
+            android:key="color_selection"
+            android:title="Uygulama Rengi"
+            android:summary="Uygulamanın ana rengini değiştir"
+            android:defaultValue="purple"
+            android:entries="@array/color_theme_entries"
+            android:entryValues="@array/color_theme_values"
+            app:icon="@drawable/ic_image_24" />
+
+        <ListPreference
             android:key="widget_background_selection"
             android:title="@string/widget_background_title"
             android:defaultValue="widget_background"

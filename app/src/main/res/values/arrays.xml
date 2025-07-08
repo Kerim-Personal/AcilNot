@@ -6,7 +6,7 @@
         <item>@string/theme_system_default</item>
     </string-array>
 
-    <string-array name="theme_values">
+    <string-array name="theme_values" translatable="false">
         <item>light</item>
         <item>dark</item>
         <item>system_default</item>
@@ -39,4 +39,19 @@
         <item>bg9</item>
         <item>bg10</item>
     </string-array>
+
+    <string-array name="color_theme_entries">
+        <item>Mor (Varsayılan)</item>
+        <item>Okyanus Mavisi</item>
+        <item>Orman Yeşili</item>
+        <item>Gül Kurusu</item>
+    </string-array>
+
+    <string-array name="color_theme_values" translatable="false">
+        <item>purple</item>
+        <item>blue</item>
+        <item>green</item>
+        <item>rose</item>
+    </string-array>
+
 </resources>

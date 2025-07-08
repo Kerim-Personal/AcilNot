@@ -85,9 +85,15 @@ class NoteActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // TEMAYI EN BAŞTA UYGULA
+        ThemeManager.applyTheme(this)
+
         super.onCreate(savedInstanceState)
         binding = ActivityNoteBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Bu aktivitenin arkaplanını da tema rengine göre ayarla
+        binding.root.setBackgroundColor(getColorFromAttr(com.google.android.material.R.attr.colorSurface))
 
         setupListeners()
         setupChecklist()
@@ -102,6 +108,13 @@ class NoteActivity : AppCompatActivity() {
                 performSave()
             }
         })
+    }
+
+    // Tema niteliğinden rengi almak için yardımcı fonksiyon
+    private fun getColorFromAttr(attrResId: Int): Int {
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(attrResId, typedValue, true)
+        return typedValue.data
     }
 
     override fun onStop() {
@@ -475,9 +488,13 @@ class NoteActivity : AppCompatActivity() {
 
     private fun updateWindowBackground() {
         try {
-            window.setBackgroundDrawable(selectedColor.toColorInt().toDrawable())
+            val color = selectedColor.toColorInt()
+            window.setBackgroundDrawable(color.toDrawable())
+            binding.root.setBackgroundColor(color) // Ana layout'un arkaplanını da ayarla
         } catch (e: IllegalArgumentException) {
-            window.setBackgroundDrawable(Color.WHITE.toDrawable())
+            val defaultColor = Color.WHITE
+            window.setBackgroundDrawable(defaultColor.toDrawable())
+            binding.root.setBackgroundColor(defaultColor)
         }
         val textColor = getContrastingTextColor(selectedColor)
         checklistAdapter.updateColors(textColor, textColor)

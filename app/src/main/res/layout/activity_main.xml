@@ -52,7 +52,7 @@
         android:layout_margin="16dp"
         android:contentDescription="@string/add_note_fab_description"
         android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="?attr/floatingActionButtonBackground"
-        app:tint="?attr/floatingActionButtonIconTint" />
+        app:backgroundTint="?attr/colorPrimaryContainer"
+        app:tint="?attr/colorOnPrimaryContainer" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
