@@ -26,6 +26,7 @@ class TrashActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTrashBinding
     private lateinit var deletedNoteAdapter: NoteAdapter
+
     private var isSelectionMode = false
     private var currentThemeResId: Int = 0
 
@@ -71,7 +72,6 @@ class TrashActivity : AppCompatActivity() {
         binding.rvDeletedNotes.adapter = deletedNoteAdapter
         binding.rvDeletedNotes.layoutManager = LinearLayoutManager(this)
     }
-    // ... (TrashActivity'deki diğer metodlar aynı kalacak)
 
     private fun observeDeletedNotes() {
         lifecycleScope.launch {
@@ -81,12 +81,11 @@ class TrashActivity : AppCompatActivity() {
                     if (notes.isEmpty()) {
                         binding.tvEmptyTrash.visibility = View.VISIBLE
                         binding.rvDeletedNotes.visibility = View.GONE
-                        binding.tvTrashInfo.visibility = View.GONE
                     } else {
                         binding.tvEmptyTrash.visibility = View.GONE
                         binding.rvDeletedNotes.visibility = View.VISIBLE
-                        binding.tvTrashInfo.visibility = View.VISIBLE
                     }
+                    invalidateOptionsMenu()
 
                     if (notes.isEmpty() && isSelectionMode) {
                         exitSelectionMode()
@@ -188,6 +187,8 @@ class TrashActivity : AppCompatActivity() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val hasNotes = deletedNoteAdapter.itemCount > 0
+        menu.findItem(R.id.action_trash_info).isVisible = hasNotes && !isSelectionMode
         menu.findItem(R.id.action_delete_selected).isVisible = isSelectionMode && deletedNoteAdapter.getSelectedItemCount() > 0
         return super.onPrepareOptionsMenu(menu)
     }
@@ -202,11 +203,23 @@ class TrashActivity : AppCompatActivity() {
                 }
                 true
             }
+            R.id.action_trash_info -> {
+                showTrashInfoDialog()
+                true
+            }
             R.id.action_delete_selected -> {
                 showPermanentDeleteConfirmationDialog(deletedNoteAdapter.getSelectedNotes())
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun showTrashInfoDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.trash_bin_title)
+            .setMessage(R.string.trash_info_message)
+            .setPositiveButton(R.string.dialog_ok, null)
+            .show()
     }
 }
