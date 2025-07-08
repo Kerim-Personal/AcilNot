@@ -2,21 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Kamera kullanımı için donanım özelliği ve izin -->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Eski Android sürümlerinde harici depolamaya yazma izni -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
-    <!-- Ses kaydı ve ön plan servisleri için izinler -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
 
 
     <application
@@ -31,7 +30,6 @@
         android:theme="@style/Theme.AcilNotUygulamasi"
         tools:targetApi="31">
 
-        <!-- Başlatıcı Activity: Parola kontrolü yapar -->
         <activity
             android:name=".PasswordCheckActivity"
             android:exported="true">
@@ -41,7 +39,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Ana uygulama ekranları -->
         <activity
             android:name=".MainActivity"
             android:exported="false" />
@@ -66,7 +63,6 @@
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
-        <!-- Widget'lardan çağrılan Activity takma adları -->
         <activity-alias
             android:name=".WidgetNoteActivity"
             android:targetActivity=".NoteActivity"
@@ -78,7 +74,6 @@
             android:exported="true"
             android:excludeFromRecents="true" />
 
-        <!-- Widget'lar ve Servisler -->
         <receiver
             android:name=".NoteWidgetProvider"
             android:exported="true">
@@ -119,7 +114,6 @@
                 android:resource="@xml/camera_widget_provider_info" />
         </receiver>
 
-        <!-- Dosya paylaşımı için FileProvider -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

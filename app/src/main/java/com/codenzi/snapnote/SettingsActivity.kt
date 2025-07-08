@@ -1,22 +1,30 @@
 package com.codenzi.snapnote
 
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import androidx.appcompat.app.AlertDialog
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
-import androidx.core.net.toUri
-import androidx.preference.ListPreference
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import com.google.android.gms.auth.GoogleAuthUtil
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.Scope
+import com.google.gson.Gson
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeManager.applyTheme(this)
         super.onCreate(savedInstanceState)
@@ -40,109 +48,87 @@ class SettingsActivity : AppCompatActivity() {
         return true
     }
 
+    @AndroidEntryPoint
     class SettingsFragment : PreferenceFragmentCompat() {
+
+        @Inject
+        lateinit var noteDao: NoteDao
+
+        // Modern ActivityResultLauncher, oturum açma sonucunu yönetir.
+        private val googleSignInLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                // Giriş başarılı, yedekleme işlemini tetikle
+                result.data?.let { handleSignInSuccess(it) }
+            } else {
+                Toast.makeText(requireContext(), "Google ile oturum açma iptal edildi.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
-            findPreference<ListPreference>("theme_selection")?.setOnPreferenceChangeListener { _, newValue ->
-                val mode = when (newValue.toString()) {
-                    "light" -> AppCompatDelegate.MODE_NIGHT_NO
-                    "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-                    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                }
-                AppCompatDelegate.setDefaultNightMode(mode)
-                true
-            }
+            findPreference<Preference>("google_drive_backup")?.setOnPreferenceClickListener {
+                // Gerekli izinleri (scope) belirterek oturum açma seçeneklerini yapılandırıyoruz.
+                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestEmail()
+                    .requestScopes(Scope("https://www.googleapis.com/auth/drive.appdata"))
+                    .build()
+                val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
 
-            findPreference<ListPreference>("color_selection")?.setOnPreferenceChangeListener { _, _ ->
-                // Tema değişikliğini anında yansıtmak için aktiviteyi yeniden başlat
-                // Kısa bir gecikme, preference'ın kaydedilmesine olanak tanır.
-                Handler(Looper.getMainLooper()).postDelayed({
-                    activity?.recreate()
-                }, 100)
-                true
-            }
-
-            findPreference<Preference>("password_settings")?.setOnPreferenceClickListener {
-                startActivity(Intent(activity, PasswordSettingsActivity::class.java))
-                true
-            }
-
-            findPreference<Preference>("trash_settings")?.setOnPreferenceClickListener {
-                startActivity(Intent(activity, TrashActivity::class.java))
-                true
-            }
-
-            findPreference<ListPreference>("widget_background_selection")?.setOnPreferenceChangeListener { _, _ ->
-                // Değişikliğin SharedPreferences'a yazılmasını beklemek için küçük bir gecikme ekliyoruz.
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    updateAllWidgets()
-                }, 100)
-                true
-            }
-
-            findPreference<Preference>("privacy_policy")?.setOnPreferenceClickListener {
-                val url = "https://www.codenzi.com"
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    showErrorDialog(R.string.toast_no_browser_found)
-                }
-                true
-            }
-
-            findPreference<Preference>("contact_us")?.setOnPreferenceClickListener {
-                val email = "info@codenzi.com"
-                val subject = getString(R.string.contact_us_email_subject)
-                try {
-                    val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = "mailto:".toUri()
-                        putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
-                        putExtra(Intent.EXTRA_SUBJECT, subject)
-                    }
-                    startActivity(Intent.createChooser(intent, getString(R.string.contact_us_email_chooser_title)))
-                } catch (e: Exception) {
-                    showErrorDialog(R.string.toast_no_email_app_found)
+                // Her seferinde temiz bir başlangıç için önce oturumu kapatıyoruz.
+                googleSignInClient.signOut().addOnCompleteListener {
+                    googleSignInLauncher.launch(googleSignInClient.signInIntent)
                 }
                 true
             }
         }
 
-        private fun updateAllWidgets() {
-            try {
-                val context = requireContext()
-                val appWidgetManager = AppWidgetManager.getInstance(context)
+        private fun handleSignInSuccess(data: Intent) {
+            GoogleSignIn.getSignedInAccountFromIntent(data)
+                .addOnSuccessListener { account ->
+                    // Hesap bilgisi başarıyla alındı, şimdi Access Token'ı alacağız.
+                    getAccessTokenAndBackup(account)
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(requireContext(), "Oturum açma hatası: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+        }
 
-                val widgetProviders = listOf(
-                    NoteWidgetProvider::class.java,
-                    VoiceMemoWidgetProvider::class.java,
-                    CameraWidgetProvider::class.java
-                )
+        private fun getAccessTokenAndBackup(account: GoogleSignInAccount) {
+            lifecycleScope.launch {
+                try {
+                    // Access Token'ı IO thread üzerinde alıyoruz.
+                    val accessToken = withContext(Dispatchers.IO) {
+                        val scope = "oauth2:https://www.googleapis.com/auth/drive.appdata"
+                        // Bu, access token almanın doğru ve stabil yöntemidir.
+                        GoogleAuthUtil.getToken(requireContext(), account.account!!, scope)
+                    }
 
-                widgetProviders.forEach { providerClass ->
-                    val componentName = ComponentName(context, providerClass)
-                    val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-                    if (appWidgetIds.isNotEmpty()) {
-                        val updateIntent = Intent(context, providerClass).apply {
-                            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                    // Yedekleme işlemini başlatıyoruz.
+                    Toast.makeText(requireContext(), "Erişim anahtarı alındı. Yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
+
+                    val allNotes = noteDao.getAllNotes().first()
+                    val notesJson = Gson().toJson(allNotes)
+
+                    val googleDriveManager = GoogleDriveManager(accessToken)
+                    val success = googleDriveManager.uploadBackup("snapnote_backup.json", notesJson)
+
+                    withContext(Dispatchers.Main) {
+                        if (success) {
+                            Toast.makeText(requireContext(), "Notlar başarıyla yedeklendi!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(requireContext(), "Yedekleme sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show()
                         }
-                        context.sendBroadcast(updateIntent)
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Yedekleme başarısız: ${e.message}", Toast.LENGTH_LONG).show()
+                        e.printStackTrace()
                     }
                 }
-
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-        }
-
-        private fun showErrorDialog(messageResId: Int) {
-            AlertDialog.Builder(requireContext())
-                .setTitle(getString(R.string.error_dialog_title))
-                .setMessage(getString(messageResId))
-                .setPositiveButton(getString(R.string.dialog_ok), null)
-                .show()
         }
     }
 }
