@@ -1,8 +1,6 @@
-package com.codenzi.snapnote.di
+package com.codenzi.snapnote
 
 import android.content.Context
-import com.codenzi.snapnote.NoteDatabase
-import com.codenzi.snapnote.NoteDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
