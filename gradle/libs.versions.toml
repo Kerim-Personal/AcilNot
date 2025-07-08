@@ -1,5 +1,7 @@
 [versions]
 agp = "8.11.0"
+# DÜZELTME: KSP ile uyumluluk sorununu çözmek için Kotlin sürümü 2.0.0'a düşürüldü.
+#noinspection NewerVersionAvailable
 kotlin = "2.0.0"
 coreKtx = "1.16.0"
 junit = "4.13.2"
@@ -11,13 +13,13 @@ activity = "1.10.1"
 constraintlayout = "2.2.1"
 ksp = "2.0.0-1.0.22"
 lifecycle = "2.9.1"
-room = "2.6.1"
+room = "2.7.2"
 gson = "2.13.1"
 preferenceKtx = "1.2.1"
-kotlinxCoroutines = "1.8.1"
-securityCrypto = "1.1.0-alpha06"
-work = "2.9.0"
-# --- YENİ EKLENEN VE GÜNCELLENEN VERSİYONLAR ---
+kotlinxCoroutines = "1.10.2"
+securityCrypto = "1.1.0-beta01"
+work = "2.10.2"
+# DÜZELTME: CameraX sürümü, IncompatibleClassChangeError hatasını çözmek için kararlı bir sürüme düşürüldü.
 camerax = "1.4.2"
 coil = "2.7.0"
 photoview = "2.3.0"

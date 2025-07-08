@@ -97,7 +97,8 @@ class CameraNoteActivity : AppCompatActivity() {
             val preview = Preview.Builder()
                 .build()
                 .also {
-                    it.surfaceProvider = binding.viewFinder.surfaceProvider
+                    // DÜZELTME: Hatalı property erişimi yerine doğru olan setSurfaceProvider metodu kullanıldı.
+                    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
                 }
 
             imageCapture = ImageCapture.Builder().build()

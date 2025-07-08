@@ -21,7 +21,7 @@ abstract class NoteDatabase : RoomDatabase() {
 
         // DÜZELTME: Veritabanı sürüm 6'dan 7'ye geçerken 'showOnWidget' sütununu ekleyen
         // Migration nesnesini tanımlıyoruz. Bu, kullanıcı verilerinin korunmasını sağlar.
-        val MIGRATION_6_7 = object : Migration(6, 7) {
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // 'notes' tablosuna 'showOnWidget' adında, boş olamayan (NOT NULL),
                 // varsayılan değeri 0 (false) olan bir INTEGER sütunu ekliyoruz.

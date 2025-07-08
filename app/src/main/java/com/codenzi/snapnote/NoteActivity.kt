@@ -45,7 +45,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@Suppress("DEPRECATION")
 @AndroidEntryPoint
 class NoteActivity : AppCompatActivity() {
 
@@ -111,8 +110,6 @@ class NoteActivity : AppCompatActivity() {
         if (isListening) {
             stopListening()
         }
-        // onStop'ta kaydetme işlemi artık geri tuşu ile handle ediliyor.
-        // Gerekirse buraya da eklenebilir ancak çift kaydı önlemek için dikkatli olunmalı.
     }
 
     private fun observeViewModel() {
@@ -181,7 +178,7 @@ class NoteActivity : AppCompatActivity() {
         val noteContentText = binding.etNoteInput.text
 
         if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() } && imagePath == null && audioPath == null) {
-            finish() // Boş notu kaydetmeden çık
+            finish()
             return
         }
 
@@ -419,7 +416,7 @@ class NoteActivity : AppCompatActivity() {
         } else {
             currentNoteId = null
             binding.btnDeleteNote.visibility = View.GONE
-            displayNote(null) // Display empty note
+            displayNote(null)
         }
         binding.btnShowHistory.visibility = if (currentNoteId != null) View.VISIBLE else View.GONE
     }
@@ -493,7 +490,6 @@ class NoteActivity : AppCompatActivity() {
 
     private fun displayNote(note: Note?) {
         if (note == null) {
-            // New note state
             binding.etNoteTitle.text?.clear()
             binding.etNoteInput.text?.clear()
             displayEditHistory(null)
@@ -510,7 +506,6 @@ class NoteActivity : AppCompatActivity() {
             return
         }
 
-        // Existing note state
         binding.etNoteTitle.setText(note.title)
         displayEditHistory(note)
         try {
@@ -597,7 +592,7 @@ class NoteActivity : AppCompatActivity() {
             binding.tvEditHistory.text = ""
             return
         }
-        val historyBuilder = StringBuilder("${getString(R.string.creation_date_label, formatDate(note.createdAt))}")
+        val historyBuilder = StringBuilder(getString(R.string.creation_date_label, formatDate(note.createdAt)))
         if (note.modifiedAt.isNotEmpty()) {
             historyBuilder.append("\n\n${getString(R.string.edit_history_title)}")
             note.modifiedAt.forEach { timestamp ->

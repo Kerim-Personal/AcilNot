@@ -34,6 +34,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import androidx.core.view.drawToBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -47,7 +48,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
-import java.util.Locale
 
 @AndroidEntryPoint // Hilt'in bu Activity'i yönetmesini sağlar
 class MainActivity : AppCompatActivity() {
@@ -433,7 +433,7 @@ class MainActivity : AppCompatActivity() {
 
             if (noteContent.imagePath != null) {
                 try {
-                    val imageUri = Uri.parse(noteContent.imagePath)
+                    val imageUri = noteContent.imagePath.toUri()
                     val inputStream = contentResolver.openInputStream(imageUri)
                     val imageBitmap = BitmapFactory.decodeStream(inputStream)
                     imageView.setImageBitmap(imageBitmap)
