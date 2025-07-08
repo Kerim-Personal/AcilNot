@@ -44,11 +44,11 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import kotlinx.coroutines.launch
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
 
 @Suppress("DEPRECATION")
 class NoteActivity : AppCompatActivity() {
@@ -96,7 +96,6 @@ class NoteActivity : AppCompatActivity() {
     private val recognizedTextBuilder = StringBuilder()
     private var utteranceStartPosition = 0
 
-    // YENİ: Notun widget'tan gelip gelmediğini tutacak bir değişken ekliyoruz.
     private var isFromWidget = false
 
     private val restartHandler = Handler(Looper.getMainLooper())
@@ -154,9 +153,13 @@ class NoteActivity : AppCompatActivity() {
 
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                performSave()
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
+                // *** DEĞİŞİKLİK: Geri tuşuna basıldığında da kaydetme işleminin bitmesini bekle ***
+                lifecycleScope.launch {
+                    performSave()
+                    // Coroutine bittikten sonra geri gitme işlemini manuel olarak tetikle
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
             }
         }
         onBackPressedDispatcher.addCallback(this, callback)
@@ -168,7 +171,12 @@ class NoteActivity : AppCompatActivity() {
         if (isListening) {
             stopListening()
         }
-        performSave()
+        // *** DEĞİŞİKLİK: onStop durumunda veri kaybını önlemek için senkronize kaydetme ***
+        // Kullanıcı uygulamadan hızla çıktığında veya başka bir ekrana geçtiğinde
+        // veri kaybı yaşanmaması için burada da kaydetme işlemi yapılır.
+        lifecycleScope.launch {
+            performSave()
+        }
     }
 
     private fun setupListeners() {
@@ -188,26 +196,33 @@ class NoteActivity : AppCompatActivity() {
             updateFormattingButtonsState()
         }
 
+        // *** DEĞİŞİKLİK: Kaydetme butonu artık bir coroutine içinde çalışıyor ***
+        // Bu değişiklik, kaydetme işlemi (performSave) bitmeden finish() çağrılmasını
+        // engelleyerek "race condition" sorununu ve veri kaybını önler.
         saveButton.setOnClickListener {
             val titleText = noteTitle.text.toString().trim()
             val noteContentText = noteInput.text
             if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() } && imagePath == null) {
                 Toast.makeText(this, R.string.toast_empty_note, Toast.LENGTH_SHORT).show()
             } else {
-                performSave()
-                finish()
+                lifecycleScope.launch {
+                    performSave() // Kaydetme işleminin bitmesini bekle
+                    finish()      // İşlem bittikten sonra ekranı güvenle kapat
+                }
             }
         }
         deleteButton.setOnClickListener { showDeleteConfirmationDialog() }
         playPauseButton.setOnClickListener { togglePlayback() }
     }
 
-    private fun performSave() {
+    // *** DEĞİŞİKLİK: Fonksiyon "suspend" olarak işaretlendi ***
+    // Bu, içindeki veritabanı işlemlerinin tamamlanmasını bekleyebilmemizi sağlar.
+    private suspend fun performSave() {
         val titleText = noteTitle.text.toString().trim()
         val noteContentText = noteInput.text
 
-        if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() } && imagePath == null) {
-            return
+        if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() } && imagePath == null && audioPath == null) {
+            return // Kaydedilecek bir şey yoksa işlemi sonlandır.
         }
 
         setResult(Activity.RESULT_OK)
@@ -215,33 +230,31 @@ class NoteActivity : AppCompatActivity() {
         val noteTextHtml = if (noteContentText.isNullOrBlank()) "" else Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
         val jsonContent = gson.toJson(NoteContent(text = noteTextHtml, checklist = checklistItems, audioFilePath = audioPath, imagePath = imagePath))
 
-        lifecycleScope.launch {
-            if (currentNoteId != null) {
-                noteDao.getNoteById(currentNoteId!!)?.let {
-                    val updatedModifications = it.modifiedAt.toMutableList().apply { add(System.currentTimeMillis()) }
-                    val updatedNote = it.copy(
-                        title = titleText,
-                        content = jsonContent,
-                        modifiedAt = updatedModifications,
-                        color = selectedColor
-                    )
-                    noteDao.update(updatedNote)
-                }
-            } else {
-                val newNote = Note(
+        if (currentNoteId != null) {
+            noteDao.getNoteById(currentNoteId!!)?.let {
+                val updatedModifications = it.modifiedAt.toMutableList().apply { add(System.currentTimeMillis()) }
+                val updatedNote = it.copy(
                     title = titleText,
                     content = jsonContent,
-                    createdAt = System.currentTimeMillis(),
-                    color = selectedColor,
-                    // YENİ: Eğer not widget'tan oluşturulduysa, `showOnWidget` değerini true yap.
-                    showOnWidget = isFromWidget
+                    modifiedAt = updatedModifications,
+                    color = selectedColor
                 )
-                val newId = noteDao.insert(newNote)
-                currentNoteId = newId.toInt()
+                noteDao.update(updatedNote)
             }
-            updateAllWidgets()
+        } else {
+            val newNote = Note(
+                title = titleText,
+                content = jsonContent,
+                createdAt = System.currentTimeMillis(),
+                color = selectedColor,
+                showOnWidget = isFromWidget
+            )
+            val newId = noteDao.insert(newNote)
+            currentNoteId = newId.toInt()
         }
+        updateAllWidgets()
     }
+
 
     private fun toggleStyle(styleType: Int) {
         val spannable = noteInput.text as SpannableStringBuilder
@@ -449,7 +462,6 @@ class NoteActivity : AppCompatActivity() {
     }
 
     private fun processIntent(intent: Intent) {
-        // YENİ: Intent'ten gelen "FROM_WIDGET" extrasını kontrol ediyoruz.
         isFromWidget = intent.getBooleanExtra("FROM_WIDGET", false)
 
         if (intent.hasExtra("NOTE_ID")) {

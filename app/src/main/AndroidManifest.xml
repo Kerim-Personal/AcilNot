@@ -49,11 +49,21 @@
             android:name=".CameraNoteActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar"/>
-
         <activity
             android:name=".PhotoViewActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar"/>
+
+        <activity-alias
+            android:name=".WidgetNoteActivity"
+            android:targetActivity=".NoteActivity"
+            android:exported="true"
+            android:excludeFromRecents="true" />
+        <activity-alias
+            android:name=".WidgetCameraNoteActivity"
+            android:targetActivity=".CameraNoteActivity"
+            android:exported="true"
+            android:excludeFromRecents="true" />
 
         <receiver
             android:name=".NoteDeleteReceiver"
@@ -62,7 +72,6 @@
                 <action android:name="com.codenzi.snapnote.ACTION_DELETE_NOTE" />
             </intent-filter>
         </receiver>
-
         <receiver
             android:name=".NoteWidgetProvider"
             android:exported="true">
@@ -73,16 +82,13 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/note_widget_provider_info" />
         </receiver>
-
         <service
             android:name=".NoteWidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
-
         <service
             android:name=".AudioRecordingService"
             android:foregroundServiceType="microphone"
             android:exported="false" />
-
         <receiver
             android:name=".VoiceMemoWidgetProvider"
             android:exported="true">
@@ -93,7 +99,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/voice_memo_widget_provider_info" />
         </receiver>
-
         <receiver
             android:name=".CameraWidgetProvider"
             android:exported="true">
@@ -104,7 +109,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/camera_widget_provider_info" />
         </receiver>
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
