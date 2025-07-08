@@ -3,12 +3,12 @@ package com.codenzi.snapnote
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
+import androidx.core.net.toUri
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -22,7 +22,7 @@ class SettingsActivity : AppCompatActivity() {
         val toolbar: Toolbar = findViewById(R.id.settings_toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = getString(R.string.settings_title) // Değişiklik burada
+        supportActionBar?.title = getString(R.string.settings_title)
 
         if (savedInstanceState == null) {
             supportFragmentManager
@@ -41,8 +41,7 @@ class SettingsActivity : AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
-            val themePreference: ListPreference? = findPreference("theme_selection")
-            themePreference?.setOnPreferenceChangeListener { _, newValue ->
+            findPreference<ListPreference>("theme_selection")?.setOnPreferenceChangeListener { _, newValue ->
                 val mode = when (newValue.toString()) {
                     "light" -> AppCompatDelegate.MODE_NIGHT_NO
                     "dark" -> AppCompatDelegate.MODE_NIGHT_YES
@@ -52,98 +51,89 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            val passwordSettingsPreference: Preference? = findPreference("password_settings")
-            passwordSettingsPreference?.setOnPreferenceClickListener {
+            findPreference<Preference>("password_settings")?.setOnPreferenceClickListener {
                 startActivity(Intent(activity, PasswordSettingsActivity::class.java))
                 true
             }
 
-            val trashPreference: Preference? = findPreference("trash_settings")
-            trashPreference?.setOnPreferenceClickListener {
+            findPreference<Preference>("trash_settings")?.setOnPreferenceClickListener {
                 startActivity(Intent(activity, TrashActivity::class.java))
                 true
             }
 
-            val widgetBackgroundPreference: ListPreference? = findPreference("widget_background_selection")
-            widgetBackgroundPreference?.setOnPreferenceChangeListener { _, _ ->
+            findPreference<ListPreference>("widget_background_selection")?.setOnPreferenceChangeListener { _, _ ->
+                // Değişikliğin SharedPreferences'a yazılmasını beklemek için küçük bir gecikme ekliyoruz.
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    updateWidget()
+                    updateAllWidgets()
                 }, 100)
                 true
             }
 
-            val privacyPolicyPreference: Preference? = findPreference("privacy_policy")
-            privacyPolicyPreference?.setOnPreferenceClickListener {
+            findPreference<Preference>("privacy_policy")?.setOnPreferenceClickListener {
                 val url = "https://www.codenzi.com"
                 try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    // DÜZELTME: KTX uzantı fonksiyonu kullanıldı.
+                    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                     startActivity(intent)
                 } catch (e: Exception) {
-                    AlertDialog.Builder(requireContext())
-                        .setTitle(getString(R.string.error_dialog_title))
-                        .setMessage(getString(R.string.toast_no_browser_found))
-                        .setPositiveButton(getString(R.string.dialog_ok), null)
-                        .show()
+                    showErrorDialog(R.string.toast_no_browser_found)
                 }
                 true
             }
 
-            val contactUsPreference: Preference? = findPreference("contact_us")
-            contactUsPreference?.setOnPreferenceClickListener {
+            findPreference<Preference>("contact_us")?.setOnPreferenceClickListener {
                 val email = "info@codenzi.com"
                 val subject = getString(R.string.contact_us_email_subject)
                 try {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:")
+                        // DÜZELTME: KTX uzantı fonksiyonu kullanıldı.
+                        data = "mailto:".toUri()
                         putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
                         putExtra(Intent.EXTRA_SUBJECT, subject)
                     }
                     startActivity(Intent.createChooser(intent, getString(R.string.contact_us_email_chooser_title)))
                 } catch (e: Exception) {
-                    AlertDialog.Builder(requireContext())
-                        .setTitle(getString(R.string.error_dialog_title))
-                        .setMessage(getString(R.string.toast_no_email_app_found))
-                        .setPositiveButton(getString(R.string.dialog_ok), null)
-                        .show()
+                    showErrorDialog(R.string.toast_no_email_app_found)
                 }
                 true
             }
         }
 
-        private fun updateWidget() {
+        private fun updateAllWidgets() {
             try {
                 val context = requireContext()
                 val appWidgetManager = AppWidgetManager.getInstance(context)
 
-                // Not widget'larını güncelle
-                val noteWidgetComponentName = ComponentName(context, NoteWidgetProvider::class.java)
-                val noteWidgetIds = appWidgetManager.getAppWidgetIds(noteWidgetComponentName)
-                noteWidgetIds.forEach { appWidgetId ->
-                    NoteWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
-                    appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
-                }
+                // Tüm widget türlerini tek bir listede toplayıp döngüye alarak kodu daha temiz hale getirelim.
+                val widgetProviders = listOf(
+                    NoteWidgetProvider::class.java,
+                    VoiceMemoWidgetProvider::class.java,
+                    CameraWidgetProvider::class.java
+                )
 
-                // Sesli not widget'larını güncelle
-                val voiceMemoWidgetComponentName = ComponentName(context, VoiceMemoWidgetProvider::class.java)
-                val voiceMemoWidgetIds = appWidgetManager.getAppWidgetIds(voiceMemoWidgetComponentName)
-                val voiceMemoIntent = Intent(context, VoiceMemoWidgetProvider::class.java).apply {
-                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, voiceMemoWidgetIds)
+                widgetProviders.forEach { providerClass ->
+                    val componentName = ComponentName(context, providerClass)
+                    val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+                    if (appWidgetIds.isNotEmpty()) {
+                        val updateIntent = Intent(context, providerClass).apply {
+                            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                        }
+                        context.sendBroadcast(updateIntent)
+                    }
                 }
-                context.sendBroadcast(voiceMemoIntent)
-
-                // Kamera widget'larını güncelle
-                val cameraWidgetComponentName = ComponentName(context, CameraWidgetProvider::class.java)
-                val cameraWidgetIds = appWidgetManager.getAppWidgetIds(cameraWidgetComponentName)
-                val cameraIntent = Intent(context, CameraWidgetProvider::class.java).apply {
-                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, cameraWidgetIds)
-                }
-                context.sendBroadcast(cameraIntent)
 
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+
+        private fun showErrorDialog(messageResId: Int) {
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.error_dialog_title))
+                .setMessage(getString(messageResId))
+                .setPositiveButton(getString(R.string.dialog_ok), null)
+                .show()
         }
     }
 }

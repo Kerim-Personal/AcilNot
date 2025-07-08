@@ -24,6 +24,7 @@ class NoteWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        @Suppress("DEPRECATION")
         fun updateAppWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -31,20 +32,22 @@ class NoteWidgetProvider : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.note_widget_layout)
 
+            // DÜZELTME: getIdentifier yerine doğrudan kaynak ID'lerini kullanan daha verimli bir yapı.
             val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
             val backgroundDrawableName = sharedPrefs.getString("widget_background_selection", "widget_background")
-            val backgroundResId = context.resources.getIdentifier(
-                backgroundDrawableName, "drawable", context.packageName
-            )
-            views.setInt(R.id.widget_container_layout, "setBackgroundResource", if (backgroundResId != 0) backgroundResId else R.drawable.widget_background)
+            val backgroundResId = getBackgroundResource(backgroundDrawableName)
+            views.setInt(R.id.widget_container_layout, "setBackgroundResource", backgroundResId)
 
+            // ListView'i dolduracak olan RemoteViewsService için Intent.
             val serviceIntent = Intent(context, NoteWidgetService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 data = this.toUri(Intent.URI_INTENT_SCHEME).toUri()
             }
+            // DÜZELTME: setRemoteAdapter kullanımı minSdk < 31 için zorunludur. Uyarı gizlendi.
             views.setRemoteAdapter(R.id.lv_widget_notes, serviceIntent)
             views.setEmptyView(R.id.lv_widget_notes, R.id.tv_widget_empty)
 
+            // ListView'deki her bir öğeye tıklandığında NoteActivity'i açacak olan PendingIntent şablonu.
             val clickIntent = Intent(context, NoteActivity::class.java)
             val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
             val clickPendingIntent = PendingIntent.getActivity(
@@ -52,11 +55,11 @@ class NoteWidgetProvider : AppWidgetProvider() {
             )
             views.setPendingIntentTemplate(R.id.lv_widget_notes, clickPendingIntent)
 
-            // *** DEĞİŞİKLİK: Intent artık ComponentName ile oluşturuluyor ***
-            // Bu yöntem, "Unresolved reference" hatasını düzeltir.
+            // "Yeni Not" butonuna tıklandığında WidgetNoteActivity (alias) açılacak.
             val newNoteIntent = Intent().apply {
                 val component = ComponentName("com.codenzi.snapnote", "com.codenzi.snapnote.WidgetNoteActivity")
-                component.let { setComponent(it) }
+                // DÜZELTME: Gereksiz 'let' kaldırıldı.
+                setComponent(component)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra("FROM_WIDGET", true)
             }
@@ -67,7 +70,29 @@ class NoteWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.btn_widget_new, newNotePendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
-            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_widget_notes)
+            // DÜZELTME: Eskimiş metodun yerine yenisi kullanıldı.
+            appWidgetManager.notifyAppWidgetViewDataChanged(intArrayOf(appWidgetId), R.id.lv_widget_notes)
+        }
+
+        /**
+         * SharedPreferences'tan gelen string key'e karşılık gelen drawable resource ID'sini döndürür.
+         * Bu yöntem, getIdentifier kullanmaktan daha performanslıdır.
+         */
+        private fun getBackgroundResource(name: String?): Int {
+            return when (name) {
+                "widget_background" -> R.drawable.widget_background
+                "bg1" -> R.drawable.bg1
+                "bg2" -> R.drawable.bg2
+                "bg3" -> R.drawable.bg3
+                "bg4" -> R.drawable.bg4
+                "bg5" -> R.drawable.bg5
+                "bg6" -> R.drawable.bg6
+                "bg7" -> R.drawable.bg7
+                "bg8" -> R.drawable.bg8
+                "bg9" -> R.drawable.bg9
+                "bg10" -> R.drawable.bg10
+                else -> R.drawable.widget_background // Varsayılan
+            }
         }
     }
 }

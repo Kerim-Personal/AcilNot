@@ -19,7 +19,6 @@ class MainViewModel @Inject constructor(private val noteDao: NoteDao) : ViewMode
 
     // Arama sorgusunu tutan StateFlow
     private val _searchQuery = MutableStateFlow("")
-    val searchQuery = _searchQuery.asStateFlow()
 
     // Sıralama düzenini tutan StateFlow
     private val _sortOrder = MutableStateFlow(SortOrder.CREATION_NEWEST)
