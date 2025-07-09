@@ -108,4 +108,5 @@
     <color name="note_color_pink">#FADBD8</color>
     <color name="note_color_purple">#EAEAF4</color>
     <color name="note_color_orange">#FDEBD0</color>
+    <color name="control_panel_background">#424242</color>
 </resources>

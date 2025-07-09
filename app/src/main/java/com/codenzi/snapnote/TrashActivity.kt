@@ -41,6 +41,16 @@ class TrashActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbarTrash)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
+        // DÜZELTME: Geri/Kapat butonu için tıklama dinleyicisi buraya taşındı.
+        binding.toolbarTrash.setNavigationOnClickListener {
+            // isSelectionMode true ise seçimden çık, değilse aktiviteyi bitir.
+            if (isSelectionMode) {
+                exitSelectionMode()
+            } else {
+                onBackPressedDispatcher.onBackPressed()
+            }
+        }
+
         setupRecyclerView()
         observeDeletedNotes()
         setupBackButtonHandler()
@@ -98,8 +108,8 @@ class TrashActivity : AppCompatActivity() {
     private fun enterSelectionMode() {
         isSelectionMode = true
         invalidateOptionsMenu()
+        // Geri okunu, kapat (çarpı) ikonuyla değiştir
         binding.toolbarTrash.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_close)
-        binding.toolbarTrash.setNavigationOnClickListener { exitSelectionMode() }
     }
 
     private fun exitSelectionMode() {
@@ -107,7 +117,8 @@ class TrashActivity : AppCompatActivity() {
         deletedNoteAdapter.clearSelections()
         invalidateOptionsMenu()
         supportActionBar?.title = getString(R.string.trash_title)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        // Kapat (çarpı) ikonunu tekrar geri okuna çevir
+        binding.toolbarTrash.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_arrow_back)
     }
 
     private fun toggleSelection(note: Note) {
@@ -190,21 +201,22 @@ class TrashActivity : AppCompatActivity() {
         val hasNotes = deletedNoteAdapter.itemCount > 0
         menu.findItem(R.id.action_trash_info).isVisible = hasNotes && !isSelectionMode
         menu.findItem(R.id.action_delete_selected).isVisible = isSelectionMode && deletedNoteAdapter.getSelectedItemCount() > 0
+        menu.findItem(R.id.action_select_all).isVisible = isSelectionMode
         return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // DÜZELTME: android.R.id.home olayı kaldırıldı çünkü artık toolbar'ın kendi dinleyicisi var.
         return when (item.itemId) {
-            android.R.id.home -> {
-                if (!isSelectionMode) {
-                    finish()
-                } else {
-                    exitSelectionMode()
-                }
-                true
-            }
             R.id.action_trash_info -> {
                 showTrashInfoDialog()
+                true
+            }
+            R.id.action_select_all -> {
+                deletedNoteAdapter.selectAll()
+                val count = deletedNoteAdapter.itemCount
+                supportActionBar?.title = resources.getQuantityString(R.plurals.selection_title, count, count)
+                invalidateOptionsMenu()
                 true
             }
             R.id.action_delete_selected -> {

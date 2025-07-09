@@ -231,6 +231,7 @@ class NoteActivity : AppCompatActivity() {
             }
         }
 
+        // DEĞİŞİKLİK: Buton dinleyicileri güncellendi
         binding.btnAddPhoto.setOnClickListener { takePicture() }
         binding.btnRecordAudio.setOnClickListener { toggleRecording() }
         binding.btnVoiceNote.setOnClickListener { toggleSpeechToText() }
@@ -314,7 +315,7 @@ class NoteActivity : AppCompatActivity() {
                 start()
             }
             isRecording = true
-            binding.btnRecordAudio.setImageResource(R.drawable.ic_stop_24)
+            binding.btnRecordAudio.setIconResource(R.drawable.ic_stop_24) // İkonu değiştir
             Toast.makeText(this, "Kayıt başladı...", Toast.LENGTH_SHORT).show()
         } catch (e: IOException) {
             Toast.makeText(this, "Kayıt başlatılamadı.", Toast.LENGTH_SHORT).show()
@@ -326,7 +327,7 @@ class NoteActivity : AppCompatActivity() {
         mediaRecorder?.release()
         mediaRecorder = null
         isRecording = false
-        binding.btnRecordAudio.setImageResource(R.drawable.ic_mic)
+        binding.btnRecordAudio.setIconResource(R.drawable.ic_mic) // İkonu eski haline getir
         Toast.makeText(this, "Kayıt tamamlandı.", Toast.LENGTH_SHORT).show()
 
         binding.llAudioPlayer.visibility = View.VISIBLE
@@ -421,7 +422,7 @@ class NoteActivity : AppCompatActivity() {
 
     private fun startListening() {
         isListening = true
-        binding.btnVoiceNote.setImageResource(R.drawable.ic_microphone_red_24)
+        binding.btnVoiceNote.setIconResource(R.drawable.ic_microphone_red_24)
         Toast.makeText(applicationContext, getString(R.string.speech_listening), Toast.LENGTH_SHORT).show()
         recognizedTextBuilder.clear()
         val currentText = binding.etNoteInput.text.toString()
@@ -437,7 +438,7 @@ class NoteActivity : AppCompatActivity() {
         isListening = false
         restartHandler.removeCallbacksAndMessages(null)
         speechRecognizer.stopListening()
-        binding.btnVoiceNote.setImageResource(R.drawable.ic_microphone_24)
+        binding.btnVoiceNote.setIconResource(R.drawable.ic_microphone_24)
     }
 
     private fun restartListeningWithDelay() {

@@ -53,6 +53,15 @@ class NoteAdapter(
 
     fun getSelectedItemCount(): Int = selectedItems.size
 
+    // YENİ FONKSİYON: Tüm notları seçer.
+    fun selectAll() {
+        if (notes.isEmpty()) return
+        val allNoteIds = notes.map { it.id }
+        selectedItems.clear()
+        selectedItems.addAll(allNoteIds)
+        notifyItemRangeChanged(0, notes.size)
+    }
+
     inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val noteTitle: TextView = itemView.findViewById(R.id.tv_note_title)
         private val noteContent: TextView = itemView.findViewById(R.id.tv_note_content)
@@ -68,7 +77,6 @@ class NoteAdapter(
 
             try {
                 val content = gson.fromJson(note.content, NoteContent::class.java)
-                // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                 val textPreview: Spanned = Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY)
 
                 val hasText = textPreview.isNotBlank()
@@ -104,7 +112,6 @@ class NoteAdapter(
                 }
 
             } catch (e: JsonSyntaxException) {
-                // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                 val preview: Spanned = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
                 noteContent.text = preview
                 noteContent.isVisible = preview.isNotBlank()

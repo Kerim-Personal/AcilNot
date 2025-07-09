@@ -13,7 +13,7 @@
         android:id="@+id/action_sort"
         android:title="@string/sort_title"
         android:icon="@drawable/outline_sort_24"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_settings"
@@ -21,23 +21,37 @@
         android:icon="@drawable/ic_settings_24"
         app:showAsAction="always" />
 
+
+    <item
+        android:id="@+id/action_select_all"
+        android:title="@string/action_select_all"
+        android:icon="@drawable/ic_select_all"
+        app:showAsAction="always"
+        android:visible="false"
+        android:orderInCategory="1" />
+
     <item
         android:id="@+id/action_pin_to_widget"
         android:title="@string/pin_to_widget"
         android:icon="@drawable/ic_push_pin"
-        app:showAsAction="ifRoom"
-        android:visible="false" />
+        app:showAsAction="always"
+        android:visible="false"
+        android:orderInCategory="2" />
 
     <item
         android:id="@+id/action_share_contextual"
         android:title="@string/action_share"
-        android:icon="@drawable/outline_share_24"  app:showAsAction="ifRoom"
-        android:visible="false" />
+        android:icon="@drawable/outline_share_24"
+        app:showAsAction="always"
+        android:visible="false"
+        android:orderInCategory="3" />
 
     <item
         android:id="@+id/action_delete_contextual"
         android:title="@string/action_delete"
-        android:icon="@drawable/outline_delete_24"  app:showAsAction="ifRoom"
-        android:visible="false" />
+        android:icon="@drawable/outline_delete_24"
+        app:showAsAction="always"
+        android:visible="false"
+        android:orderInCategory="4" />
 
 </menu>

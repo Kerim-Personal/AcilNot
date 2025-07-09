@@ -244,4 +244,7 @@
     <string name="widget_option_camera_note">Picture Note Widget</string>
     <string name="widget_option_voice_note">Voice Note Widget</string>
 
+
+    <string name="action_select_all">Select All</string>
+
 </resources>

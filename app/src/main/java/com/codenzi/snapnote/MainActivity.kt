@@ -196,7 +196,9 @@ class MainActivity : AppCompatActivity() {
 
         searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
-                return false
+                viewModel.setSearchQuery(query.orEmpty())
+                searchView.clearFocus()
+                return true
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
@@ -223,6 +225,7 @@ class MainActivity : AppCompatActivity() {
         pinItem.isVisible = isSelectionMode
         menu.findItem(R.id.action_share_contextual).isVisible = isSelectionMode
         menu.findItem(R.id.action_delete_contextual).isVisible = isSelectionMode
+        menu.findItem(R.id.action_select_all).isVisible = isSelectionMode
 
         if (isSelectionMode) {
             val selectedNotes = noteAdapter.getSelectedNotes()
@@ -254,6 +257,13 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.action_settings -> {
                 startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            }
+            R.id.action_select_all -> {
+                noteAdapter.selectAll()
+                val count = noteAdapter.itemCount
+                binding.toolbar.title = resources.getQuantityString(R.plurals.selection_title, count, count)
+                invalidateOptionsMenu()
                 true
             }
             R.id.action_pin_to_widget -> {
@@ -341,10 +351,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             try {
-                // DÜZELTME: 'gson' referans hatasını çözmek için nesne burada oluşturuluyor.
                 val gson = Gson()
                 val noteContent = gson.fromJson(note.content, NoteContent::class.java)
-                // DÜZELTME: 'it' referans hatasını önlemek için daha açık bir yapı kullanılıyor.
                 val audioPath = noteContent.audioFilePath
                 if (audioPath != null) {
                     val audioFile = File(audioPath)
@@ -360,8 +368,6 @@ class MainActivity : AppCompatActivity() {
                     type = "*/*"
                     putParcelableArrayListExtra(Intent.EXTRA_STREAM, urisToShare)
 
-                    // DÜZELTME: ClipData oluşturulurken doğru metod kullanılıyor.
-                    // Bu, URI izinlerinin hedef uygulamaya daha güvenilir bir şekilde aktarılmasını sağlar.
                     val clipData = ClipData.newUri(contentResolver, noteTitle, urisToShare.first())
                     if (urisToShare.size > 1) {
                         for (i in 1 until urisToShare.size) {
