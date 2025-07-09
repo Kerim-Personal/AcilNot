@@ -5,6 +5,7 @@
     <string name="dialog_cancel">İptal</string>
     <string name="dialog_yes">Evet</string>
     <string name="dialog_no">Hayır</string>
+    <string name="confirm_button">Onayla</string>
     <string name="stop">Durdur</string>
     <string name="saved">Kaydedildi</string>
     <string name="play">Oynat</string>
@@ -17,7 +18,6 @@
     <string name="action_delete">Sil</string>
     <string name="add_note_fab_description">Yeni Not Ekle</string>
     <string name="empty_notes_message">Henüz hiç notunuz yok.</string>
-    <string name="selection_title" translatable="false">%d not seçildi</string>
 
     <string name="title_activity_new_note">Yeni Not Ekle</string>
     <string name="title_activity_edit_note">Notu Düzenle</string>
@@ -48,6 +48,8 @@
     <string name="delete_item_desc">Öğeyi Sil</string>
     <string name="checklist_summary_preview">[Liste: %1$d/%2$d tamamlandı]</string>
 
+    <string name="tooltip_add_photo">Fotoğraf Ekle</string>
+    <string name="tooltip_record_audio">Ses Kaydet</string>
     <string name="tooltip_bold">Kalın</string>
     <string name="tooltip_italic">İtalik</string>
     <string name="tooltip_strikethrough">Üstü Çizili</string>
@@ -122,6 +124,8 @@
     <string name="camera_widget_title">Kamera Notu</string>
     <string name="camera_widget_description">Bir fotoğraf çekin ve not olarak kaydedin.</string>
     <string name="take_photo">Fotoğraf Çek</string>
+    <string name="note_title_placeholder">Not Başlığı</string>
+    <string name="note_content_placeholder">Not içeriği burada görünecek</string>
     <string name="widget_bg_papyrys">Papirüs Kağıdı</string>
     <string name="widget_bg_harmony_of_colors">Renklerin Uyumu</string>
     <string name="widget_bg_raven_black">Kuzgun Siyahı</string>
@@ -146,6 +150,7 @@
     <string name="onboarding_start_button">Maceraya Başla!</string>
 
     <string name="settings">Ayarlar</string>
+    <string name="settings_title">Ayarlar</string>
     <string name="appearance_category_title">Görünüm</string>
     <string name="theme_title">Tema</string>
     <string name="theme_dialog_title">Tema Seç</string>
@@ -211,6 +216,7 @@
     <string name="error_occurred_during_backup">Yedekleme sırasında bir hata oluştu.</string>
     <string name="backup_failed">Yedekleme başarısız oldu</string>
     <string name="restore_failed">Notlar geri yüklenemedi.</string>
+    <string name="restore_failed_with_error">Geri yükleme işlemi başarısız: %s</string>
     <string name="backup_not_found">Google Drive\'da yedekleme dosyası bulunamadı.</string>
     <string name="restore_dialog_title">Notları Geri Yükle</string>
     <string name="restore_dialog_message">Notları Google Drive\'dan geri yüklemek istediğinizden emin misiniz? Bu, mevcut tüm notlarınızın üzerine yazacak ve geri alınamaz.</string>
@@ -231,8 +237,6 @@
     <string name="widget_option_camera_note">Fotoğraf Notu Widget\'ı</string>
     <string name="widget_option_voice_note">Sesli Not Widget\'ı</string>
 
-
     <string name="action_select_all">Tümünü Seç</string>
-
 
 </resources>
