@@ -38,13 +38,13 @@
             android:key="google_drive_backup"
             android:title="Notları Drive'a Yedekle"
             android:summary="Tüm notlarınızı Google Drive'a kaydeder."
-            app:icon="@drawable/ic_cloud_upload" />
+            app:icon="@drawable/cloud_upload" />
 
         <Preference
             android:key="google_drive_restore"
             android:title="Notları Drive'dan Geri Yükle"
             android:summary="Daha önce yedeklediğiniz notları geri yükler."
-            app:icon="@drawable/ic_cloud_upload" />
+            app:icon="@drawable/cloud_download" />
 
     </PreferenceCategory>
 

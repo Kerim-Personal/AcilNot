@@ -2,15 +2,18 @@ package com.codenzi.snapnote
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
+import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -82,19 +85,80 @@ class SettingsActivity : AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
+            // Tema Değişikliği
+            findPreference<ListPreference>("theme_selection")?.setOnPreferenceChangeListener { _, newValue ->
+                val mode = when (newValue as String) {
+                    "light" -> AppCompatDelegate.MODE_NIGHT_NO
+                    "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+                    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                }
+                AppCompatDelegate.setDefaultNightMode(mode)
+                true
+            }
+
+            // Renk Değişikliği
+            findPreference<ListPreference>("color_selection")?.setOnPreferenceChangeListener { _, _ ->
+                requireActivity().recreate()
+                true
+            }
+
+            // Google Drive Yedekleme
             findPreference<Preference>("google_drive_backup")?.setOnPreferenceClickListener {
                 requestedAction = Action.BACKUP
                 signInToGoogle()
                 true
             }
 
+            // Google Drive Geri Yükleme
             findPreference<Preference>("google_drive_restore")?.setOnPreferenceClickListener {
                 requestedAction = Action.RESTORE
                 signInToGoogle()
                 true
             }
+
+            // Şifre Ayarları
+            findPreference<Preference>("password_settings")?.setOnPreferenceClickListener {
+                startActivity(Intent(requireContext(), PasswordSettingsActivity::class.java))
+                true
+            }
+
+            // Çöp Kutusu
+            findPreference<Preference>("trash_settings")?.setOnPreferenceClickListener {
+                startActivity(Intent(requireContext(), TrashActivity::class.java))
+                true
+            }
+
+            // Gizlilik Politikası
+            findPreference<Preference>("privacy_policy")?.setOnPreferenceClickListener {
+                val url = "https://codenzi.com/snapnote"
+                // DÜZELTME: Uri.parse() yerine KTX .toUri() fonksiyonu kullanıldı.
+                val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), getString(R.string.toast_no_browser_found), Toast.LENGTH_SHORT).show()
+                }
+                true
+            }
+
+            // Bize Ulaşın
+            findPreference<Preference>("contact_us")?.setOnPreferenceClickListener {
+                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                    // DÜZELTME: Uri.parse() yerine KTX .toUri() fonksiyonu kullanıldı.
+                    data = "mailto:".toUri()
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf("info@codenzi.com"))
+                    putExtra(Intent.EXTRA_SUBJECT, getString(R.string.contact_us_email_subject))
+                }
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), getString(R.string.toast_no_email_app_found), Toast.LENGTH_SHORT).show()
+                }
+                true
+            }
         }
 
+        @Suppress("DEPRECATION") // DÜZELTME: 'GoogleSignIn' is deprecated uyarısını bastırır.
         private fun signInToGoogle() {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestEmail()
@@ -108,6 +172,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        @Suppress("DEPRECATION") // DÜZELTME: 'GoogleSignIn' is deprecated uyarısını bastırır.
         private fun handleSignInResult(data: Intent?) {
             try {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
@@ -155,7 +220,7 @@ class SettingsActivity : AppCompatActivity() {
 
                         if (content.audioFilePath != null) {
                             try {
-                                val file = File(content.audioFilePath!!)
+                                val file = File(content.audioFilePath)
                                 if (file.exists()) {
                                     val bytes = file.readBytes()
                                     content.audioDataBase64 = Base64.encodeToString(bytes, Base64.DEFAULT)
