@@ -108,8 +108,7 @@ class SettingsActivity : AppCompatActivity() {
             if (result.resultCode == Activity.RESULT_OK) {
                 handleSignInResult(result.data)
             } else {
-                Toast.makeText(requireContext(), "Google ile oturum açma iptal edildi.", Toast.LENGTH_SHORT).show()
-            }
+                Toast.makeText(requireContext(), getString(R.string.google_sign_in_cancelled), Toast.LENGTH_SHORT).show()            }
         }
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {

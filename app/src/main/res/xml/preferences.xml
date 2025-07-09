@@ -15,7 +15,7 @@
 
         <ListPreference
             android:key="color_selection"
-            android:title="Uygulama Rengi"
+            android:title="@string/app_color_title"
             android:defaultValue="purple"
             android:entries="@array/color_theme_entries"
             android:entryValues="@array/color_theme_values"
@@ -31,25 +31,25 @@
 
         <Preference
             android:key="add_widget_shortcut"
-            android:title="Widget Ekle"
-            android:summary="Ana ekrana not, kamera veya sesli not widget'ı ekleyin."
+            android:title="@string/add_widget_title"
+            android:summary="@string/add_widget_summary"
             app:icon="@drawable/outline_widgets_24" />
 
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Veri Yönetimi">
+        android:title="@string/data_management_title">
 
         <Preference
             android:key="google_drive_backup"
-            android:title="Notları Drive'a Yedekle"
-            android:summary="Tüm notlarınızı Google Drive'a kaydeder."
+            android:title="@string/backup_to_drive_title"
+            android:summary="@string/backup_to_drive_summary"
             app:icon="@drawable/cloud_upload" />
 
         <Preference
             android:key="google_drive_restore"
-            android:title="Notları Drive'dan Geri Yükle"
-            android:summary="Daha önce yedeklediğiniz notları geri yükler."
+            android:title="@string/restore_from_drive_title"
+            android:summary="@string/restore_from_drive_summary"
             app:icon="@drawable/cloud_download" />
 
     </PreferenceCategory>
