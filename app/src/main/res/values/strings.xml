@@ -182,4 +182,15 @@
     <string name="restore_failed">Failed to restore notes.</string>
     <string name="backup_not_found">No backup file found on Google Drive.</string>
 
+    <string name="onboarding_subtitle">Your notebook that keeps up with the speed of life, capturing your ideas instantly.</string>
+    <string name="onboarding_feature1_title">Capture the Moment</string>
+    <string name="onboarding_feature1_desc">Create photo and voice notes with a single tap using widgets, never miss a detail.</string>
+    <string name="onboarding_feature2_title">Break the Limits</string>
+    <string name="onboarding_feature2_desc">Text, images, audio, and checklists... Enrich your notes however you want.</string>
+    <string name="onboarding_feature3_title">Your Data is Secure</string>
+    <string name="onboarding_feature3_desc">Lock the app with a password, keeping your notes private to you.</string>
+    <string name="onboarding_feature4_title">With You, Always</string>
+    <string name="onboarding_feature4_desc">Securely back up your notes to Google Drive and access them from any device.</string>
+    <string name="onboarding_start_button">Start the Adventure!</string>
+
 </resources>
