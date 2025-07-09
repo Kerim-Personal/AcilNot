@@ -34,6 +34,8 @@
         <item name="buttonBarPositiveButtonStyle">@style/AlertDialog.Button.Dark</item>
         <item name="buttonBarNegativeButtonStyle">@style/AlertDialog.Button.Dark</item>
         <item name="buttonBarNeutralButtonStyle">@style/AlertDialog.Button.Dark</item>
+
+        <item name="noteInfoButtonTint">@color/md_theme_onSurfaceVariant_dark</item>
     </style>
 
     <style name="AlertDialog.Button.Dark" parent="Widget.Material3.Button.TextButton.Dialog">

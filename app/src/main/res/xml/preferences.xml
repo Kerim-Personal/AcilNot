@@ -32,13 +32,19 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="@string/application_encryption_category_title">
+        android:title="Veri Yönetimi">
 
         <Preference
-            android:key="password_settings"
-            android:title="@string/password_settings_title"
-            android:summary="@string/password_settings_summary"
-            app:icon="@drawable/ic_lock_24" />
+            android:key="google_drive_backup"
+            android:title="Notları Drive'a Yedekle"
+            android:summary="Tüm notlarınızı Google Drive'a kaydeder."
+            app:icon="@drawable/ic_cloud_upload" />
+
+        <Preference
+            android:key="google_drive_restore"
+            android:title="Notları Drive'dan Geri Yükle"
+            android:summary="Daha önce yedeklediğiniz notları geri yükler."
+            app:icon="@drawable/ic_cloud_upload" />
 
     </PreferenceCategory>
 
@@ -46,16 +52,16 @@
         android:title="@string/other_settings_category_title">
 
         <Preference
-            android:key="google_drive_backup"
-            android:title="Google Drive Yedekleme"
-            android:summary="Notlarınızı Google Drive'a yedekleyin veya geri yükleyin."
-            app:icon="@drawable/outline_archive_24" />
+            android:key="password_settings"
+            android:title="@string/password_settings_title"
+            android:summary="@string/password_settings_summary"
+            app:icon="@drawable/ic_lock_24" />
 
         <Preference
             android:key="trash_settings"
             android:title="@string/trash_bin_title"
             android:summary="@string/trash_bin_summary"
-            android:icon="@drawable/outline_archive_24" />
+            app:icon="@drawable/outline_archive_24" />
 
         <Preference
             android:key="privacy_policy"

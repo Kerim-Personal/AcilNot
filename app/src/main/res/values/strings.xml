@@ -175,4 +175,11 @@
     <string name="image_preview">Image Preview</string>
     <string name="camera_permission_denied">Camera permission is required to use this feature.</string>
 
+    <string name="restore_dialog_title">Restore Notes</string>
+    <string name="restore_dialog_message">Are you sure you want to restore notes from Google Drive? This will overwrite all your current notes and cannot be undone.</string>
+    <string name="restore_confirm">Yes, Restore</string>
+    <string name="restore_success">Notes restored successfully!</string>
+    <string name="restore_failed">Failed to restore notes.</string>
+    <string name="backup_not_found">No backup file found on Google Drive.</string>
+
 </resources>

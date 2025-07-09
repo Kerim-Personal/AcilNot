@@ -32,6 +32,7 @@
         <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
         <item name="destructiveButtonColor">@color/md_theme_error</item>
 
+        <item name="noteInfoButtonTint">@color/md_theme_onSurfaceVariant</item>
     </style>
 
     <style name="Theme.AcilNotUygulamasi" parent="Base.Theme.AcilNotUygulamasi" />

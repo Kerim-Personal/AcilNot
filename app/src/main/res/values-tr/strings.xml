@@ -175,4 +175,11 @@
     <string name="image_preview">Resim Önizleme</string>
     <string name="camera_permission_denied">Bu özelliği kullanmak için kamera izni gereklidir.</string>
 
+    <string name="restore_dialog_title">Notları Geri Yükle</string>
+    <string name="restore_dialog_message">Notlarınızı Google Drive\'dan geri yüklemek istediğinizden emin misiniz? Bu işlem mevcut tüm notlarınızın üzerine yazacak ve geri alınamaz.</string>
+    <string name="restore_confirm">Evet, Geri Yükle</string>
+    <string name="restore_success">Notlar başarıyla geri yüklendi!</string>
+    <string name="restore_failed">Notlar geri yüklenemedi.</string>
+    <string name="backup_not_found">Google Drive\'da yedek dosyası bulunamadı.</string>
+
 </resources>
