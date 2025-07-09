@@ -112,7 +112,7 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
             val outputStream = FileOutputStream(destinationFile)
             drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
             outputStream.close()
-            return@withContext true
+            return@withContext destinationFile.length() > 0
         } catch (e: IOException) {
             Log.e("GoogleDriveManager", "downloadMediaFile failed for id $fileId", e)
             destinationFile.delete() // Başarısız olursa yarım dosyayı sil

@@ -253,11 +253,12 @@
     <string name="delete_in_progress">Deleting Account…</string>
     <string name="account_deleted_successfully">Your account and all data have been successfully deleted.</string>
     <string name="account_deletion_failed">Failed to delete account. Please try again</string>
-
-
-
     <string name="account_deletion_failed_with_error">Failed to delete account: %1$s</string>
 
-
-
+    <string name="final_delete_confirmation_title">Are you absolutely sure?</string>
+    <string name="final_delete_confirmation_message">This is your final warning. Deleting your account will permanently erase all data, and this action cannot be undone. Do you still wish to proceed?</string>
+    <string name="final_delete_confirm_button">Yes, Delete Everything</string>
+    <string name="launcher_does_not_support_feature">Your launcher (home screen app) does not support this feature.</string>
+    <string name="feature_requires_android_oreo">This feature is available on Android 8.0 (Oreo) and above.</string>
+    <string name="an_error_occurred_during_backup_simple">An error occurred during backup.</string>
 </resources>

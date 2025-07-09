@@ -216,8 +216,8 @@
     <string name="restore_in_progress">Geri Yükleme Sürüyor…</string>
     <string name="backup_update_in_progress">Yedek Güncelleniyor…</string>
     <string name="backup_successful">Notlar ve ayarlar başarıyla yedeklendi!</string>
-    <string name="error_occurred_during_backup">Yedekleme sırasında bir hata oluştu.</string>
-    <string name="backup_failed">Yedekleme başarısız oldu</string>
+    <string name="error_occurred_during_backup">Yedekleme sırasında bir hata oluştu: %s</string>
+    <string name="backup_failed">Yedekleme başarısız oldu: %s</string>
     <string name="restore_failed">Notlar geri yüklenemedi.</string>
     <string name="restore_failed_with_error">Geri yükleme işlemi başarısız: %s</string>
     <string name="backup_not_found">Google Drive\'da yedekleme dosyası bulunamadı.</string>
@@ -230,9 +230,9 @@
     <string name="overwrite_button">Evet, Üzerine Yaz</string>
     <string name="searching_for_backups">Yedekler aranıyor...</string>
     <string name="backup_file_empty_or_corrupt">Yedek dosyası boş veya bozuk.</string>
-    <string name="password_required_title">Parola Gerekli</string>
-    <string name="backup_password_protected_message">Bu yedek parola ile korunuyor. Lütfen devam etmek için parolanızı girin.</string>
-    <string name="incorrect_password">Yanlış parola!</string>
+    <string name="password_required_title">Şifre Gerekli</string>
+    <string name="backup_password_protected_message">Bu yedekleme şifre korumalıdır. Devam etmek için lütfen şifrenizi girin.</string>
+    <string name="incorrect_password">Yanlış şifre!</string>
     <string name="dialog_ok">Tamam</string>
 
     <string name="add_widget_dialog_title">Widget Ekle</string>
@@ -245,10 +245,12 @@
     <string name="delete_in_progress">Hesap Siliniyor…</string>
     <string name="account_deleted_successfully">Hesabınız ve tüm verileriniz başarıyla silindi.</string>
     <string name="account_deletion_failed">Hesap silinemedi. Lütfen tekrar deneyin</string>
-
-
-
     <string name="account_deletion_failed_with_error">Hesap silinemedi: %1$s</string>
 
-
+    <string name="final_delete_confirmation_title">Emin misiniz?</string>
+    <string name="final_delete_confirmation_message">Bu son uyarıdır. Hesabınızı silmek tüm verilerinizi kalıcı olarak silecek ve bu işlem geri alınamaz. Yine de devam etmek istiyor musunuz?</string>
+    <string name="final_delete_confirm_button">Evet, Her Şeyi Sil</string>
+    <string name="launcher_does_not_support_feature">Başlatıcınız (ana ekran uygulaması) bu özelliği desteklemiyor.</string>
+    <string name="feature_requires_android_oreo">Bu özellik Android 8.0 (Oreo) ve üzeri sürümlerde mevcuttur.</string>
+    <string name="an_error_occurred_during_backup_simple">Yedekleme sırasında bir hata oluştu.</string>
 </resources>

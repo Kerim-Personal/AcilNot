@@ -1,10 +1,11 @@
 package com.codenzi.snapnote
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.net.toUri
 import coil.load
 import com.codenzi.snapnote.databinding.ActivityPhotoViewBinding
+import java.io.File
 
 class PhotoViewActivity : AppCompatActivity() {
 
@@ -17,9 +18,12 @@ class PhotoViewActivity : AppCompatActivity() {
 
         val imageUriString = intent.getStringExtra("IMAGE_URI")
         if (imageUriString != null) {
-            // Hata mesajındaki öneriye uyarak .toUri() fonksiyonunu kullanıyoruz.
-            val imageUri = imageUriString.toUri()
-            binding.ivFullscreenPhoto.load(imageUri) {
+            val dataToLoad: Any = if (imageUriString.startsWith("content://")) {
+                Uri.parse(imageUriString)
+            } else {
+                File(imageUriString)
+            }
+            binding.ivFullscreenPhoto.load(dataToLoad) {
                 crossfade(true)
                 error(R.drawable.ic_image_24)
             }

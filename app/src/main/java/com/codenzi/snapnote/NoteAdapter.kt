@@ -1,6 +1,7 @@
 package com.codenzi.snapnote
 
 import android.graphics.Color
+import android.net.Uri
 import android.text.Html
 import android.text.Spanned
 import android.view.LayoutInflater
@@ -17,6 +18,7 @@ import coil.load
 import com.google.android.material.card.MaterialCardView
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import java.io.File
 
 class NoteAdapter(
     private var notes: List<Note>,
@@ -102,7 +104,13 @@ class NoteAdapter(
 
                 if (content.imagePath != null) {
                     noteImage.visibility = View.VISIBLE
-                    noteImage.load(content.imagePath) {
+                    val path = content.imagePath
+                    val dataToLoad: Any = if (path.startsWith("content://")) {
+                        Uri.parse(path)
+                    } else {
+                        File(path)
+                    }
+                    noteImage.load(dataToLoad) {
                         crossfade(true)
                         placeholder(R.drawable.ic_image_24)
                         error(R.drawable.ic_image_24)

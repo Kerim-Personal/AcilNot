@@ -201,11 +201,54 @@ class SettingsActivity : AppCompatActivity() {
                 .setTitle(R.string.delete_account_title)
                 .setMessage(R.string.delete_account_confirmation_message)
                 .setPositiveButton(R.string.dialog_yes) { _, _ ->
-                    requestedAction = Action.DELETE
-                    signInToGoogle()
+                    showFinalDeleteConfirmationDialog()
                 }
                 .setNegativeButton(R.string.dialog_no, null)
                 .show()
+        }
+
+        private fun showFinalDeleteConfirmationDialog() {
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.final_delete_confirmation_title))
+                .setMessage(getString(R.string.final_delete_confirmation_message))
+                .setPositiveButton(getString(R.string.final_delete_confirm_button)) { _, _ ->
+                    val lastSignedInAccount = GoogleSignIn.getLastSignedInAccount(requireContext())
+                    if (lastSignedInAccount == null) {
+                        performLocalAccountDeletion()
+                    } else {
+                        requestedAction = Action.DELETE
+                        signInToGoogle()
+                    }
+                }
+                .setNegativeButton(getString(R.string.dialog_cancel), null)
+                .show()
+        }
+
+        private fun performLocalAccountDeletion() {
+            lifecycleScope.launch(Dispatchers.IO) {
+                withContext(Dispatchers.Main) {
+                    showProgressDialog(R.string.delete_in_progress)
+                    updateProgress(10)
+                }
+
+                noteDao.deleteAllNotes()
+                withContext(Dispatchers.Main) { updateProgress(70) }
+
+                PasswordManager.disablePassword(requireContext())
+                withContext(Dispatchers.Main) { updateProgress(85) }
+
+                clearAllSharedPreferences()
+                withContext(Dispatchers.Main) { updateProgress(100) }
+
+                withContext(Dispatchers.Main) {
+                    dismissProgressDialog()
+                    Toast.makeText(requireContext(), R.string.account_deleted_successfully, Toast.LENGTH_LONG).show()
+                    val intent = Intent(requireActivity(), OnboardingActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    requireActivity().finish()
+                }
+            }
         }
 
         @Suppress("DEPRECATION")
@@ -242,7 +285,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
             } catch (e: ApiException) {
                 Log.w("SettingsFragment", "signInResult:failed code=" + e.statusCode, e)
-                Toast.makeText(requireContext(), "Sign-in error: Please try again.", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.sign_in_error_try_again), Toast.LENGTH_LONG).show()
             }
         }
 
@@ -322,10 +365,10 @@ class SettingsActivity : AppCompatActivity() {
                 if (appWidgetManager.isRequestPinAppWidgetSupported) {
                     appWidgetManager.requestPinAppWidget(componentName, null, null)
                 } else {
-                    Toast.makeText(requireContext(), "Your launcher (home screen app) does not support this feature.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), getString(R.string.launcher_does_not_support_feature), Toast.LENGTH_LONG).show()
                 }
             } else {
-                Toast.makeText(requireContext(), "This feature is available on Android 8.0 (Oreo) and above.", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.feature_requires_android_oreo), Toast.LENGTH_LONG).show()
             }
         }
 
@@ -397,14 +440,14 @@ class SettingsActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         if (existingBackup != null) {
                             AlertDialog.Builder(requireContext())
-                                .setTitle("Existing Backup Found")
-                                .setMessage("You already have a backup on Google Drive. Are you sure you want to overwrite it? This action cannot be undone.")
-                                .setPositiveButton("Yes, Overwrite") { _, _ ->
+                                .setTitle(getString(R.string.existing_backup_found_title))
+                                .setMessage(getString(R.string.existing_backup_found_message))
+                                .setPositiveButton(getString(R.string.overwrite_button)) { _, _ ->
                                     lifecycleScope.launch(Dispatchers.IO) {
                                         proceedWithBackup(googleDriveManager, localNotes)
                                     }
                                 }
-                                .setNegativeButton("Cancel", null)
+                                .setNegativeButton(getString(R.string.dialog_cancel), null)
                                 .show()
                         } else {
                             proceedWithBackup(googleDriveManager, localNotes)
@@ -477,9 +520,9 @@ class SettingsActivity : AppCompatActivity() {
                     updateProgress(100)
                     dismissProgressDialog()
                     if (success) {
-                        Toast.makeText(requireContext(), "Notes and settings backed up successfully!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.backup_successful), Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(requireContext(), "An error occurred during backup.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.an_error_occurred_during_backup_simple), Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
@@ -511,7 +554,7 @@ class SettingsActivity : AppCompatActivity() {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Searching for backups...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.searching_for_backups), Toast.LENGTH_SHORT).show()
                     }
 
                     val backupFile = googleDriveManager.getBackupFiles()?.firstOrNull()
@@ -522,7 +565,7 @@ class SettingsActivity : AppCompatActivity() {
 
                     val jsonContent = googleDriveManager.downloadJsonBackup(backupFile.id)
                     if (jsonContent.isNullOrBlank()) {
-                        withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Backup file is empty or corrupt.", Toast.LENGTH_LONG).show() }
+                        withContext(Dispatchers.Main) { Toast.makeText(requireContext(), getString(R.string.backup_file_empty_or_corrupt), Toast.LENGTH_LONG).show() }
                         return@launch
                     }
 
@@ -563,10 +606,10 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             AlertDialog.Builder(requireContext())
-                .setTitle("Password Required")
-                .setMessage("This backup is password protected. Please enter your password to continue.")
+                .setTitle(getString(R.string.password_required_title))
+                .setMessage(getString(R.string.backup_password_protected_message))
                 .setView(editText)
-                .setPositiveButton("Confirm") { _, _ ->
+                .setPositiveButton(getString(R.string.confirm_button)) { _, _ ->
                     val enteredPassword = editText.text.toString()
                     if (backupData.passwordHash != null && backupData.salt != null) {
                         if (PasswordManager.checkPassword(enteredPassword, backupData.salt, backupData.passwordHash)) {
@@ -574,11 +617,11 @@ class SettingsActivity : AppCompatActivity() {
                                 proceedWithRestore(googleDriveManager, backupData)
                             }
                         } else {
-                            Toast.makeText(requireContext(), "Incorrect password!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), getString(R.string.incorrect_password), Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(getString(R.string.dialog_cancel), null)
                 .show()
         }
 
@@ -604,7 +647,7 @@ class SettingsActivity : AppCompatActivity() {
                     content.imagePath?.let { driveId ->
                         val imageFile = createImageFile()
                         if (googleDriveManager.downloadMediaFile(driveId, imageFile)) {
-                            localImagePath = imageFile.toURI().toString()
+                            localImagePath = imageFile.absolutePath
                         }
                     }
                     var localAudioPath: String? = null
@@ -664,7 +707,6 @@ class SettingsActivity : AppCompatActivity() {
 
         private suspend fun showError(message: String, e: Exception) {
             withContext(Dispatchers.Main) {
-                // Hata mesajı placeholder ile kullanılacak şekilde güncellendi
                 Toast.makeText(requireContext(), getString(R.string.restore_failed_with_error, e.message), Toast.LENGTH_LONG).show()
                 Log.e("SettingsFragment", message, e)
             }
