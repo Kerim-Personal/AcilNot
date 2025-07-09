@@ -1,5 +1,6 @@
 package com.codenzi.snapnote
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,10 +15,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import android.Manifest
+import androidx.preference.PreferenceManager
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -70,14 +72,8 @@ class AudioRecordingService : Service() {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-
-                // --- SES KALİTESİ İYİLEŞTİRMESİ ---
-                // Örnekleme oranını CD kalitesi olan 44.1kHz'e ayarla.
                 setAudioSamplingRate(44100)
-                // Bit hızını 192kbps'e ayarlayarak ses kalitesini artır.
                 setAudioEncodingBitRate(192000)
-                // --- İYİLEŞTİRME SONU ---
-
                 setOutputFile(audioFile?.absolutePath)
                 prepare()
                 start()
@@ -139,10 +135,22 @@ class AudioRecordingService : Service() {
     }
 
     private fun updateWidgetTimer(formattedTime: String) {
-        val remoteViews = RemoteViews(packageName, R.layout.widget_voice_memo)
-        remoteViews.setTextViewText(R.id.tv_widget_timer, formattedTime)
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, VoiceMemoWidgetProvider::class.java)
+
+        val remoteViews = RemoteViews(packageName, R.layout.widget_voice_memo)
+
+        val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val backgroundDrawableName = sharedPrefs.getString("widget_background_selection", "widget_background")
+        val backgroundResId = VoiceMemoWidgetProvider.getBackgroundResource(backgroundDrawableName)
+        remoteViews.setInt(R.id.voice_widget_container, "setBackgroundResource", backgroundResId)
+
+        remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_stop_24)
+        remoteViews.setTextViewText(R.id.tv_widget_status, getString(R.string.tap_to_stop))
+        remoteViews.setViewVisibility(R.id.tv_widget_timer, View.VISIBLE)
+
+        remoteViews.setTextViewText(R.id.tv_widget_timer, formattedTime)
+
         appWidgetManager.updateAppWidget(componentName, remoteViews)
     }
 

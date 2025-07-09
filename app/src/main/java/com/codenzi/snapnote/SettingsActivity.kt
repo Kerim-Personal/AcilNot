@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
@@ -17,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceManager
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -31,11 +33,24 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+
+// Yedekleme verisini yapılandırmak için yeni data sınıfları
+data class AppSettings(
+    val themeSelection: String?,
+    val colorSelection: String?,
+    val widgetBackgroundSelection: String?
+)
+
+data class BackupData(
+    val settings: AppSettings,
+    val notes: List<Note>
+)
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -85,7 +100,6 @@ class SettingsActivity : AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
-            // Tema Değişikliği
             findPreference<ListPreference>("theme_selection")?.setOnPreferenceChangeListener { _, newValue ->
                 val mode = when (newValue as String) {
                     "light" -> AppCompatDelegate.MODE_NIGHT_NO
@@ -96,49 +110,40 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Renk Değişikliği
             findPreference<ListPreference>("color_selection")?.setOnPreferenceChangeListener { _, _ ->
                 requireActivity().recreate()
                 true
             }
 
-            // Widget Arka Planı Değişikliği
             findPreference<ListPreference>("widget_background_selection")?.setOnPreferenceChangeListener { _, _ ->
-                // Değişikliğin SharedPreferences'a yansıması için küçük bir gecikme ekliyoruz.
-                activity?.window?.decorView?.postDelayed({
+                requireActivity().window.decorView.post {
                     updateAllWidgets()
-                }, 100)
+                }
                 true
             }
 
-
-            // Google Drive Yedekleme
             findPreference<Preference>("google_drive_backup")?.setOnPreferenceClickListener {
                 requestedAction = Action.BACKUP
                 signInToGoogle()
                 true
             }
 
-            // Google Drive Geri Yükleme
             findPreference<Preference>("google_drive_restore")?.setOnPreferenceClickListener {
                 requestedAction = Action.RESTORE
                 signInToGoogle()
                 true
             }
 
-            // Şifre Ayarları
             findPreference<Preference>("password_settings")?.setOnPreferenceClickListener {
                 startActivity(Intent(requireContext(), PasswordSettingsActivity::class.java))
                 true
             }
 
-            // Çöp Kutusu
             findPreference<Preference>("trash_settings")?.setOnPreferenceClickListener {
                 startActivity(Intent(requireContext(), TrashActivity::class.java))
                 true
             }
 
-            // Gizlilik Politikası
             findPreference<Preference>("privacy_policy")?.setOnPreferenceClickListener {
                 val url = "https://codenzi.com/snapnote"
                 val intent = Intent(Intent.ACTION_VIEW, url.toUri())
@@ -150,7 +155,6 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Bize Ulaşın
             findPreference<Preference>("contact_us")?.setOnPreferenceClickListener {
                 val intent = Intent(Intent.ACTION_SENDTO).apply {
                     data = "mailto:".toUri()
@@ -167,31 +171,36 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun updateAllWidgets() {
-            val context = requireActivity().applicationContext
+            val context = requireContext().applicationContext
             val appWidgetManager = AppWidgetManager.getInstance(context)
 
-            // NoteWidgetProvider'ı güncelle
-            val noteWidgetComponentName = ComponentName(context, NoteWidgetProvider::class.java)
-            val noteWidgetIds = appWidgetManager.getAppWidgetIds(noteWidgetComponentName)
-            for (appWidgetId in noteWidgetIds) {
-                NoteWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+            val noteWidgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, NoteWidgetProvider::class.java))
+            if (noteWidgetIds.isNotEmpty()) {
+                val noteIntent = Intent(context, NoteWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, noteWidgetIds)
+                }
+                context.sendBroadcast(noteIntent)
             }
 
-            // VoiceMemoWidgetProvider'ı güncelle
-            val voiceMemoWidgetComponentName = ComponentName(context, VoiceMemoWidgetProvider::class.java)
-            val voiceMemoWidgetIds = appWidgetManager.getAppWidgetIds(voiceMemoWidgetComponentName)
-            for (appWidgetId in voiceMemoWidgetIds) {
-                VoiceMemoWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+            val cameraWidgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, CameraWidgetProvider::class.java))
+            if (cameraWidgetIds.isNotEmpty()) {
+                val cameraIntent = Intent(context, CameraWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, cameraWidgetIds)
+                }
+                context.sendBroadcast(cameraIntent)
             }
 
-            // CameraWidgetProvider'ı güncelle
-            val cameraWidgetComponentName = ComponentName(context, CameraWidgetProvider::class.java)
-            val cameraWidgetIds = appWidgetManager.getAppWidgetIds(cameraWidgetComponentName)
-            for (appWidgetId in cameraWidgetIds) {
-                CameraWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+            val voiceMemoWidgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, VoiceMemoWidgetProvider::class.java))
+            if (voiceMemoWidgetIds.isNotEmpty()) {
+                val voiceMemoIntent = Intent(context, VoiceMemoWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, voiceMemoWidgetIds)
+                }
+                context.sendBroadcast(voiceMemoIntent)
             }
         }
-
 
         @Suppress("DEPRECATION")
         private fun signInToGoogle() {
@@ -231,53 +240,81 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // **DÜZENLENEN FONKSİYON**
         private fun backupNotes(googleDriveManager: GoogleDriveManager) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    // Önce mevcut yedek ve lokal notları kontrol et
+                    val existingBackupFiles = googleDriveManager.getBackupFiles()
+                    val localNotes = noteDao.getAllNotes().first()
+
+                    // Eğer Drive'da yedek varsa ve lokalde hiç not yoksa kullanıcıyı uyar
+                    if (!existingBackupFiles.isNullOrEmpty() && localNotes.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            AlertDialog.Builder(requireContext())
+                                .setTitle("Yedekleme Uyarısı")
+                                .setMessage("Google Drive'da mevcut bir yedeğiniz bulundu. Mevcut boş not listenizle bu yedeğin üzerine yazmak, eski notlarınızı kalıcı olarak silecektir. Devam etmek istediğinizden emin misiniz?")
+                                .setPositiveButton("Evet, Üzerine Yaz") { _, _ ->
+                                    // Kullanıcı onaylarsa yedeklemeye devam et
+                                    proceedWithBackup(googleDriveManager, localNotes)
+                                }
+                                .setNegativeButton("İptal", null)
+                                .show()
+                        }
+                    } else {
+                        // Eğer bir risk yoksa doğrudan yedeklemeye devam et
+                        proceedWithBackup(googleDriveManager, localNotes)
+                    }
+                } catch (e: Exception) {
+                    showError("Yedekleme kontrolü sırasında hata", e)
+                }
+            }
+        }
+
+        // **YENİ FONKSİYON:** Asıl yedekleme mantığını içerir.
+        private fun proceedWithBackup(googleDriveManager: GoogleDriveManager, notesToBackup: List<Note>) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(requireContext(), "Yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
                     }
 
-                    val allNotes = noteDao.getAllNotes().first()
+                    val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                    val appSettings = AppSettings(
+                        themeSelection = sharedPrefs.getString("theme_selection", "system_default"),
+                        colorSelection = sharedPrefs.getString("color_selection", "bordo"),
+                        widgetBackgroundSelection = sharedPrefs.getString("widget_background_selection", "widget_background")
+                    )
+
                     val notesForBackup = mutableListOf<Note>()
-
-                    for (note in allNotes) {
+                    for (note in notesToBackup) {
                         val content = gson.fromJson(note.content, NoteContent::class.java)
-
                         var imageDriveId: String? = null
                         if (content.imagePath != null) {
-                            // URI'dan geçerli bir dosya yolu elde etmeye çalışın
-                            val imageFile = try {
-                                content.imagePath?.toUri()?.path?.let { File(it) }
-                            } catch (e: Exception) { null }
-
-                            if(imageFile?.exists() == true) {
+                            val imageFile = try { content.imagePath?.toUri()?.path?.let { File(it) } } catch (e: Exception) { null }
+                            if (imageFile?.exists() == true) {
                                 imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
                             }
                         }
-
                         var audioDriveId: String? = null
                         if (content.audioFilePath != null) {
                             val audioFile = File(content.audioFilePath)
-                            if(audioFile.exists()) {
+                            if (audioFile.exists()) {
                                 audioDriveId = googleDriveManager.uploadMediaFile(audioFile, "audio/mp4")
                             }
                         }
-
-                        // Not içeriğini Drive ID'leri ile güncelle
-                        val newContent = content.copy(
-                            imagePath = imageDriveId, // imagePath artık Drive ID'sini tutuyor
-                            audioFilePath = audioDriveId // audioFilePath artık Drive ID'sini tutuyor
-                        )
+                        val newContent = content.copy(imagePath = imageDriveId, audioFilePath = audioDriveId)
                         notesForBackup.add(note.copy(content = gson.toJson(newContent)))
                     }
 
-                    val notesJson = gson.toJson(notesForBackup)
-                    val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", notesJson)
+                    val backupData = BackupData(settings = appSettings, notes = notesForBackup)
+                    val backupJson = gson.toJson(backupData)
+
+                    val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", backupJson)
 
                     withContext(Dispatchers.Main) {
                         if (success) {
-                            Toast.makeText(requireContext(), "Notlar başarıyla yedeklendi!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Notlar ve ayarlar başarıyla yedeklendi!", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(requireContext(), "Yedekleme sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show()
                         }
@@ -310,15 +347,24 @@ class SettingsActivity : AppCompatActivity() {
                         return@launch
                     }
 
-                    val type = object : TypeToken<List<Note>>() {}.type
-                    val notesFromBackup: List<Note> = gson.fromJson(jsonContent, type)
+                    val type = object : TypeToken<BackupData>() {}.type
+                    val backupData: BackupData = gson.fromJson(jsonContent, type)
+
+                    val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                    with(sharedPrefs.edit()) {
+                        putString("theme_selection", backupData.settings.themeSelection)
+                        putString("color_selection", backupData.settings.colorSelection)
+                        putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
+                        apply()
+                    }
+
+                    val notesFromBackup = backupData.notes
                     val restoredNotes = mutableListOf<Note>()
 
                     for (note in notesFromBackup) {
                         val content = gson.fromJson(note.content, NoteContent::class.java)
-
                         var localImagePath: String? = null
-                        if(content.imagePath != null) { // imagePath artık Drive ID'si
+                        if(content.imagePath != null) {
                             val imageDriveId = content.imagePath
                             val imageFile = createImageFile()
                             val success = googleDriveManager.downloadMediaFile(imageDriveId, imageFile)
@@ -326,9 +372,8 @@ class SettingsActivity : AppCompatActivity() {
                                 localImagePath = imageFile.toURI().toString()
                             }
                         }
-
                         var localAudioPath: String? = null
-                        if(content.audioFilePath != null) { // audioFilePath artık Drive ID'si
+                        if(content.audioFilePath != null) {
                             val audioDriveId = content.audioFilePath
                             val audioFile = createAudioFile()
                             val success = googleDriveManager.downloadMediaFile(audioDriveId, audioFile)
@@ -336,11 +381,7 @@ class SettingsActivity : AppCompatActivity() {
                                 localAudioPath = audioFile.absolutePath
                             }
                         }
-
-                        val finalContent = content.copy(
-                            imagePath = localImagePath,
-                            audioFilePath = localAudioPath
-                        )
+                        val finalContent = content.copy(imagePath = localImagePath, audioFilePath = localAudioPath)
                         restoredNotes.add(note.copy(content = gson.toJson(finalContent)))
                     }
 
@@ -349,6 +390,7 @@ class SettingsActivity : AppCompatActivity() {
 
                     withContext(Dispatchers.Main) {
                         Toast.makeText(requireContext(), getString(R.string.restore_success), Toast.LENGTH_LONG).show()
+                        requireActivity().recreate()
                     }
 
                 } catch (e: Exception) {

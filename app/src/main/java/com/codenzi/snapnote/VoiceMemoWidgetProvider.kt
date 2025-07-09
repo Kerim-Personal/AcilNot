@@ -12,11 +12,10 @@ import android.widget.RemoteViews
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 
-// Widget'ın farklı durumlarını yönetmek için bir enum sınıfı
 enum class WidgetState {
-    IDLE,      // Boşta, kayıt bekleniyor
-    RECORDING, // Kayıt yapılıyor
-    SAVED      // Kayıt yeni bitti, "Kaydedildi" durumu
+    IDLE,
+    RECORDING,
+    SAVED
 }
 
 class VoiceMemoWidgetProvider : AppWidgetProvider() {
@@ -31,8 +30,6 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    // updateAppWidget'ı companion object içine alarak
-    // hem Provider içinden hem de dışarıdan (örn. SettingsActivity) erişilebilir kılıyoruz.
     companion object {
         private const val PREFS_NAME = "voice_memo_widget_prefs"
         private const val PREF_WIDGET_STATE = "widget_state"
@@ -45,13 +42,11 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
             val remoteViews = RemoteViews(context.packageName, R.layout.widget_voice_memo)
             val currentState = getWidgetState(context)
 
-            // DÜZELTME: Kaynaklara daha verimli erişim sağlandı.
             val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
             val backgroundDrawableName = sharedPrefs.getString("widget_background_selection", "widget_background")
             val backgroundResId = getBackgroundResource(backgroundDrawableName)
             remoteViews.setInt(R.id.voice_widget_container, "setBackgroundResource", backgroundResId)
 
-            // Widget'ın görünümünü mevcut durumuna göre ayarla
             when (currentState) {
                 WidgetState.IDLE -> {
                     remoteViews.setImageViewResource(R.id.btn_record_voice, R.drawable.ic_microphone_red_24)
@@ -71,7 +66,6 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
                 }
             }
 
-            // Tıklama olayını ayarla
             val intent = Intent(context, AudioRecordingService::class.java).apply {
                 action = if (currentState == WidgetState.RECORDING) {
                     AudioRecordingService.ACTION_STOP_RECORDING
@@ -107,12 +101,10 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
         }
 
         fun setWidgetState(context: Context, state: WidgetState) {
-            // DÜZELTME: KTX uzantı fonksiyonu kullanıldı.
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
                 putString(PREF_WIDGET_STATE, state.name)
             }
 
-            // Widget'ı güncellemek için broadcast gönder.
             val intent = Intent(context, VoiceMemoWidgetProvider::class.java).apply {
                 action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
                 val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -123,10 +115,8 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
             context.sendBroadcast(intent)
         }
 
-        /**
-         * SharedPreferences'tan gelen string key'e karşılık gelen drawable resource ID'sini döndürür.
-         */
-        private fun getBackgroundResource(name: String?): Int {
+        // DÜZENLEME: Bu fonksiyon 'internal' yapıldı
+        internal fun getBackgroundResource(name: String?): Int {
             return when (name) {
                 "widget_background" -> R.drawable.widget_background
                 "bg1" -> R.drawable.bg1
@@ -139,7 +129,7 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
                 "bg8" -> R.drawable.bg8
                 "bg9" -> R.drawable.bg9
                 "bg10" -> R.drawable.bg10
-                else -> R.drawable.widget_background // Varsayılan
+                else -> R.drawable.widget_background
             }
         }
     }
