@@ -153,6 +153,11 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            findPreference<Preference>("delete_account")?.setOnPreferenceClickListener {
+                showDeleteAccountConfirmationDialog()
+                true
+            }
+
             findPreference<Preference>("password_settings")?.setOnPreferenceClickListener {
                 startActivity(Intent(requireContext(), PasswordSettingsActivity::class.java))
                 true
@@ -187,6 +192,18 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 true
             }
+        }
+
+        private fun showDeleteAccountConfirmationDialog() {
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.delete_account_title)
+                .setMessage(R.string.delete_account_confirmation_message)
+                .setPositiveButton(R.string.dialog_yes) { _, _ ->
+                    // TODO: Gerçek hesap silme işlemini burada gerçekleştirin.
+                    Toast.makeText(requireContext(), "Hesap silme işlemi başlatıldı.", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton(R.string.dialog_no, null)
+                .show()
         }
 
         private fun showAddWidgetDialog() {

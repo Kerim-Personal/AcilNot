@@ -173,6 +173,9 @@
     <string name="backup_to_drive_summary">Saves all your notes to Google Drive.</string>
     <string name="restore_from_drive_title">Restore from Drive</string>
     <string name="restore_from_drive_summary">Restores your previously backed up notes.</string>
+    <string name="delete_account_title">Delete Account</string>
+    <string name="delete_account_summary">Permanently delete your account and all data.</string>
+    <string name="delete_account_confirmation_message">Are you sure you want to permanently delete your account? All your data, including notes and settings, will be erased. This action cannot be undone.</string>
     <string name="other_settings_category_title">Other Settings</string>
     <string name="trash_bin_summary">View and manage deleted notes</string>
     <string name="privacy_policy_title">Privacy Policy</string>

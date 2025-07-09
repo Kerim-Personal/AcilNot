@@ -166,6 +166,9 @@
     <string name="backup_to_drive_summary">Tüm notlarınızı Google Drive\'a kaydeder.</string>
     <string name="restore_from_drive_title">Drive\'dan Geri Yükle</string>
     <string name="restore_from_drive_summary">Daha önce yedeklediğiniz notları geri yükler.</string>
+    <string name="delete_account_title">Hesabı Sil</string>
+    <string name="delete_account_summary">Hesabınızı ve tüm verilerinizi kalıcı olarak silin.</string>
+    <string name="delete_account_confirmation_message">Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz? Notlar ve ayarlar dahil tüm verileriniz silinecektir. Bu işlem geri alınamaz.</string>
     <string name="other_settings_category_title">Diğer Ayarlar</string>
     <string name="trash_bin_summary">Silinen notları görüntüleyin ve yönetin</string>
     <string name="privacy_policy_title">Gizlilik Politikası</string>
