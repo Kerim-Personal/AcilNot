@@ -5,11 +5,15 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
+import androidx.preference.PreferenceManager
 import com.codenzi.snapnote.databinding.ActivityPasswordSettingsBinding
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
@@ -23,14 +27,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import androidx.core.net.toUri
-import androidx.preference.PreferenceManager
 import java.io.File
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class PasswordSettingsActivity : AppCompatActivity() {
@@ -39,6 +38,12 @@ class PasswordSettingsActivity : AppCompatActivity() {
     lateinit var noteDao: NoteDao
     private lateinit var binding: ActivityPasswordSettingsBinding
     private val gson = Gson()
+
+    // YENİ: İlerleme diyaloğu için değişkenler
+    private var progressDialog: AlertDialog? = null
+    private var progressBar: ProgressBar? = null
+    private var progressTitle: TextView? = null
+    private var progressPercentage: TextView? = null
 
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -83,6 +88,7 @@ class PasswordSettingsActivity : AppCompatActivity() {
         }
     }
 
+    // ... (savePassword ve diğer üstteki fonksiyonlar aynı kalacak) ...
     private fun savePassword() {
         val currentPassword = binding.etCurrentPassword.text.toString()
         val newPassword = binding.etNewPassword.text.toString()
@@ -161,6 +167,36 @@ class PasswordSettingsActivity : AppCompatActivity() {
         }
     }
 
+    // YENİ: İlerleme diyaloğunu gösteren fonksiyon
+    private fun showProgressDialog() {
+        val builder = AlertDialog.Builder(this)
+        val inflater = this.layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_progress, null)
+
+        progressBar = dialogView.findViewById(R.id.progress_bar)
+        progressTitle = dialogView.findViewById(R.id.tv_progress_title)
+        progressPercentage = dialogView.findViewById(R.id.tv_progress_percentage)
+
+        progressTitle?.text = getString(R.string.backup_update_in_progress)
+
+        builder.setView(dialogView)
+        builder.setCancelable(false)
+        progressDialog = builder.create()
+        progressDialog?.show()
+    }
+
+    // YENİ: İlerleme diyaloğunu güncelleyen fonksiyon
+    private fun updateProgress(progress: Int) {
+        progressBar?.progress = progress
+        progressPercentage?.text = "$progress%"
+    }
+
+    // YENİ: İlerleme diyaloğunu kapatan fonksiyon
+    private fun dismissProgressDialog() {
+        progressDialog?.dismiss()
+        progressDialog = null
+    }
+
     private fun performAutomaticBackup(account: GoogleSignInAccount) {
         lifecycleScope.launch(Dispatchers.IO) {
             val credential = GoogleAccountCredential.usingOAuth2(
@@ -183,7 +219,7 @@ class PasswordSettingsActivity : AppCompatActivity() {
 
     private suspend fun proceedWithFullBackup(googleDriveManager: GoogleDriveManager, notesToBackup: List<Note>) {
         withContext(Dispatchers.Main) {
-            Toast.makeText(this@PasswordSettingsActivity, "Google Drive yedeği güncelleniyor...", Toast.LENGTH_SHORT).show()
+            showProgressDialog() // Diyaloğu göster
         }
 
         try {
@@ -198,13 +234,16 @@ class PasswordSettingsActivity : AppCompatActivity() {
             val salt = PasswordManager.getSalt(this)
 
             val notesForBackup = mutableListOf<Note>()
-            for (note in notesToBackup) {
+            val totalSteps = notesToBackup.size + 1 // Notlar + son JSON yüklemesi
+
+            for ((index, note) in notesToBackup.withIndex()) {
                 val content = gson.fromJson(note.content, NoteContent::class.java)
                 var imageDriveId: String? = null
                 content.imagePath?.let { path ->
-                    val imageFile = try { File(path.toUri().path!!) } catch (e: Exception) { null }
-                    if (imageFile?.exists() == true) {
-                        imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
+                    try { File(path.toUri().path!!) } catch (e: Exception) { null }?.let { imageFile ->
+                        if (imageFile.exists()) {
+                            imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
+                        }
                     }
                 }
                 var audioDriveId: String? = null
@@ -216,6 +255,12 @@ class PasswordSettingsActivity : AppCompatActivity() {
                 }
                 val newContent = content.copy(imagePath = imageDriveId, audioFilePath = audioDriveId)
                 notesForBackup.add(note.copy(content = gson.toJson(newContent)))
+
+                // İlerlemeyi güncelle
+                val progress = ((index + 1) * 100) / totalSteps
+                withContext(Dispatchers.Main) {
+                    updateProgress(progress)
+                }
             }
 
             val backupData = BackupData(
@@ -229,6 +274,8 @@ class PasswordSettingsActivity : AppCompatActivity() {
             val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", backupJson)
 
             withContext(Dispatchers.Main) {
+                updateProgress(100) // Son ilerlemeyi güncelle
+                dismissProgressDialog() // Diyaloğu kapat
                 if (success) {
                     Toast.makeText(this@PasswordSettingsActivity, "Parola değişikliği Google Drive yedeğine başarıyla yansıtıldı.", Toast.LENGTH_LONG).show()
                 } else {
@@ -238,6 +285,7 @@ class PasswordSettingsActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
+                dismissProgressDialog() // Hata durumunda diyaloğu kapat
                 Toast.makeText(this@PasswordSettingsActivity, "Yedekleme başarısız: ${e.message}", Toast.LENGTH_LONG).show()
                 finish()
             }

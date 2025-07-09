@@ -10,6 +10,8 @@ import android.os.Bundle
 import android.text.InputType
 import android.util.Log
 import android.widget.EditText
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -93,6 +95,12 @@ class SettingsActivity : AppCompatActivity() {
 
         private var requestedAction: Action? = null
         enum class Action { BACKUP, RESTORE }
+
+        // İlerleme diyaloğu için değişkenler
+        private var progressDialog: AlertDialog? = null
+        private var progressBar: ProgressBar? = null
+        private var progressTitle: TextView? = null
+        private var progressPercentage: TextView? = null
 
         private val googleSignInLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -281,6 +289,33 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        private fun showProgressDialog(titleResId: Int) {
+            val builder = AlertDialog.Builder(requireContext())
+            val inflater = requireActivity().layoutInflater
+            val dialogView = inflater.inflate(R.layout.dialog_progress, null)
+
+            progressBar = dialogView.findViewById(R.id.progress_bar)
+            progressTitle = dialogView.findViewById(R.id.tv_progress_title)
+            progressPercentage = dialogView.findViewById(R.id.tv_progress_percentage)
+
+            progressTitle?.text = getString(titleResId)
+
+            builder.setView(dialogView)
+            builder.setCancelable(false)
+            progressDialog = builder.create()
+            progressDialog?.show()
+        }
+
+        private fun updateProgress(progress: Int) {
+            progressBar?.progress = progress
+            progressPercentage?.text = "$progress%"
+        }
+
+        private fun dismissProgressDialog() {
+            progressDialog?.dismiss()
+            progressDialog = null
+        }
+
         private fun backupNotes(googleDriveManager: GoogleDriveManager) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
@@ -311,7 +346,7 @@ class SettingsActivity : AppCompatActivity() {
 
         private suspend fun proceedWithBackup(googleDriveManager: GoogleDriveManager, notesToBackup: List<Note>) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(requireContext(), "Yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
+                showProgressDialog(R.string.backup_in_progress)
             }
 
             try {
@@ -326,7 +361,9 @@ class SettingsActivity : AppCompatActivity() {
                 val salt = if (PasswordManager.isPasswordSet(requireContext())) PasswordManager.getSalt(requireContext()) else null
 
                 val notesForBackup = mutableListOf<Note>()
-                for (note in notesToBackup) {
+                val totalSteps = notesToBackup.size + 1
+
+                notesToBackup.forEachIndexed { index, note ->
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     var imageDriveId: String? = null
 
@@ -347,6 +384,11 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     val newContent = content.copy(imagePath = imageDriveId, audioFilePath = audioDriveId)
                     notesForBackup.add(note.copy(content = gson.toJson(newContent)))
+
+                    val progress = ((index + 1) * 100) / totalSteps
+                    withContext(Dispatchers.Main) {
+                        updateProgress(progress)
+                    }
                 }
 
                 val backupData = BackupData(
@@ -360,6 +402,8 @@ class SettingsActivity : AppCompatActivity() {
                 val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", backupJson)
 
                 withContext(Dispatchers.Main) {
+                    updateProgress(100)
+                    dismissProgressDialog()
                     if (success) {
                         Toast.makeText(requireContext(), "Notlar ve ayarlar başarıyla yedeklendi!", Toast.LENGTH_SHORT).show()
                     } else {
@@ -367,6 +411,9 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    dismissProgressDialog()
+                }
                 showError("Yedekleme başarısız", e)
             }
         }
@@ -466,7 +513,7 @@ class SettingsActivity : AppCompatActivity() {
 
         private suspend fun proceedWithRestore(googleDriveManager: GoogleDriveManager, backupData: BackupData) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(requireContext(), "Geri yükleme başlatılıyor...", Toast.LENGTH_SHORT).show()
+                showProgressDialog(R.string.restore_in_progress)
             }
 
             try {
@@ -478,8 +525,9 @@ class SettingsActivity : AppCompatActivity() {
 
                 val notesFromBackup = backupData.notes
                 val restoredNotes = mutableListOf<Note>()
+                val totalSteps = notesFromBackup.size + 1
 
-                for (note in notesFromBackup) {
+                notesFromBackup.forEachIndexed { index, note ->
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     var localImagePath: String? = null
                     content.imagePath?.let { driveId ->
@@ -497,6 +545,11 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     val finalContent = content.copy(imagePath = localImagePath, audioFilePath = localAudioPath)
                     restoredNotes.add(note.copy(content = gson.toJson(finalContent)))
+
+                    val progress = ((index + 1) * 100) / totalSteps
+                    withContext(Dispatchers.Main) {
+                        updateProgress(progress)
+                    }
                 }
 
                 noteDao.deleteAllNotes()
@@ -507,10 +560,15 @@ class SettingsActivity : AppCompatActivity() {
                 }
 
                 withContext(Dispatchers.Main) {
+                    updateProgress(100)
+                    dismissProgressDialog()
                     Toast.makeText(requireContext(), getString(R.string.restore_success), Toast.LENGTH_LONG).show()
                     activity?.recreate()
                 }
             } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    dismissProgressDialog()
+                }
                 showError("Geri yükleme işlemi başarısız oldu", e)
             }
         }

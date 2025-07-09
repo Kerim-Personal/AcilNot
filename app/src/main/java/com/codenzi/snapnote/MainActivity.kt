@@ -106,8 +106,7 @@ class MainActivity : AppCompatActivity() {
                 if (isSelectionMode) {
                     exitSelectionMode()
                 } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                    finish() // Geri tuşuna basıldığında uygulamayı kapatır.
                 }
             }
         }
@@ -140,7 +139,6 @@ class MainActivity : AppCompatActivity() {
         AppCompatDelegate.setDefaultNightMode(mode)
     }
 
-    // ... (MainActivity'deki diğer metodlar aynı kalacak)
     private fun setupRecyclerView() {
         noteAdapter = NoteAdapter(emptyList(),
             { note ->
@@ -331,75 +329,58 @@ class MainActivity : AppCompatActivity() {
         if (notes.size == 1) {
             val note = notes.first()
             val noteTitle = note.title.ifBlank { getString(R.string.shared_note_default_title) }
-
             val noteBitmap = createBitmapFromNote(note)
 
-            if (noteBitmap != null) {
-                val noteImageFile = saveBitmapToCache(noteBitmap)
-                val urisToShare = ArrayList<Uri>()
-                noteImageFile?.let {
-                    val imageUri = FileProvider.getUriForFile(this, "$packageName.provider", it)
+            val urisToShare = ArrayList<Uri>()
+
+            noteBitmap?.let { bmp ->
+                saveBitmapToCache(bmp)?.let { imageFile ->
+                    val imageUri = FileProvider.getUriForFile(this, "$packageName.provider", imageFile)
                     urisToShare.add(imageUri)
                 }
-                val gson = Gson()
-                try {
-                    val noteContent = gson.fromJson(note.content, NoteContent::class.java)
-                    noteContent.audioFilePath?.let { File(it) }?.let { audioFile ->
-                        if (audioFile.exists()) {
-                            val audioUri = FileProvider.getUriForFile(this, "$packageName.provider", audioFile)
-                            urisToShare.add(audioUri)
-                        }
-                    }
-                } catch (_: Exception) {}
-
-                if (urisToShare.isNotEmpty()) {
-                    val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                        type = "*/*"
-                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, urisToShare)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    startActivity(Intent.createChooser(shareIntent, getString(R.string.share_note_chooser_title)))
-                }
-            } else {
-                Toast.makeText(this, getString(R.string.note_too_long_for_image_share_toast), Toast.LENGTH_LONG).show()
-
-                val plainTextBuilder = StringBuilder()
-                val htmlTextBuilder = StringBuilder()
-                val gson = Gson()
-                try {
-                    val noteContent = gson.fromJson(note.content, NoteContent::class.java)
-                    if (note.title.isNotBlank()) {
-                        plainTextBuilder.append(note.title).append("\n\n")
-                        htmlTextBuilder.append("<b>").append(note.title).append("</b><br><br>")
-                    }
-                    if (noteContent.text.isNotBlank()) {
-                        plainTextBuilder.append(Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()).append("\n\n")
-                        htmlTextBuilder.append(noteContent.text)
-                    }
-                } catch(e: Exception) {
-                    plainTextBuilder.append(note.toSharableString())
-                    htmlTextBuilder.append(note.toSharableString())
-                }
-
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newHtmlText(noteTitle, plainTextBuilder.toString(), htmlTextBuilder.toString())
-                clipboard.setPrimaryClip(clip)
-
-                try {
-                    val noteContent = gson.fromJson(note.content, NoteContent::class.java)
-                    noteContent.audioFilePath?.let { File(it) }?.let { audioFile ->
-                        if (audioFile.exists()) {
-                            val audioUri = FileProvider.getUriForFile(this, "$packageName.provider", audioFile)
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "audio/*"
-                                putExtra(Intent.EXTRA_STREAM, audioUri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            startActivity(Intent.createChooser(shareIntent, getString(R.string.share_audio_chooser_title)))
-                        }
-                    }
-                } catch (_: Exception) {}
             }
+
+            try {
+                // DÜZELTME: 'gson' referans hatasını çözmek için nesne burada oluşturuluyor.
+                val gson = Gson()
+                val noteContent = gson.fromJson(note.content, NoteContent::class.java)
+                // DÜZELTME: 'it' referans hatasını önlemek için daha açık bir yapı kullanılıyor.
+                val audioPath = noteContent.audioFilePath
+                if (audioPath != null) {
+                    val audioFile = File(audioPath)
+                    if (audioFile.exists()) {
+                        val audioUri = FileProvider.getUriForFile(this, "$packageName.provider", audioFile)
+                        urisToShare.add(audioUri)
+                    }
+                }
+            } catch (_: Exception) {}
+
+            if (urisToShare.isNotEmpty()) {
+                val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                    type = "*/*"
+                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, urisToShare)
+
+                    // DÜZELTME: ClipData oluşturulurken doğru metod kullanılıyor.
+                    // Bu, URI izinlerinin hedef uygulamaya daha güvenilir bir şekilde aktarılmasını sağlar.
+                    val clipData = ClipData.newUri(contentResolver, noteTitle, urisToShare.first())
+                    if (urisToShare.size > 1) {
+                        for (i in 1 until urisToShare.size) {
+                            clipData.addItem(ClipData.Item(urisToShare[i]))
+                        }
+                    }
+                    setClipData(clipData)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(shareIntent, getString(R.string.share_note_chooser_title)))
+
+            } else if (noteBitmap == null) {
+                Toast.makeText(this, getString(R.string.note_too_long_for_image_share_toast), Toast.LENGTH_LONG).show()
+                val plainText = note.toSharableString()
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText(noteTitle, plainText)
+                clipboard.setPrimaryClip(clip)
+            }
+
         } else {
             val shareText = notes.joinToString("\n\n---\n\n") { it.toSharableString() }
             val intent = Intent(Intent.ACTION_SEND).apply {

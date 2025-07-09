@@ -193,4 +193,9 @@
     <string name="onboarding_feature4_desc">Securely back up your notes to Google Drive and access them from any device.</string>
     <string name="onboarding_start_button">Start the Adventure!</string>
 
+    <string name="backup_in_progress">Backup in Progress…</string>
+    <string name="restore_in_progress">Restore in Progress…</string>
+    <string name="backup_update_in_progress">Updating backup…</string>
+
+
 </resources>

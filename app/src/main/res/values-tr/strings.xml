@@ -190,4 +190,9 @@
     <string name="onboarding_feature4_desc">Notlarınızı Google Drive\'a güvenle yedekleyin, istediğiniz cihazdan erişin.</string>
     <string name="onboarding_start_button">Maceraya Başla!</string>
 
+    <string name="backup_in_progress">Yedekleme Sürüyor…</string>
+    <string name="restore_in_progress">Geri Yükleme Sürüyor…</string>
+    <string name="backup_update_in_progress">Yedek Güncelleniyor…</string>
+
+
 </resources>
