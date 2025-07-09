@@ -4,6 +4,7 @@ import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.util.Log
@@ -125,6 +126,11 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            findPreference<Preference>("add_widget_shortcut")?.setOnPreferenceClickListener {
+                showAddWidgetDialog()
+                true
+            }
+
             findPreference<Preference>("google_drive_backup")?.setOnPreferenceClickListener {
                 requestedAction = Action.BACKUP
                 signInToGoogle()
@@ -173,6 +179,38 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        private fun showAddWidgetDialog() {
+            val widgetOptions = arrayOf("Not Listesi Widget'ı", "Kamera Notu Widget'ı", "Sesli Not Widget'ı")
+            AlertDialog.Builder(requireContext())
+                .setTitle("Widget Ekle")
+                .setItems(widgetOptions) { _, which ->
+                    val componentName = when (which) {
+                        0 -> ComponentName(requireActivity(), NoteWidgetProvider::class.java)
+                        1 -> ComponentName(requireActivity(), CameraWidgetProvider::class.java)
+                        2 -> ComponentName(requireActivity(), VoiceMemoWidgetProvider::class.java)
+                        else -> null
+                    }
+                    componentName?.let { requestPinWidget(it) }
+                }
+                .show()
+        }
+
+        private fun requestPinWidget(componentName: ComponentName) {
+            val appWidgetManager = AppWidgetManager.getInstance(requireContext())
+            // DÜZELTME: Widget sabitleme özelliği sadece API 26 (Oreo) ve üzeri için geçerlidir.
+            // Bu nedenle, işletim sistemi sürümünü kontrol ediyoruz.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (appWidgetManager.isRequestPinAppWidgetSupported) {
+                    appWidgetManager.requestPinAppWidget(componentName, null, null)
+                } else {
+                    Toast.makeText(requireContext(), "Başlatıcınız (ana ekran uygulaması) bu özelliği desteklemiyor.", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                // Eski sürümler için bilgilendirme mesajı.
+                Toast.makeText(requireContext(), "Bu özellik Android 8.0 (Oreo) ve üzeri sürümlerde kullanılabilir. Ana ekranınızdan manuel olarak ekleyebilirsiniz.", Toast.LENGTH_LONG).show()
+            }
+        }
+
         private fun updateAllWidgets() {
             val context = context?.applicationContext ?: return
             val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -205,6 +243,9 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // Google ile oturum açma işlemi için standart metot.
+        // `getSignedInAccountFromIntent` deprecated olsa da, ActivityResultLauncher
+        // ile birlikte kullanımı şu anki tavsiye edilen yöntemdir.
         @Suppress("DEPRECATION")
         private fun signInToGoogle() {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -222,6 +263,7 @@ class SettingsActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         private fun handleSignInResult(data: Intent?) {
             try {
+                // Oturum açma sonucundan hesap bilgisini al.
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
                 val account = task.getResult(ApiException::class.java)!!
 

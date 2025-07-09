@@ -29,6 +29,12 @@
             android:entryValues="@array/widget_background_values"
             app:icon="@drawable/ic_image_24" />
 
+        <Preference
+            android:key="add_widget_shortcut"
+            android:title="Widget Ekle"
+            android:summary="Ana ekrana not, kamera veya sesli not widget'ı ekleyin."
+            app:icon="@drawable/outline_widgets_24" />
+
     </PreferenceCategory>
 
     <PreferenceCategory
