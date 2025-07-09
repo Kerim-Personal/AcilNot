@@ -246,8 +246,25 @@ class SettingsActivity : AppCompatActivity() {
         private fun backupNotes(googleDriveManager: GoogleDriveManager) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
+                    val existingBackup = googleDriveManager.getBackupFiles()?.firstOrNull()
                     val localNotes = noteDao.getAllNotes().first()
-                    proceedWithBackup(googleDriveManager, localNotes)
+
+                    withContext(Dispatchers.Main) {
+                        if (existingBackup != null) {
+                            AlertDialog.Builder(requireContext())
+                                .setTitle("Mevcut Yedek Bulundu")
+                                .setMessage("Google Drive'da zaten bir yedeğiniz var. Üzerine yazmak istediğinizden emin misiniz? Bu işlem geri alınamaz.")
+                                .setPositiveButton("Evet, Üzerine Yaz") { _, _ ->
+                                    lifecycleScope.launch(Dispatchers.IO) {
+                                        proceedWithBackup(googleDriveManager, localNotes)
+                                    }
+                                }
+                                .setNegativeButton("İptal", null)
+                                .show()
+                        } else {
+                            proceedWithBackup(googleDriveManager, localNotes)
+                        }
+                    }
                 } catch (e: Exception) {
                     showError("Yedekleme sırasında hata", e)
                 }
