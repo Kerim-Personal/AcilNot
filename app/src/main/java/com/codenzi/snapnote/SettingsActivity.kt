@@ -1,6 +1,8 @@
 package com.codenzi.snapnote
 
 import android.app.Activity
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -29,7 +31,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -101,6 +102,16 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            // Widget Arka Planı Değişikliği
+            findPreference<ListPreference>("widget_background_selection")?.setOnPreferenceChangeListener { _, _ ->
+                // Değişikliğin SharedPreferences'a yansıması için küçük bir gecikme ekliyoruz.
+                activity?.window?.decorView?.postDelayed({
+                    updateAllWidgets()
+                }, 100)
+                true
+            }
+
+
             // Google Drive Yedekleme
             findPreference<Preference>("google_drive_backup")?.setOnPreferenceClickListener {
                 requestedAction = Action.BACKUP
@@ -154,6 +165,33 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
         }
+
+        private fun updateAllWidgets() {
+            val context = requireActivity().applicationContext
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+
+            // NoteWidgetProvider'ı güncelle
+            val noteWidgetComponentName = ComponentName(context, NoteWidgetProvider::class.java)
+            val noteWidgetIds = appWidgetManager.getAppWidgetIds(noteWidgetComponentName)
+            for (appWidgetId in noteWidgetIds) {
+                NoteWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+            }
+
+            // VoiceMemoWidgetProvider'ı güncelle
+            val voiceMemoWidgetComponentName = ComponentName(context, VoiceMemoWidgetProvider::class.java)
+            val voiceMemoWidgetIds = appWidgetManager.getAppWidgetIds(voiceMemoWidgetComponentName)
+            for (appWidgetId in voiceMemoWidgetIds) {
+                VoiceMemoWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+            }
+
+            // CameraWidgetProvider'ı güncelle
+            val cameraWidgetComponentName = ComponentName(context, CameraWidgetProvider::class.java)
+            val cameraWidgetIds = appWidgetManager.getAppWidgetIds(cameraWidgetComponentName)
+            for (appWidgetId in cameraWidgetIds) {
+                CameraWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+            }
+        }
+
 
         @Suppress("DEPRECATION")
         private fun signInToGoogle() {
