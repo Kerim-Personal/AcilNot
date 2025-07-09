@@ -242,4 +242,13 @@
 
     <string name="action_select_all">Tümünü Seç</string>
 
+    <string name="delete_in_progress">Hesap Siliniyor…</string>
+    <string name="account_deleted_successfully">Hesabınız ve tüm verileriniz başarıyla silindi.</string>
+    <string name="account_deletion_failed">Hesap silinemedi. Lütfen tekrar deneyin</string>
+
+
+
+    <string name="account_deletion_failed_with_error">Hesap silinemedi: %1$s</string>
+
+
 </resources>

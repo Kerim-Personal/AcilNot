@@ -17,6 +17,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
+        // HATA BURADAYDI - SATIRLAR BİRLEŞTİRİLDİ
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -40,7 +41,6 @@ android {
         viewBinding = true
     }
 
-    // Çakışan dosyaları hariç tutmak için bu bloğu güncelliyoruz
     packaging {
         resources {
             excludes.add("META-INF/INDEX.LIST")
@@ -69,6 +69,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation(libs.androidx.preference.ktx)
     implementation(libs.kotlinx.coroutines.android)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1") // Olası await() hatası için
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
@@ -76,8 +77,6 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.coil)
     implementation(libs.photoview)
-
-    // --- YENİ ve MODERN YAPI ---
 
     // Google ile oturum açma
     implementation("com.google.android.gms:play-services-auth:21.2.0")

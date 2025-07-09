@@ -3,6 +3,7 @@ package com.codenzi.snapnote
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -37,6 +38,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -94,9 +96,8 @@ class SettingsActivity : AppCompatActivity() {
         private val gson = Gson()
 
         private var requestedAction: Action? = null
-        enum class Action { BACKUP, RESTORE }
+        enum class Action { BACKUP, RESTORE, DELETE }
 
-        // İlerleme diyaloğu için değişkenler
         private var progressDialog: AlertDialog? = null
         private var progressBar: ProgressBar? = null
         private var progressTitle: TextView? = null
@@ -108,7 +109,8 @@ class SettingsActivity : AppCompatActivity() {
             if (result.resultCode == Activity.RESULT_OK) {
                 handleSignInResult(result.data)
             } else {
-                Toast.makeText(requireContext(), getString(R.string.google_sign_in_cancelled), Toast.LENGTH_SHORT).show()            }
+                Toast.makeText(requireContext(), getString(R.string.google_sign_in_cancelled), Toast.LENGTH_SHORT).show()
+            }
         }
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -199,11 +201,99 @@ class SettingsActivity : AppCompatActivity() {
                 .setTitle(R.string.delete_account_title)
                 .setMessage(R.string.delete_account_confirmation_message)
                 .setPositiveButton(R.string.dialog_yes) { _, _ ->
-                    // TODO: Gerçek hesap silme işlemini burada gerçekleştirin.
-                    Toast.makeText(requireContext(), "Hesap silme işlemi başlatıldı.", Toast.LENGTH_SHORT).show()
+                    requestedAction = Action.DELETE
+                    signInToGoogle()
                 }
                 .setNegativeButton(R.string.dialog_no, null)
                 .show()
+        }
+
+        @Suppress("DEPRECATION")
+        private fun signInToGoogle() {
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestScopes(Scope("https://www.googleapis.com/auth/drive.appdata"))
+                .build()
+
+            val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
+            googleSignInClient.signOut().addOnCompleteListener {
+                googleSignInLauncher.launch(googleSignInClient.signInIntent)
+            }
+        }
+
+        @Suppress("DEPRECATION")
+        private fun handleSignInResult(data: Intent?) {
+            try {
+                val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                val account = task.getResult(ApiException::class.java)!!
+
+                val credential = GoogleAccountCredential.usingOAuth2(
+                    requireContext(),
+                    listOf("https://www.googleapis.com/auth/drive.appdata")
+                ).setSelectedAccount(account.account)
+
+                val googleDriveManager = GoogleDriveManager(credential)
+
+                when (requestedAction) {
+                    Action.BACKUP -> backupNotes(googleDriveManager)
+                    Action.RESTORE -> restoreNotes(googleDriveManager)
+                    Action.DELETE -> performAccountDeletion(googleDriveManager)
+                    null -> {}
+                }
+            } catch (e: ApiException) {
+                Log.w("SettingsFragment", "signInResult:failed code=" + e.statusCode, e)
+                Toast.makeText(requireContext(), "Sign-in error: Please try again.", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun performAccountDeletion(googleDriveManager: GoogleDriveManager) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    withContext(Dispatchers.Main) {
+                        showProgressDialog(R.string.delete_in_progress)
+                        updateProgress(10)
+                    }
+
+                    googleDriveManager.deleteFile("snapnote_backup.json")
+                    withContext(Dispatchers.Main) { updateProgress(30) }
+
+                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
+                    val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
+                    googleSignInClient.revokeAccess().await()
+                    withContext(Dispatchers.Main) { updateProgress(50) }
+
+                    noteDao.deleteAllNotes()
+                    withContext(Dispatchers.Main) { updateProgress(70) }
+
+                    PasswordManager.disablePassword(requireContext())
+                    withContext(Dispatchers.Main) { updateProgress(85) }
+
+                    clearAllSharedPreferences()
+                    withContext(Dispatchers.Main) { updateProgress(100) }
+
+                    withContext(Dispatchers.Main) {
+                        dismissProgressDialog()
+                        Toast.makeText(requireContext(), R.string.account_deleted_successfully, Toast.LENGTH_LONG).show()
+                        val intent = Intent(requireActivity(), OnboardingActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                        requireActivity().finish()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        dismissProgressDialog()
+                        Toast.makeText(requireContext(), getString(R.string.account_deletion_failed_with_error, e.message), Toast.LENGTH_LONG).show()
+                    }
+                    Log.e("SettingsFragment", "Account deletion failed", e)
+                }
+            }
+        }
+
+        private fun clearAllSharedPreferences() {
+            // KTX versiyonu ile güncellendi
+            PreferenceManager.getDefaultSharedPreferences(requireContext()).edit { clear() }
+            requireActivity().getSharedPreferences("onboarding_prefs", Context.MODE_PRIVATE).edit { clear() }
+            requireActivity().getSharedPreferences("voice_memo_widget_prefs", Context.MODE_PRIVATE).edit { clear() }
         }
 
         private fun showAddWidgetDialog() {
@@ -268,44 +358,6 @@ class SettingsActivity : AppCompatActivity() {
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, voiceMemoWidgetIds)
                 }
                 context.sendBroadcast(voiceMemoIntent)
-            }
-        }
-
-        @Suppress("DEPRECATION")
-        private fun signInToGoogle() {
-            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestEmail()
-                .requestScopes(Scope("https://www.googleapis.com/auth/drive.appdata"))
-                .build()
-
-            val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
-
-            googleSignInClient.signOut().addOnCompleteListener {
-                googleSignInLauncher.launch(googleSignInClient.signInIntent)
-            }
-        }
-
-        @Suppress("DEPRECATION")
-        private fun handleSignInResult(data: Intent?) {
-            try {
-                val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-                val account = task.getResult(ApiException::class.java)!!
-
-                val credential = GoogleAccountCredential.usingOAuth2(
-                    requireContext(),
-                    listOf("https://www.googleapis.com/auth/drive.appdata")
-                ).setSelectedAccount(account.account)
-
-                val googleDriveManager = GoogleDriveManager(credential)
-
-                when (requestedAction) {
-                    Action.BACKUP -> backupNotes(googleDriveManager)
-                    Action.RESTORE -> restoreNotes(googleDriveManager)
-                    null -> {}
-                }
-            } catch (e: ApiException) {
-                Log.w("SettingsFragment", "signInResult:failed code=" + e.statusCode, e)
-                Toast.makeText(requireContext(), "Sign-in error: Please try again.", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -504,7 +556,6 @@ class SettingsActivity : AppCompatActivity() {
                 .show()
         }
 
-
         private fun showPasswordPromptForRestore(googleDriveManager: GoogleDriveManager, backupData: BackupData) {
             val editText = EditText(requireContext()).apply {
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -613,7 +664,8 @@ class SettingsActivity : AppCompatActivity() {
 
         private suspend fun showError(message: String, e: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(requireContext(), "$message: ${e.message}", Toast.LENGTH_LONG).show()
+                // Hata mesajı placeholder ile kullanılacak şekilde güncellendi
+                Toast.makeText(requireContext(), getString(R.string.restore_failed_with_error, e.message), Toast.LENGTH_LONG).show()
                 Log.e("SettingsFragment", message, e)
             }
         }
