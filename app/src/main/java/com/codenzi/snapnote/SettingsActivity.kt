@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -131,7 +130,6 @@ class SettingsActivity : AppCompatActivity() {
             // Gizlilik Politikası
             findPreference<Preference>("privacy_policy")?.setOnPreferenceClickListener {
                 val url = "https://codenzi.com/snapnote"
-                // DÜZELTME: Uri.parse() yerine KTX .toUri() fonksiyonu kullanıldı.
                 val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                 try {
                     startActivity(intent)
@@ -144,7 +142,6 @@ class SettingsActivity : AppCompatActivity() {
             // Bize Ulaşın
             findPreference<Preference>("contact_us")?.setOnPreferenceClickListener {
                 val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    // DÜZELTME: Uri.parse() yerine KTX .toUri() fonksiyonu kullanıldı.
                     data = "mailto:".toUri()
                     putExtra(Intent.EXTRA_EMAIL, arrayOf("info@codenzi.com"))
                     putExtra(Intent.EXTRA_SUBJECT, getString(R.string.contact_us_email_subject))
@@ -158,7 +155,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        @Suppress("DEPRECATION") // DÜZELTME: 'GoogleSignIn' is deprecated uyarısını bastırır.
+        @Suppress("DEPRECATION")
         private fun signInToGoogle() {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestEmail()
@@ -172,7 +169,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        @Suppress("DEPRECATION") // DÜZELTME: 'GoogleSignIn' is deprecated uyarısını bastırır.
+        @Suppress("DEPRECATION")
         private fun handleSignInResult(data: Intent?) {
             try {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
@@ -204,36 +201,41 @@ class SettingsActivity : AppCompatActivity() {
                     }
 
                     val allNotes = noteDao.getAllNotes().first()
-                    val notesWithData = allNotes.map { note ->
+                    val notesForBackup = mutableListOf<Note>()
+
+                    for (note in allNotes) {
                         val content = gson.fromJson(note.content, NoteContent::class.java)
 
+                        var imageDriveId: String? = null
                         if (content.imagePath != null) {
-                            try {
-                                requireContext().contentResolver.openInputStream(content.imagePath!!.toUri())?.use { inputStream ->
-                                    val bytes = inputStream.readBytes()
-                                    content.imageDataBase64 = Base64.encodeToString(bytes, Base64.DEFAULT)
-                                }
-                            } catch (e: Exception) {
-                                Log.e("Backup", "Resim dosyası okunamadı: ${content.imagePath}", e)
+                            // URI'dan geçerli bir dosya yolu elde etmeye çalışın
+                            val imageFile = try {
+                                content.imagePath?.toUri()?.path?.let { File(it) }
+                            } catch (e: Exception) { null }
+
+                            if(imageFile?.exists() == true) {
+                                imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
                             }
                         }
 
+                        var audioDriveId: String? = null
                         if (content.audioFilePath != null) {
-                            try {
-                                val file = File(content.audioFilePath)
-                                if (file.exists()) {
-                                    val bytes = file.readBytes()
-                                    content.audioDataBase64 = Base64.encodeToString(bytes, Base64.DEFAULT)
-                                }
-                            } catch (e: Exception) {
-                                Log.e("Backup", "Ses dosyası okunamadı: ${content.audioFilePath}", e)
+                            val audioFile = File(content.audioFilePath)
+                            if(audioFile.exists()) {
+                                audioDriveId = googleDriveManager.uploadMediaFile(audioFile, "audio/mp4")
                             }
                         }
-                        note.copy(content = gson.toJson(content))
+
+                        // Not içeriğini Drive ID'leri ile güncelle
+                        val newContent = content.copy(
+                            imagePath = imageDriveId, // imagePath artık Drive ID'sini tutuyor
+                            audioFilePath = audioDriveId // audioFilePath artık Drive ID'sini tutuyor
+                        )
+                        notesForBackup.add(note.copy(content = gson.toJson(newContent)))
                     }
 
-                    val notesJson = gson.toJson(notesWithData)
-                    val success = googleDriveManager.uploadBackup("snapnote_backup.json", notesJson)
+                    val notesJson = gson.toJson(notesForBackup)
+                    val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", notesJson)
 
                     withContext(Dispatchers.Main) {
                         if (success) {
@@ -257,61 +259,49 @@ class SettingsActivity : AppCompatActivity() {
 
                     val backupFiles = googleDriveManager.getBackupFiles()
                     if (backupFiles.isNullOrEmpty()) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(requireContext(), getString(R.string.backup_not_found), Toast.LENGTH_LONG).show()
-                        }
+                        withContext(Dispatchers.Main) { Toast.makeText(requireContext(), getString(R.string.backup_not_found), Toast.LENGTH_LONG).show() }
                         return@launch
                     }
 
                     val file = backupFiles.first()
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "'${file.name}' geri yükleniyor...", Toast.LENGTH_SHORT).show()
-                    }
+                    withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "'${file.name}' geri yükleniyor...", Toast.LENGTH_SHORT).show() }
 
-                    val jsonContent = googleDriveManager.downloadFile(file.id)
+                    val jsonContent = googleDriveManager.downloadJsonBackup(file.id)
                     if (jsonContent.isNullOrBlank()) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(requireContext(), "Yedek dosyası boş veya bozuk.", Toast.LENGTH_LONG).show()
-                        }
+                        withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Yedek dosyası boş veya bozuk.", Toast.LENGTH_LONG).show() }
                         return@launch
                     }
 
                     val type = object : TypeToken<List<Note>>() {}.type
                     val notesFromBackup: List<Note> = gson.fromJson(jsonContent, type)
-
                     val restoredNotes = mutableListOf<Note>()
+
                     for (note in notesFromBackup) {
                         val content = gson.fromJson(note.content, NoteContent::class.java)
 
-                        var finalImagePath = content.imagePath
-                        if (content.imageDataBase64 != null) {
-                            try {
-                                val imageBytes = Base64.decode(content.imageDataBase64, Base64.DEFAULT)
-                                val imageFile = createImageFile()
-                                FileOutputStream(imageFile).use { it.write(imageBytes) }
-                                finalImagePath = imageFile.toURI().toString()
-                            } catch (e: Exception) {
-                                Log.e("Restore", "Base64'ten resim oluşturulamadı", e)
+                        var localImagePath: String? = null
+                        if(content.imagePath != null) { // imagePath artık Drive ID'si
+                            val imageDriveId = content.imagePath
+                            val imageFile = createImageFile()
+                            val success = googleDriveManager.downloadMediaFile(imageDriveId, imageFile)
+                            if (success) {
+                                localImagePath = imageFile.toURI().toString()
                             }
                         }
 
-                        var finalAudioPath = content.audioFilePath
-                        if (content.audioDataBase64 != null) {
-                            try {
-                                val audioBytes = Base64.decode(content.audioDataBase64, Base64.DEFAULT)
-                                val audioFile = createAudioFile()
-                                FileOutputStream(audioFile).use { it.write(audioBytes) }
-                                finalAudioPath = audioFile.absolutePath
-                            } catch (e: Exception) {
-                                Log.e("Restore", "Base64'ten ses oluşturulamadı", e)
+                        var localAudioPath: String? = null
+                        if(content.audioFilePath != null) { // audioFilePath artık Drive ID'si
+                            val audioDriveId = content.audioFilePath
+                            val audioFile = createAudioFile()
+                            val success = googleDriveManager.downloadMediaFile(audioDriveId, audioFile)
+                            if (success) {
+                                localAudioPath = audioFile.absolutePath
                             }
                         }
 
                         val finalContent = content.copy(
-                            imagePath = finalImagePath,
-                            audioFilePath = finalAudioPath,
-                            imageDataBase64 = null,
-                            audioDataBase64 = null
+                            imagePath = localImagePath,
+                            audioFilePath = localAudioPath
                         )
                         restoredNotes.add(note.copy(content = gson.toJson(finalContent)))
                     }

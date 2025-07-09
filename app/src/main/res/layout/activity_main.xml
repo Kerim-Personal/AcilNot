@@ -52,7 +52,7 @@
         android:layout_margin="16dp"
         android:contentDescription="@string/add_note_fab_description"
         android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="?attr/colorPrimaryContainer"
-        app:tint="?attr/colorOnPrimaryContainer" />
+        app:backgroundTint="?attr/colorPrimary"
+        app:tint="?attr/colorOnPrimary" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -41,17 +41,31 @@
     </string-array>
 
     <string-array name="color_theme_entries">
-        <item>Mor</item>
+        <item>Bordo</item>
         <item>Okyanus Mavisi</item>
         <item>Orman Yeşili</item>
         <item>Gül Kurusu</item>
+        <item>Turkuaz</item>
+        <item>Çivit Mavisi</item>
+        <item>Turuncu</item>
+        <item>Kahverengi</item>
+        <item>Gri</item>
+        <item>Camgöbeği</item>
+        <item>Limon Yeşili</item>
     </string-array>
 
     <string-array name="color_theme_values" translatable="false">
-        <item>purple</item>
+        <item>bordo</item>
         <item>blue</item>
         <item>green</item>
         <item>rose</item>
+        <item>teal</item>
+        <item>indigo</item>
+        <item>orange</item>
+        <item>brown</item>
+        <item>grey</item>
+        <item>cyan</item>
+        <item>lime</item>
     </string-array>
 
 </resources>
