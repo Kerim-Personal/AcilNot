@@ -55,7 +55,8 @@ object PasswordManager {
     fun setPassword(context: Context, newPassword: String) {
         val salt = generateSalt()
         val (hashedPassword, _) = hashPassword(newPassword, salt)
-        getSharedPreferences(context).edit {
+        // DÜZELTME: İşlemin hemen diske yazılmasını garantilemek için 'commit = true' kullanılıyor.
+        getSharedPreferences(context).edit(commit = true) {
             putString(KEY_PASSWORD_HASH, hashedPassword)
             putString(KEY_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
             putBoolean(KEY_IS_PASSWORD_ENABLED, true)
@@ -89,7 +90,8 @@ object PasswordManager {
     }
 
     fun disablePassword(context: Context) {
-        getSharedPreferences(context).edit {
+        // DÜZELTME: İşlemin hemen diske yazılmasını garantilemek için 'commit = true' kullanılıyor.
+        getSharedPreferences(context).edit(commit = true) {
             remove(KEY_PASSWORD_HASH)
             remove(KEY_SALT)
             putBoolean(KEY_IS_PASSWORD_ENABLED, false)
@@ -105,11 +107,11 @@ object PasswordManager {
     }
 
     /**
-     * YENİ: Yedekten geri yüklenen parola bilgilerini güvenli bir şekilde kaydeder.
-     * Bu fonksiyon, `getSharedPreferences` hatasını çözmek için eklenmiştir.
+     * Yedekten geri yüklenen parola bilgilerini güvenli bir şekilde kaydeder.
      */
     fun restorePassword(context: Context, hash: String, salt: String) {
-        getSharedPreferences(context).edit {
+        // DÜZELTME: İşlemin hemen diske yazılmasını garantilemek için 'commit = true' kullanılıyor.
+        getSharedPreferences(context).edit(commit = true) {
             putString(KEY_PASSWORD_HASH, hash)
             putString(KEY_SALT, salt)
             putBoolean(KEY_IS_PASSWORD_ENABLED, true)

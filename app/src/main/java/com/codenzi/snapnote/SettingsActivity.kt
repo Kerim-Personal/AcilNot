@@ -335,13 +335,10 @@ class SettingsActivity : AppCompatActivity() {
                     val type = object : TypeToken<BackupData>() {}.type
                     val backupData: BackupData = gson.fromJson(jsonContent, type)
 
-                    // ANA MANTIK DEĞİŞİKLİĞİ: UI işlemini Main thread'de yap
                     withContext(Dispatchers.Main) {
-                        // Eğer yedekte şifre varsa, sormak için dialog göster
                         if (backupData.passwordHash != null && backupData.salt != null) {
                             showPasswordPromptForRestore(googleDriveManager, backupData)
                         } else {
-                            // Şifre yoksa, onay al ve direkt yükle
                             showRestoreConfirmationDialog(googleDriveManager, backupData)
                         }
                     }
@@ -352,7 +349,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // YENİ: Şifresiz geri yükleme için onay dialog'u
         private fun showRestoreConfirmationDialog(googleDriveManager: GoogleDriveManager, backupData: BackupData) {
             AlertDialog.Builder(requireContext())
                 .setTitle(getString(R.string.restore_dialog_title))
@@ -379,10 +375,8 @@ class SettingsActivity : AppCompatActivity() {
                 .setView(editText)
                 .setPositiveButton("Onayla") { _, _ ->
                     val enteredPassword = editText.text.toString()
-                    // DÜZELTME: Null kontrolü burada tekrar yapılıyor.
                     if (backupData.passwordHash != null && backupData.salt != null) {
                         if (PasswordManager.checkPassword(enteredPassword, backupData.salt, backupData.passwordHash)) {
-                            // Parola doğruysa, işlemi IO thread'de başlat
                             lifecycleScope.launch(Dispatchers.IO) {
                                 proceedWithRestore(googleDriveManager, backupData)
                             }
