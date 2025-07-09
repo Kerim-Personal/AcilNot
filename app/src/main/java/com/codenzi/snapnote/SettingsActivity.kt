@@ -190,9 +190,13 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun showAddWidgetDialog() {
-            val widgetOptions = arrayOf("Not Listesi Widget'ı", "Kamera Notu Widget'ı", "Sesli Not Widget'ı")
+            val widgetOptions = arrayOf(
+                getString(R.string.widget_option_note_list),
+                getString(R.string.widget_option_camera_note),
+                getString(R.string.widget_option_voice_note)
+            )
             AlertDialog.Builder(requireContext())
-                .setTitle("Widget Ekle")
+                .setTitle(getString(R.string.add_widget_dialog_title))
                 .setItems(widgetOptions) { _, which ->
                     val componentName = when (which) {
                         0 -> ComponentName(requireActivity(), NoteWidgetProvider::class.java)
@@ -211,10 +215,10 @@ class SettingsActivity : AppCompatActivity() {
                 if (appWidgetManager.isRequestPinAppWidgetSupported) {
                     appWidgetManager.requestPinAppWidget(componentName, null, null)
                 } else {
-                    Toast.makeText(requireContext(), "Başlatıcınız (ana ekran uygulaması) bu özelliği desteklemiyor.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), "Your launcher (home screen app) does not support this feature.", Toast.LENGTH_LONG).show()
                 }
             } else {
-                Toast.makeText(requireContext(), "Bu özellik Android 8.0 (Oreo) ve üzeri sürümlerde kullanılabilir.", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "This feature is available on Android 8.0 (Oreo) and above.", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -284,7 +288,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
             } catch (e: ApiException) {
                 Log.w("SettingsFragment", "signInResult:failed code=" + e.statusCode, e)
-                Toast.makeText(requireContext(), "Oturum açma hatası: Lütfen tekrar deneyin.", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Sign-in error: Please try again.", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -324,21 +328,21 @@ class SettingsActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         if (existingBackup != null) {
                             AlertDialog.Builder(requireContext())
-                                .setTitle("Mevcut Yedek Bulundu")
-                                .setMessage("Google Drive'da zaten bir yedeğiniz var. Üzerine yazmak istediğinizden emin misiniz? Bu işlem geri alınamaz.")
-                                .setPositiveButton("Evet, Üzerine Yaz") { _, _ ->
+                                .setTitle("Existing Backup Found")
+                                .setMessage("You already have a backup on Google Drive. Are you sure you want to overwrite it? This action cannot be undone.")
+                                .setPositiveButton("Yes, Overwrite") { _, _ ->
                                     lifecycleScope.launch(Dispatchers.IO) {
                                         proceedWithBackup(googleDriveManager, localNotes)
                                     }
                                 }
-                                .setNegativeButton("İptal", null)
+                                .setNegativeButton("Cancel", null)
                                 .show()
                         } else {
                             proceedWithBackup(googleDriveManager, localNotes)
                         }
                     }
                 } catch (e: Exception) {
-                    showError("Yedekleme sırasında hata", e)
+                    showError("Error during backup", e)
                 }
             }
         }
@@ -404,16 +408,16 @@ class SettingsActivity : AppCompatActivity() {
                     updateProgress(100)
                     dismissProgressDialog()
                     if (success) {
-                        Toast.makeText(requireContext(), "Notlar ve ayarlar başarıyla yedeklendi!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Notes and settings backed up successfully!", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(requireContext(), "Yedekleme sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "An error occurred during backup.", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     dismissProgressDialog()
                 }
-                showError("Yedekleme başarısız", e)
+                showError("Backup failed", e)
             }
         }
 
@@ -438,7 +442,7 @@ class SettingsActivity : AppCompatActivity() {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Yedekler aranıyor...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Searching for backups...", Toast.LENGTH_SHORT).show()
                     }
 
                     val backupFile = googleDriveManager.getBackupFiles()?.firstOrNull()
@@ -449,7 +453,7 @@ class SettingsActivity : AppCompatActivity() {
 
                     val jsonContent = googleDriveManager.downloadJsonBackup(backupFile.id)
                     if (jsonContent.isNullOrBlank()) {
-                        withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Yedek dosyası boş veya bozuk.", Toast.LENGTH_LONG).show() }
+                        withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Backup file is empty or corrupt.", Toast.LENGTH_LONG).show() }
                         return@launch
                     }
 
@@ -491,10 +495,10 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             AlertDialog.Builder(requireContext())
-                .setTitle("Parola Gerekli")
-                .setMessage("Bu yedek parola ile korunuyor. Lütfen devam etmek için parolanızı girin.")
+                .setTitle("Password Required")
+                .setMessage("This backup is password protected. Please enter your password to continue.")
                 .setView(editText)
-                .setPositiveButton("Onayla") { _, _ ->
+                .setPositiveButton("Confirm") { _, _ ->
                     val enteredPassword = editText.text.toString()
                     if (backupData.passwordHash != null && backupData.salt != null) {
                         if (PasswordManager.checkPassword(enteredPassword, backupData.salt, backupData.passwordHash)) {
@@ -502,11 +506,11 @@ class SettingsActivity : AppCompatActivity() {
                                 proceedWithRestore(googleDriveManager, backupData)
                             }
                         } else {
-                            Toast.makeText(requireContext(), "Yanlış parola!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Incorrect password!", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
-                .setNegativeButton("İptal", null)
+                .setNegativeButton("Cancel", null)
                 .show()
         }
 
@@ -568,7 +572,7 @@ class SettingsActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     dismissProgressDialog()
                 }
-                showError("Geri yükleme işlemi başarısız oldu", e)
+                showError("Restore operation failed", e)
             }
         }
 

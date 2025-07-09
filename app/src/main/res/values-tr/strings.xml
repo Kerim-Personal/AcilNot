@@ -226,5 +226,10 @@
     <string name="incorrect_password">Yanlış parola!</string>
     <string name="dialog_ok">Tamam</string>
 
+    <string name="add_widget_dialog_title">Widget Ekle</string>
+    <string name="widget_option_note_list">Not Listesi Widget\'ı</string>
+    <string name="widget_option_camera_note">Fotoğraf Notu Widget\'ı</string>
+    <string name="widget_option_voice_note">Sesli Not Widget\'ı</string>
+
 
 </resources>

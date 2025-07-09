@@ -178,7 +178,7 @@
     <string name="privacy_policy_summary">Read the application\'s privacy policy.</string>
     <string name="contact_us_title">Contact Us</string>
     <string name="contact_us_summary">Email us for feedback or support.</string>
-    <string name="contact_us_email_subject">Acil Not App Feedback</string>
+    <string name="contact_us_email_subject">SnapNote App Feedback</string>
 
 
     <string name="application_encryption_category_title">Application Encryption</string>
@@ -238,5 +238,10 @@
     <string name="restore_failed_with_error">Restore operation failed: %s</string>
 
     <string name="restore_failed">Failed to restore notes.</string>
+
+    <string name="add_widget_dialog_title">Add Widget</string>
+    <string name="widget_option_note_list">Note List Widget</string>
+    <string name="widget_option_camera_note">Picture Note Widget</string>
+    <string name="widget_option_voice_note">Voice Note Widget</string>
 
 </resources>
