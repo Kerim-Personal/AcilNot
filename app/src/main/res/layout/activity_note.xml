@@ -50,53 +50,79 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <LinearLayout
-            android:id="@+id/ll_format_buttons_container"
-            style="?android:attr/buttonBarStyle"
-            android:layout_width="wrap_content"
+        <HorizontalScrollView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal">
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/toggle_button_group"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/ll_format_buttons_container"
+                style="?android:attr/buttonBarStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:selectionRequired="false"
-                app:singleSelection="false">
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_bold"
-                    style="?attr/materialButtonOutlinedStyle"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggle_button_group"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:contentDescription="@string/tooltip_bold"
-                    app:icon="@drawable/ic_format_bold_24"
-                    app:iconTint="@android:color/darker_gray" />
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_italic"
-                    style="?attr/materialButtonOutlinedStyle"
+                    app:selectionRequired="false"
+                    app:singleSelection="false">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_bold"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/tooltip_bold"
+                        app:icon="@drawable/ic_format_bold_24"
+                        app:iconTint="@android:color/darker_gray" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_italic"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/tooltip_italic"
+                        app:icon="@drawable/ic_format_italic_24"
+                        app:iconTint="@android:color/darker_gray" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_strikethrough"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/tooltip_strikethrough"
+                        app:icon="@drawable/ic_format_strikethrough_24"
+                        app:iconTint="@android:color/darker_gray" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <ImageButton
+                    android:id="@+id/btn_add_photo"
+                    style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:contentDescription="@string/tooltip_italic"
-                    app:icon="@drawable/ic_format_italic_24"
-                    app:iconTint="@android:color/darker_gray" />
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_strikethrough"
-                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_marginStart="8dp"
+                    android:contentDescription="Fotoğraf Ekle"
+                    android:src="@drawable/outline_photo_camera_24" />
+
+                <ImageButton
+                    android:id="@+id/btn_record_audio"
+                    style="?attr/buttonBarButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:contentDescription="@string/tooltip_strikethrough"
-                    app:icon="@drawable/ic_format_strikethrough_24"
-                    app:iconTint="@android:color/darker_gray" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
-            <ImageButton
-                android:id="@+id/btn_voice_note"
-                style="?android:attr/buttonBarButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:contentDescription="@string/tooltip_voice_note"
-                android:src="@drawable/ic_microphone_24" />
-        </LinearLayout>
+                    android:layout_marginStart="8dp"
+                    android:contentDescription="Ses Kaydı Yap"
+                    android:src="@drawable/ic_mic" />
+
+                <ImageButton
+                    android:id="@+id/btn_voice_note"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:contentDescription="@string/tooltip_voice_note"
+                    android:src="@drawable/ic_microphone_24" />
+            </LinearLayout>
+        </HorizontalScrollView>
 
         <HorizontalScrollView
             android:layout_width="wrap_content"

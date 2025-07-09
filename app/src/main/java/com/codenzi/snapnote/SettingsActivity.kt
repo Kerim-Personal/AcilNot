@@ -4,6 +4,7 @@ import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
@@ -36,7 +37,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -197,8 +200,6 @@ class SettingsActivity : AppCompatActivity() {
 
         private fun requestPinWidget(componentName: ComponentName) {
             val appWidgetManager = AppWidgetManager.getInstance(requireContext())
-            // DÜZELTME: Widget sabitleme özelliği sadece API 26 (Oreo) ve üzeri için geçerlidir.
-            // Bu nedenle, işletim sistemi sürümünü kontrol ediyoruz.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (appWidgetManager.isRequestPinAppWidgetSupported) {
                     appWidgetManager.requestPinAppWidget(componentName, null, null)
@@ -206,8 +207,7 @@ class SettingsActivity : AppCompatActivity() {
                     Toast.makeText(requireContext(), "Başlatıcınız (ana ekran uygulaması) bu özelliği desteklemiyor.", Toast.LENGTH_LONG).show()
                 }
             } else {
-                // Eski sürümler için bilgilendirme mesajı.
-                Toast.makeText(requireContext(), "Bu özellik Android 8.0 (Oreo) ve üzeri sürümlerde kullanılabilir. Ana ekranınızdan manuel olarak ekleyebilirsiniz.", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Bu özellik Android 8.0 (Oreo) ve üzeri sürümlerde kullanılabilir.", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -243,9 +243,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // Google ile oturum açma işlemi için standart metot.
-        // `getSignedInAccountFromIntent` deprecated olsa da, ActivityResultLauncher
-        // ile birlikte kullanımı şu anki tavsiye edilen yöntemdir.
         @Suppress("DEPRECATION")
         private fun signInToGoogle() {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -263,7 +260,6 @@ class SettingsActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         private fun handleSignInResult(data: Intent?) {
             try {
-                // Oturum açma sonucundan hesap bilgisini al.
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
                 val account = task.getResult(ApiException::class.java)!!
 
@@ -333,12 +329,15 @@ class SettingsActivity : AppCompatActivity() {
                 for (note in notesToBackup) {
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     var imageDriveId: String? = null
+
                     content.imagePath?.let { path ->
-                        val imageFile = try { File(path.toUri().path!!) } catch (e: Exception) { null }
-                        if (imageFile?.exists() == true) {
+                        val imageFile = createTempFileForUpload(path.toUri())
+                        if (imageFile != null) {
                             imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
+                            imageFile.delete()
                         }
                     }
+
                     var audioDriveId: String? = null
                     content.audioFilePath?.let { path ->
                         val audioFile = File(path)
@@ -369,6 +368,23 @@ class SettingsActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 showError("Yedekleme başarısız", e)
+            }
+        }
+
+        @Throws(IOException::class)
+        private fun createTempFileForUpload(uri: Uri): File? {
+            val context = requireContext()
+            return try {
+                val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+                val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
+                FileOutputStream(tempFile).use { outputStream ->
+                    inputStream?.copyTo(outputStream)
+                }
+                inputStream?.close()
+                tempFile
+            } catch (e: Exception) {
+                Log.e("SettingsFragment", "Error creating temp file from URI", e)
+                null
             }
         }
 

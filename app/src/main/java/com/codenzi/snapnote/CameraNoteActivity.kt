@@ -15,11 +15,15 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.codenzi.snapnote.databinding.ActivityCameraBinding
+import com.github.chrisbanes.photoview.BuildConfig
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 @AndroidEntryPoint
 class CameraNoteActivity : AppCompatActivity() {
@@ -28,6 +32,7 @@ class CameraNoteActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCameraBinding
     private var imageCapture: ImageCapture? = null
+    private lateinit var cameraExecutor: ExecutorService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,14 +48,14 @@ class CameraNoteActivity : AppCompatActivity() {
         }
 
         binding.imageCaptureButton.setOnClickListener { takePhoto() }
+        cameraExecutor = Executors.newSingleThreadExecutor()
     }
 
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
 
-        // Fotoğrafı galeri yerine uygulamanın özel dizinine kaydet
         val photoFile = File(
-            getExternalFilesDir(null), // Uygulamanın özel dizini
+            outputDirectory,
             SimpleDateFormat(FILENAME_FORMAT, Locale.US)
                 .format(System.currentTimeMillis()) + ".jpg"
         )
@@ -66,12 +71,15 @@ class CameraNoteActivity : AppCompatActivity() {
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    // Dosya URI'sini string'e çevirerek kaydet
-                    val savedUri = photoFile.toURI().toString()
+                    val savedUri = FileProvider.getUriForFile(
+                        this@CameraNoteActivity,
+                        "${BuildConfig.APPLICATION_ID}.provider",
+                        photoFile
+                    )
                     val msg = "Photo capture succeeded: $savedUri"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
-                    viewModel.savePhotoNote(savedUri, getString(R.string.photo_note_title))
+                    viewModel.savePhotoNote(savedUri.toString(), getString(R.string.photo_note_title))
                     finish()
                 }
             }
@@ -87,7 +95,7 @@ class CameraNoteActivity : AppCompatActivity() {
             val preview = Preview.Builder()
                 .build()
                 .also {
-                    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+                    it.surfaceProvider = binding.viewFinder.surfaceProvider
                 }
 
             imageCapture = ImageCapture.Builder().build()
@@ -129,6 +137,19 @@ class CameraNoteActivity : AppCompatActivity() {
                 finish()
             }
         }
+    }
+
+    private val outputDirectory: File by lazy {
+        val mediaDir = externalMediaDirs.firstOrNull()?.let {
+            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
+        }
+        if (mediaDir != null && mediaDir.exists())
+            mediaDir else filesDir
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraExecutor.shutdown()
     }
 
     companion object {
