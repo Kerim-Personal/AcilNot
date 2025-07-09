@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.ksp)
     id("com.google.dagger.hilt.android")
-    // YENİ: Kotlinx Serialization eklentisi
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
 }
 
@@ -17,6 +16,7 @@ android {
         targetSdk = 36
         versionCode = 2
         versionName = "1.1.0"
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -39,6 +39,14 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    // Çakışan dosyaları hariç tutmak için bu bloğu güncelliyoruz
+    packaging {
+        resources {
+            excludes.add("META-INF/INDEX.LIST")
+            excludes.add("META-INF/DEPENDENCIES")
+        }
+    }
 }
 
 dependencies {
@@ -46,6 +54,7 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.51.1")
     ksp("com.google.dagger:hilt-android-compiler:2.51.1")
     implementation(libs.androidx.security.crypto)
+
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -70,18 +79,18 @@ dependencies {
 
     // --- YENİ ve MODERN YAPI ---
 
-    // Google ile oturum açma (Sadece bu gerekli)
+    // Google ile oturum açma
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     // GSON
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // Ktor (Modern Ağ Kütüphanesi)
-    val ktorVersion = "2.3.12"
-    implementation("io.ktor:ktor-client-android:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+    // Google Drive Kütüphaneleri
+    implementation(libs.google.api.client)
+    implementation(libs.google.oauth.client)
+    implementation(libs.google.api.client.android)
+    implementation(libs.google.http.client.android)
+    implementation(libs.google.api.services.drive)
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")

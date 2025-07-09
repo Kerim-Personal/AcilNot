@@ -26,7 +26,8 @@ googleApiClient = "2.4.0" # google-api-client
 googleOauthClient = "1.36.0" # google-oauth-client
 googleApiClientAndroid = "2.4.0" # google-api-client-android
 googleHttpAndroid = "1.44.2" # google-http-client-android
-googleApiServicesDrive = "v3-rev20240701-2.0.0"
+# Hatalı versiyonu güncel ve stabil bir versiyonla değiştiriyoruz.
+googleApiServicesDrive = "v3-rev20220815-2.0.0"
 
 
 [libraries]
