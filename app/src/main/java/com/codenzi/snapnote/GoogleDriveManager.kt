@@ -1,4 +1,4 @@
-// kerim-personal/acilnot/AcilNot-67f040771546d8d1c2779533e2d914d9dbbd06cc/app/src/main/java/com/codenzi/snapnote/GoogleDriveManager.kt
+// kerim-personal/acilnot/AcilNot-834706bd32961a54e3924bd58580b2d85464274f/app/src/main/java/com/codenzi/snapnote/GoogleDriveManager.kt
 
 package com.codenzi.snapnote
 
@@ -29,23 +29,8 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
     private val driveApiFilesFields = "files(id, name, modifiedTime)"
     private val appDataFolderSpace = "appDataFolder"
 
-    // --- YENİ FONKSİYON: Medya dosyalarını Drive'a yükler ---
-    suspend fun uploadMediaFile(localFile: java.io.File, mimeType: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val fileMetadata = File().apply {
-                name = localFile.name
-                parents = listOf(appDataFolderSpace)
-            }
-            val mediaContent = FileContent(mimeType, localFile)
-            val file = drive.files().create(fileMetadata, mediaContent).setFields("id").execute()
-            return@withContext file.id
-        } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "uploadMediaFile failed for ${localFile.name}", e)
-            return@withContext null
-        }
-    }
+    // ... (Mevcut diğer fonksiyonlar aynı kalacak)
 
-    // --- MEVCUT FONKSİYON: Adını daha anlaşılır yapalım ---
     suspend fun uploadJsonBackup(fileName: String, content: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val fileMetadata = File().apply {
@@ -66,36 +51,6 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
             return@withContext false
         }
     }
-
-    suspend fun getBackupFiles(): List<File>? = withContext(Dispatchers.IO) {
-        try {
-            return@withContext drive.files().list()
-                .setSpaces(appDataFolderSpace)
-                .setFields(driveApiFilesFields)
-                .setQ("name = 'snapnote_backup.json'") // Sadece ana yedek dosyasını bul
-                .setOrderBy("modifiedTime desc")
-                .execute()
-                .files
-        } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "getBackupFiles failed", e)
-            return@withContext null
-        }
-    }
-
-    // --- YENİ FONKSİYON: Medya dosyalarını ID ile Drive'dan indirir ---
-    suspend fun downloadMediaFile(fileId: String, destinationFile: java.io.File): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val outputStream = FileOutputStream(destinationFile)
-            drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
-            outputStream.close()
-            return@withContext true
-        } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "downloadMediaFile failed for id $fileId", e)
-            destinationFile.delete() // Başarısız olursa yarım dosyayı sil
-            return@withContext false
-        }
-    }
-
 
     suspend fun downloadJsonBackup(fileId: String): String? = withContext(Dispatchers.IO) {
         try {
@@ -119,6 +74,69 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
         } catch (e: IOException) {
             Log.e("GoogleDriveManager", "findFile failed", e)
             return@withContext null
+        }
+    }
+
+    suspend fun getBackupFiles(): List<File>? = withContext(Dispatchers.IO) {
+        try {
+            return@withContext drive.files().list()
+                .setSpaces(appDataFolderSpace)
+                .setFields(driveApiFilesFields)
+                .setQ("name = 'snapnote_backup.json'") // Sadece ana yedek dosyasını bul
+                .setOrderBy("modifiedTime desc")
+                .execute()
+                .files
+        } catch (e: IOException) {
+            Log.e("GoogleDriveManager", "getBackupFiles failed", e)
+            return@withContext null
+        }
+    }
+
+    suspend fun uploadMediaFile(localFile: java.io.File, mimeType: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val fileMetadata = File().apply {
+                name = localFile.name
+                parents = listOf(appDataFolderSpace)
+            }
+            val mediaContent = FileContent(mimeType, localFile)
+            val file = drive.files().create(fileMetadata, mediaContent).setFields("id").execute()
+            return@withContext file.id
+        } catch (e: IOException) {
+            Log.e("GoogleDriveManager", "uploadMediaFile failed for ${localFile.name}", e)
+            return@withContext null
+        }
+    }
+
+    suspend fun downloadMediaFile(fileId: String, destinationFile: java.io.File): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val outputStream = FileOutputStream(destinationFile)
+            drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
+            outputStream.close()
+            return@withContext true
+        } catch (e: IOException) {
+            Log.e("GoogleDriveManager", "downloadMediaFile failed for id $fileId", e)
+            destinationFile.delete() // Başarısız olursa yarım dosyayı sil
+            return@withContext false
+        }
+    }
+
+    /**
+     * YENİ: Drive'dan belirtilen dosyayı bulur ve siler.
+     * @param fileName Silinecek dosyanın adı (örn: "snapnote_credentials.json")
+     * @return İşlem başarılıysa true, değilse false.
+     */
+    suspend fun deleteFile(fileName: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val fileToDelete = findFile(fileName)
+            if (fileToDelete != null) {
+                drive.files().delete(fileToDelete.id).execute()
+                return@withContext true
+            }
+            // Dosya zaten yoksa, işlemi başarılı kabul et.
+            return@withContext true
+        } catch (e: IOException) {
+            Log.e("GoogleDriveManager", "deleteFile failed for $fileName", e)
+            return@withContext false
         }
     }
 }

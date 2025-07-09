@@ -4,15 +4,17 @@ import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
@@ -33,14 +35,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
-// Yedekleme verisini yapılandırmak için yeni data sınıfları
+// Data sınıfları aynı kalıyor
 data class AppSettings(
     val themeSelection: String?,
     val colorSelection: String?,
@@ -49,7 +50,9 @@ data class AppSettings(
 
 data class BackupData(
     val settings: AppSettings,
-    val notes: List<Note>
+    val notes: List<Note>,
+    val passwordHash: String?,
+    val salt: String?
 )
 
 @AndroidEntryPoint
@@ -111,12 +114,12 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             findPreference<ListPreference>("color_selection")?.setOnPreferenceChangeListener { _, _ ->
-                requireActivity().recreate()
+                activity?.recreate()
                 true
             }
 
             findPreference<ListPreference>("widget_background_selection")?.setOnPreferenceChangeListener { _, _ ->
-                requireActivity().window.decorView.post {
+                activity?.window?.decorView?.post {
                     updateAllWidgets()
                 }
                 true
@@ -171,7 +174,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun updateAllWidgets() {
-            val context = requireContext().applicationContext
+            val context = context?.applicationContext ?: return
             val appWidgetManager = AppWidgetManager.getInstance(context)
 
             val noteWidgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, NoteWidgetProvider::class.java))
@@ -220,7 +223,7 @@ class SettingsActivity : AppCompatActivity() {
         private fun handleSignInResult(data: Intent?) {
             try {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-                val account = task.getResult(ApiException::class.java)
+                val account = task.getResult(ApiException::class.java)!!
 
                 val credential = GoogleAccountCredential.usingOAuth2(
                     requireContext(),
@@ -235,93 +238,78 @@ class SettingsActivity : AppCompatActivity() {
                     null -> {}
                 }
             } catch (e: ApiException) {
-                Log.w("SettingsFragment", "signInResult:failed code=" + e.statusCode)
+                Log.w("SettingsFragment", "signInResult:failed code=" + e.statusCode, e)
                 Toast.makeText(requireContext(), "Oturum açma hatası: Lütfen tekrar deneyin.", Toast.LENGTH_LONG).show()
             }
         }
 
-        // **DÜZENLENEN FONKSİYON**
         private fun backupNotes(googleDriveManager: GoogleDriveManager) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
-                    // Önce mevcut yedek ve lokal notları kontrol et
-                    val existingBackupFiles = googleDriveManager.getBackupFiles()
                     val localNotes = noteDao.getAllNotes().first()
-
-                    // Eğer Drive'da yedek varsa ve lokalde hiç not yoksa kullanıcıyı uyar
-                    if (!existingBackupFiles.isNullOrEmpty() && localNotes.isEmpty()) {
-                        withContext(Dispatchers.Main) {
-                            AlertDialog.Builder(requireContext())
-                                .setTitle("Yedekleme Uyarısı")
-                                .setMessage("Google Drive'da mevcut bir yedeğiniz bulundu. Mevcut boş not listenizle bu yedeğin üzerine yazmak, eski notlarınızı kalıcı olarak silecektir. Devam etmek istediğinizden emin misiniz?")
-                                .setPositiveButton("Evet, Üzerine Yaz") { _, _ ->
-                                    // Kullanıcı onaylarsa yedeklemeye devam et
-                                    proceedWithBackup(googleDriveManager, localNotes)
-                                }
-                                .setNegativeButton("İptal", null)
-                                .show()
-                        }
-                    } else {
-                        // Eğer bir risk yoksa doğrudan yedeklemeye devam et
-                        proceedWithBackup(googleDriveManager, localNotes)
-                    }
+                    proceedWithBackup(googleDriveManager, localNotes)
                 } catch (e: Exception) {
-                    showError("Yedekleme kontrolü sırasında hata", e)
+                    showError("Yedekleme sırasında hata", e)
                 }
             }
         }
 
-        // **YENİ FONKSİYON:** Asıl yedekleme mantığını içerir.
-        private fun proceedWithBackup(googleDriveManager: GoogleDriveManager, notesToBackup: List<Note>) {
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
-                    }
+        private suspend fun proceedWithBackup(googleDriveManager: GoogleDriveManager, notesToBackup: List<Note>) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(requireContext(), "Yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
+            }
 
-                    val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-                    val appSettings = AppSettings(
-                        themeSelection = sharedPrefs.getString("theme_selection", "system_default"),
-                        colorSelection = sharedPrefs.getString("color_selection", "bordo"),
-                        widgetBackgroundSelection = sharedPrefs.getString("widget_background_selection", "widget_background")
-                    )
+            try {
+                val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                val appSettings = AppSettings(
+                    themeSelection = sharedPrefs.getString("theme_selection", "system_default"),
+                    colorSelection = sharedPrefs.getString("color_selection", "bordo"),
+                    widgetBackgroundSelection = sharedPrefs.getString("widget_background_selection", "widget_background")
+                )
 
-                    val notesForBackup = mutableListOf<Note>()
-                    for (note in notesToBackup) {
-                        val content = gson.fromJson(note.content, NoteContent::class.java)
-                        var imageDriveId: String? = null
-                        if (content.imagePath != null) {
-                            val imageFile = try { content.imagePath?.toUri()?.path?.let { File(it) } } catch (e: Exception) { null }
-                            if (imageFile?.exists() == true) {
-                                imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
-                            }
-                        }
-                        var audioDriveId: String? = null
-                        if (content.audioFilePath != null) {
-                            val audioFile = File(content.audioFilePath)
-                            if (audioFile.exists()) {
-                                audioDriveId = googleDriveManager.uploadMediaFile(audioFile, "audio/mp4")
-                            }
-                        }
-                        val newContent = content.copy(imagePath = imageDriveId, audioFilePath = audioDriveId)
-                        notesForBackup.add(note.copy(content = gson.toJson(newContent)))
-                    }
+                val passwordHash = if (PasswordManager.isPasswordSet(requireContext())) PasswordManager.getPasswordHash(requireContext()) else null
+                val salt = if (PasswordManager.isPasswordSet(requireContext())) PasswordManager.getSalt(requireContext()) else null
 
-                    val backupData = BackupData(settings = appSettings, notes = notesForBackup)
-                    val backupJson = gson.toJson(backupData)
-
-                    val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", backupJson)
-
-                    withContext(Dispatchers.Main) {
-                        if (success) {
-                            Toast.makeText(requireContext(), "Notlar ve ayarlar başarıyla yedeklendi!", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(requireContext(), "Yedekleme sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show()
+                val notesForBackup = mutableListOf<Note>()
+                for (note in notesToBackup) {
+                    val content = gson.fromJson(note.content, NoteContent::class.java)
+                    var imageDriveId: String? = null
+                    content.imagePath?.let { path ->
+                        val imageFile = try { File(path.toUri().path!!) } catch (e: Exception) { null }
+                        if (imageFile?.exists() == true) {
+                            imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
                         }
                     }
-                } catch (e: Exception) {
-                    showError("Yedekleme başarısız", e)
+                    var audioDriveId: String? = null
+                    content.audioFilePath?.let { path ->
+                        val audioFile = File(path)
+                        if (audioFile.exists()) {
+                            audioDriveId = googleDriveManager.uploadMediaFile(audioFile, "audio/mp4")
+                        }
+                    }
+                    val newContent = content.copy(imagePath = imageDriveId, audioFilePath = audioDriveId)
+                    notesForBackup.add(note.copy(content = gson.toJson(newContent)))
                 }
+
+                val backupData = BackupData(
+                    settings = appSettings,
+                    notes = notesForBackup,
+                    passwordHash = passwordHash,
+                    salt = salt
+                )
+                val backupJson = gson.toJson(backupData)
+
+                val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", backupJson)
+
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        Toast.makeText(requireContext(), "Notlar ve ayarlar başarıyla yedeklendi!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(requireContext(), "Yedekleme sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                showError("Yedekleme başarısız", e)
             }
         }
 
@@ -332,16 +320,13 @@ class SettingsActivity : AppCompatActivity() {
                         Toast.makeText(requireContext(), "Yedekler aranıyor...", Toast.LENGTH_SHORT).show()
                     }
 
-                    val backupFiles = googleDriveManager.getBackupFiles()
-                    if (backupFiles.isNullOrEmpty()) {
+                    val backupFile = googleDriveManager.getBackupFiles()?.firstOrNull()
+                    if (backupFile == null) {
                         withContext(Dispatchers.Main) { Toast.makeText(requireContext(), getString(R.string.backup_not_found), Toast.LENGTH_LONG).show() }
                         return@launch
                     }
 
-                    val file = backupFiles.first()
-                    withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "'${file.name}' geri yükleniyor...", Toast.LENGTH_SHORT).show() }
-
-                    val jsonContent = googleDriveManager.downloadJsonBackup(file.id)
+                    val jsonContent = googleDriveManager.downloadJsonBackup(backupFile.id)
                     if (jsonContent.isNullOrBlank()) {
                         withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Yedek dosyası boş veya bozuk.", Toast.LENGTH_LONG).show() }
                         return@launch
@@ -350,47 +335,15 @@ class SettingsActivity : AppCompatActivity() {
                     val type = object : TypeToken<BackupData>() {}.type
                     val backupData: BackupData = gson.fromJson(jsonContent, type)
 
-                    val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-                    with(sharedPrefs.edit()) {
-                        putString("theme_selection", backupData.settings.themeSelection)
-                        putString("color_selection", backupData.settings.colorSelection)
-                        putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
-                        apply()
-                    }
-
-                    val notesFromBackup = backupData.notes
-                    val restoredNotes = mutableListOf<Note>()
-
-                    for (note in notesFromBackup) {
-                        val content = gson.fromJson(note.content, NoteContent::class.java)
-                        var localImagePath: String? = null
-                        if(content.imagePath != null) {
-                            val imageDriveId = content.imagePath
-                            val imageFile = createImageFile()
-                            val success = googleDriveManager.downloadMediaFile(imageDriveId, imageFile)
-                            if (success) {
-                                localImagePath = imageFile.toURI().toString()
-                            }
-                        }
-                        var localAudioPath: String? = null
-                        if(content.audioFilePath != null) {
-                            val audioDriveId = content.audioFilePath
-                            val audioFile = createAudioFile()
-                            val success = googleDriveManager.downloadMediaFile(audioDriveId, audioFile)
-                            if (success) {
-                                localAudioPath = audioFile.absolutePath
-                            }
-                        }
-                        val finalContent = content.copy(imagePath = localImagePath, audioFilePath = localAudioPath)
-                        restoredNotes.add(note.copy(content = gson.toJson(finalContent)))
-                    }
-
-                    noteDao.deleteAllNotes()
-                    noteDao.insertAll(restoredNotes)
-
+                    // ANA MANTIK DEĞİŞİKLİĞİ: UI işlemini Main thread'de yap
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), getString(R.string.restore_success), Toast.LENGTH_LONG).show()
-                        requireActivity().recreate()
+                        // Eğer yedekte şifre varsa, sormak için dialog göster
+                        if (backupData.passwordHash != null && backupData.salt != null) {
+                            showPasswordPromptForRestore(googleDriveManager, backupData)
+                        } else {
+                            // Şifre yoksa, onay al ve direkt yükle
+                            showRestoreConfirmationDialog(googleDriveManager, backupData)
+                        }
                     }
 
                 } catch (e: Exception) {
@@ -399,20 +352,114 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // YENİ: Şifresiz geri yükleme için onay dialog'u
+        private fun showRestoreConfirmationDialog(googleDriveManager: GoogleDriveManager, backupData: BackupData) {
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.restore_dialog_title))
+                .setMessage(getString(R.string.restore_dialog_message))
+                .setPositiveButton(getString(R.string.restore_confirm)) { _, _ ->
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        proceedWithRestore(googleDriveManager, backupData)
+                    }
+                }
+                .setNegativeButton(getString(R.string.dialog_cancel), null)
+                .show()
+        }
+
+
+        private fun showPasswordPromptForRestore(googleDriveManager: GoogleDriveManager, backupData: BackupData) {
+            val editText = EditText(requireContext()).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                hint = getString(R.string.enter_current_password_hint)
+            }
+
+            AlertDialog.Builder(requireContext())
+                .setTitle("Parola Gerekli")
+                .setMessage("Bu yedek parola ile korunuyor. Lütfen devam etmek için parolanızı girin.")
+                .setView(editText)
+                .setPositiveButton("Onayla") { _, _ ->
+                    val enteredPassword = editText.text.toString()
+                    // DÜZELTME: Null kontrolü burada tekrar yapılıyor.
+                    if (backupData.passwordHash != null && backupData.salt != null) {
+                        if (PasswordManager.checkPassword(enteredPassword, backupData.salt, backupData.passwordHash)) {
+                            // Parola doğruysa, işlemi IO thread'de başlat
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                proceedWithRestore(googleDriveManager, backupData)
+                            }
+                        } else {
+                            Toast.makeText(requireContext(), "Yanlış parola!", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                .setNegativeButton("İptal", null)
+                .show()
+        }
+
+        private suspend fun proceedWithRestore(googleDriveManager: GoogleDriveManager, backupData: BackupData) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(requireContext(), "Geri yükleme başlatılıyor...", Toast.LENGTH_SHORT).show()
+            }
+
+            try {
+                PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
+                    putString("theme_selection", backupData.settings.themeSelection)
+                    putString("color_selection", backupData.settings.colorSelection)
+                    putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
+                }
+
+                val notesFromBackup = backupData.notes
+                val restoredNotes = mutableListOf<Note>()
+
+                for (note in notesFromBackup) {
+                    val content = gson.fromJson(note.content, NoteContent::class.java)
+                    var localImagePath: String? = null
+                    content.imagePath?.let { driveId ->
+                        val imageFile = createImageFile()
+                        if (googleDriveManager.downloadMediaFile(driveId, imageFile)) {
+                            localImagePath = imageFile.toURI().toString()
+                        }
+                    }
+                    var localAudioPath: String? = null
+                    content.audioFilePath?.let { driveId ->
+                        val audioFile = createAudioFile()
+                        if (googleDriveManager.downloadMediaFile(driveId, audioFile)) {
+                            localAudioPath = audioFile.absolutePath
+                        }
+                    }
+                    val finalContent = content.copy(imagePath = localImagePath, audioFilePath = localAudioPath)
+                    restoredNotes.add(note.copy(content = gson.toJson(finalContent)))
+                }
+
+                noteDao.deleteAllNotes()
+                noteDao.insertAll(restoredNotes)
+
+                if (backupData.passwordHash != null && backupData.salt != null) {
+                    PasswordManager.restorePassword(requireContext(), backupData.passwordHash, backupData.salt)
+                }
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), getString(R.string.restore_success), Toast.LENGTH_LONG).show()
+                    activity?.recreate()
+                }
+            } catch (e: Exception) {
+                showError("Geri yükleme işlemi başarısız oldu", e)
+            }
+        }
+
         @Throws(IOException::class)
         private fun createImageFile(): File {
+            val context = requireContext()
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val storageDir: File = requireContext().getExternalFilesDir("RestoredImages")
-                ?: requireContext().filesDir
+            val storageDir: File = context.getExternalFilesDir("RestoredImages") ?: context.filesDir
             storageDir.mkdirs()
             return File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)
         }
 
         @Throws(IOException::class)
         private fun createAudioFile(): File {
+            val context = requireContext()
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val storageDir: File = requireContext().getExternalFilesDir("RestoredAudio")
-                ?: requireContext().filesDir
+            val storageDir: File = context.getExternalFilesDir("RestoredAudio") ?: context.filesDir
             storageDir.mkdirs()
             return File.createTempFile("AUD_${timeStamp}_", ".mp3", storageDir)
         }
