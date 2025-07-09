@@ -5,6 +5,10 @@
         name="audio_notes"
         path="." />
 
+    <external-media-path
+        name="my_media"
+        path="." />
+
     <cache-path
         name="shared_images"
         path="images/" />

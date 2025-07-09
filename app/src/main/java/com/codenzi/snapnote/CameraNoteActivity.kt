@@ -17,7 +17,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.codenzi.snapnote.databinding.ActivityCameraBinding
-import com.github.chrisbanes.photoview.BuildConfig
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import java.text.SimpleDateFormat
@@ -73,7 +72,7 @@ class CameraNoteActivity : AppCompatActivity() {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     val savedUri = FileProvider.getUriForFile(
                         this@CameraNoteActivity,
-                        "${BuildConfig.APPLICATION_ID}.provider",
+                        "com.codenzi.snapnote.provider", // DÜZELTME: BuildConfig.APPLICATION_ID yerine doğrudan paket adı kullanıldı.
                         photoFile
                     )
                     val msg = "Photo capture succeeded: $savedUri"
