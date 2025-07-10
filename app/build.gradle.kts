@@ -16,14 +16,15 @@ android {
         targetSdk = 36
         versionCode = 3
         versionName = "1.0.2"
-
-        // HATA BURADAYDI - SATIRLAR BİRLEŞTİRİLDİ
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Kod küçültmeyi etkinleştirir. Bu, kullanılmayan kodları kaldırarak uygulama boyutunu azaltır.
+            isMinifyEnabled = true
+            // Kaynak küçültmeyi etkinleştirir. Bu, kullanılmayan kaynakları kaldırır.
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -40,7 +41,6 @@ android {
     buildFeatures {
         viewBinding = true
     }
-
     packaging {
         resources {
             excludes.add("META-INF/INDEX.LIST")
@@ -54,7 +54,6 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.51.1")
     ksp("com.google.dagger:hilt-android-compiler:2.51.1")
     implementation(libs.androidx.security.crypto)
-
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -69,7 +68,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation(libs.androidx.preference.ktx)
     implementation(libs.kotlinx.coroutines.android)
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1") // Olası await() hatası için
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
@@ -77,20 +76,12 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.coil)
     implementation(libs.photoview)
-
-    // Google ile oturum açma
     implementation("com.google.android.gms:play-services-auth:21.2.0")
-
-    // GSON
     implementation("com.google.code.gson:gson:2.10.1")
-
-    // Google Drive Kütüphaneleri
     implementation(libs.google.api.client)
     implementation(libs.google.oauth.client)
     implementation(libs.google.api.client.android)
     implementation(libs.google.http.client.android)
     implementation(libs.google.api.services.drive)
-
-    // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
