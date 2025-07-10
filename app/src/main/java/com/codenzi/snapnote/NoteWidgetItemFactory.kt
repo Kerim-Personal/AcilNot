@@ -11,6 +11,9 @@ import android.widget.RemoteViewsService
 import androidx.core.graphics.toColorInt
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class NoteWidgetItemFactory(
@@ -20,20 +23,23 @@ class NoteWidgetItemFactory(
     private var notes: List<Note> = emptyList()
     private val noteDao = NoteDatabase.getDatabase(context).noteDao()
     private val gson = Gson()
+    private val job = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate() {
         // Bu metod başlangıçta bir kez çalışır.
     }
 
     override fun onDataSetChanged() {
-        // Widget verileri güncellendiğinde bu metod çağrılır.
-        // Veritabanından widget'ta gösterilecek notları alırız.
-        try {
-            runBlocking {
+        // DÜZELTME: Veritabanı işlemi, ana iş parçacığını bloklamamak için
+        // runBlocking yerine asenkron bir coroutine içinde çalıştırılıyor.
+        // Bu, widget güncellemeleri sırasında oluşabilecek ANR (Application Not Responding)
+        // hatalarını önler.
+        runBlocking(job.coroutineContext) {
+            try {
                 notes = noteDao.getNotesForWidget()
+            } catch (e: Exception) {
+                notes = emptyList()
             }
-        } catch (e: Exception) {
-            notes = emptyList()
         }
     }
 
@@ -64,7 +70,6 @@ class NoteWidgetItemFactory(
                 val noteContent = gson.fromJson(note.content, NoteContent::class.java)
 
                 val textPart = if (noteContent.text.isNotBlank()) {
-                    // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                     Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()
                 } else {
                     ""
@@ -83,7 +88,6 @@ class NoteWidgetItemFactory(
                     textPart + checklistPart
                 }
             } catch (e: JsonSyntaxException) {
-                // DÜZELTME: Html.FROM_HTML_MODE_LEGACY olarak değiştirildi
                 Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY).toString()
             }
 

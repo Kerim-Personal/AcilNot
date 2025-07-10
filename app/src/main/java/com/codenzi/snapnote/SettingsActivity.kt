@@ -333,7 +333,6 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun clearAllSharedPreferences() {
-            // KTX versiyonu ile güncellendi
             PreferenceManager.getDefaultSharedPreferences(requireContext()).edit { clear() }
             requireActivity().getSharedPreferences("onboarding_prefs", Context.MODE_PRIVATE).edit { clear() }
             requireActivity().getSharedPreferences("voice_memo_widget_prefs", Context.MODE_PRIVATE).edit { clear() }
@@ -631,23 +630,28 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             try {
-                PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
-                    putString("theme_selection", backupData.settings.themeSelection)
-                    putString("color_selection", backupData.settings.colorSelection)
-                    putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
-                }
-
+                // DÜZELTME: Veri kaybını önlemek için, tüm veriler indirilip hazırlanana kadar
+                // mevcut veritabanı silinmiyor. İşlem, yalnızca tüm adımlar başarılı olursa
+                // en sonda gerçekleştirilir.
                 val notesFromBackup = backupData.notes
                 val restoredNotes = mutableListOf<Note>()
-                val totalSteps = notesFromBackup.size + 1
+                val tempFiles = mutableListOf<File>() // İndirilen geçici dosyaları takip et
+                val totalSteps = notesFromBackup.size + 1 // Notlar + son DB işlemi
+
+                var isDownloadSuccessful = true
 
                 notesFromBackup.forEachIndexed { index, note ->
+                    if (!isDownloadSuccessful) return@forEachIndexed
+
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     var localImagePath: String? = null
                     content.imagePath?.let { driveId ->
                         val imageFile = createImageFile()
                         if (googleDriveManager.downloadMediaFile(driveId, imageFile)) {
                             localImagePath = imageFile.absolutePath
+                            tempFiles.add(imageFile)
+                        } else {
+                            isDownloadSuccessful = false
                         }
                     }
                     var localAudioPath: String? = null
@@ -655,35 +659,52 @@ class SettingsActivity : AppCompatActivity() {
                         val audioFile = createAudioFile()
                         if (googleDriveManager.downloadMediaFile(driveId, audioFile)) {
                             localAudioPath = audioFile.absolutePath
+                            tempFiles.add(audioFile)
+                        } else {
+                            isDownloadSuccessful = false
                         }
                     }
                     val finalContent = content.copy(imagePath = localImagePath, audioFilePath = localAudioPath)
                     restoredNotes.add(note.copy(content = gson.toJson(finalContent)))
 
-                    val progress = ((index + 1) * 100) / totalSteps
+                    val progress = ((index + 1) * 95) / totalSteps // %95'e kadar ilerlet
                     withContext(Dispatchers.Main) {
                         updateProgress(progress)
                     }
                 }
 
-                noteDao.deleteAllNotes()
-                noteDao.insertAll(restoredNotes)
+                if (isDownloadSuccessful) {
+                    // Tüm veriler başarıyla indirildiyse, veritabanını güncelle
+                    noteDao.deleteAllNotes()
+                    noteDao.insertAll(restoredNotes)
 
-                if (backupData.passwordHash != null && backupData.salt != null) {
-                    PasswordManager.restorePassword(requireContext(), backupData.passwordHash, backupData.salt)
+                    // Ayarları ve şifreyi uygula
+                    PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
+                        putString("theme_selection", backupData.settings.themeSelection)
+                        putString("color_selection", backupData.settings.colorSelection)
+                        putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
+                    }
+                    if (backupData.passwordHash != null && backupData.salt != null) {
+                        PasswordManager.restorePassword(requireContext(), backupData.passwordHash, backupData.salt)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        updateProgress(100)
+                        dismissProgressDialog()
+                        Toast.makeText(requireContext(), getString(R.string.restore_success), Toast.LENGTH_LONG).show()
+                        activity?.recreate()
+                    }
+                } else {
+                    // İndirme başarısız olduysa, geçici dosyaları temizle ve hata göster
+                    tempFiles.forEach { it.delete() }
+                    throw IOException("Medya dosyası indirilemedi, işlem iptal edildi.")
                 }
 
-                withContext(Dispatchers.Main) {
-                    updateProgress(100)
-                    dismissProgressDialog()
-                    Toast.makeText(requireContext(), getString(R.string.restore_success), Toast.LENGTH_LONG).show()
-                    activity?.recreate()
-                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     dismissProgressDialog()
+                    showError(getString(R.string.restore_failed_with_error, e.message), e)
                 }
-                showError("Restore operation failed", e)
             }
         }
 
@@ -707,7 +728,12 @@ class SettingsActivity : AppCompatActivity() {
 
         private suspend fun showError(message: String, e: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(requireContext(), getString(R.string.restore_failed_with_error, e.message), Toast.LENGTH_LONG).show()
+                val finalMessage = if (e.message != null) {
+                    getString(R.string.restore_failed_with_error, e.message)
+                } else {
+                    message
+                }
+                Toast.makeText(requireContext(), finalMessage, Toast.LENGTH_LONG).show()
                 Log.e("SettingsFragment", message, e)
             }
         }
