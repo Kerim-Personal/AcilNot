@@ -93,28 +93,41 @@ class PasswordSettingsActivity : AppCompatActivity() {
         val newPassword = binding.etNewPassword.text.toString()
         val confirmPassword = binding.etConfirmPassword.text.toString()
 
-        // DÜZELTME: 'this' parametreleri kaldırıldı.
+        // GÜVENLİK: Mevcut şifreyi kontrol et
         if (PasswordManager.isPasswordSet() && !PasswordManager.checkPassword(currentPassword)) {
-            Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.current_password_incorrect_detailed), Toast.LENGTH_LONG).show()
             return
         }
+        
+        // DOĞRULAMA: Şifre alanları boş mu kontrol et
         if (newPassword.isBlank() || confirmPassword.isBlank()) {
-            Toast.makeText(this, getString(R.string.toast_password_fields_cannot_be_empty), Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.password_fields_empty_detailed), Toast.LENGTH_LONG).show()
             return
         }
+        
+        // DOĞRULAMA: Şifre minimum uzunluk kontrolü
         if (newPassword.length < 4) {
-            Toast.makeText(this, R.string.password_too_short_error, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.password_too_short_detailed), Toast.LENGTH_LONG).show()
             return
         }
+        
+        // DOĞRULAMA: Şifre ve tekrar uyuşma kontrolü
         if (newPassword != confirmPassword) {
-            Toast.makeText(this, R.string.password_mismatch_error, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.password_mismatch_detailed), Toast.LENGTH_LONG).show()
             return
         }
 
-        // DÜZELTME: 'this' parametresi kaldırıldı.
-        PasswordManager.setPassword(newPassword)
-        Toast.makeText(this, "Parola ayarlandı. Otomatik yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
-        triggerAutomaticBackup()
+        try {
+            PasswordManager.setPassword(newPassword)
+            Toast.makeText(this, getString(R.string.password_set_success_backup_starting), Toast.LENGTH_SHORT).show()
+            
+            // GÜVENLİK: Otomatik yedeklemenin başlatılıp başlatılmadığını kontrol et
+            if (!triggerAutomaticBackup()) {
+                Toast.makeText(this, getString(R.string.password_set_but_backup_failed), Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.password_set_failed, e.message), Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun showDisablePasswordConfirmationDialog() {
@@ -128,33 +141,49 @@ class PasswordSettingsActivity : AppCompatActivity() {
 
     private fun disablePassword() {
         val currentPassword = binding.etCurrentPassword.text.toString()
-        // DÜZELTME: 'this' parametresi kaldırıldı.
+        
+        // DOĞRULAMA: Mevcut şifreyi kontrol et
         if (!PasswordManager.checkPassword(currentPassword)) {
-            Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.current_password_incorrect_disable_detailed), Toast.LENGTH_LONG).show()
             return
         }
 
-        // DÜZELTME: 'this' parametresi kaldırıldı.
-        PasswordManager.disablePassword()
-        Toast.makeText(this, "Parola kaldırıldı. Otomatik yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
-        triggerAutomaticBackup()
+        try {
+            PasswordManager.disablePassword()
+            Toast.makeText(this, getString(R.string.password_disabled_backup_starting), Toast.LENGTH_SHORT).show()
+            
+            // GÜVENLİK: Otomatik yedeklemenin başlatılıp başlatılmadığını kontrol et
+            if (!triggerAutomaticBackup()) {
+                Toast.makeText(this, getString(R.string.password_disabled_but_backup_failed), Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.password_disable_failed, e.message), Toast.LENGTH_LONG).show()
+        }
     }
 
-    private fun triggerAutomaticBackup() {
-        val lastSignedInAccount = GoogleSignIn.getLastSignedInAccount(this)
-        val driveScope = Scope("https://www.googleapis.com/auth/drive.appdata")
+    private fun triggerAutomaticBackup(): Boolean {
+        return try {
+            val lastSignedInAccount = GoogleSignIn.getLastSignedInAccount(this)
+            val driveScope = Scope("https://www.googleapis.com/auth/drive.appdata")
 
-        if (lastSignedInAccount != null && lastSignedInAccount.grantedScopes.contains(driveScope)) {
-            performAutomaticBackup(lastSignedInAccount)
-        } else {
-            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestEmail()
-                .requestScopes(driveScope)
-                .build()
-            val googleSignInClient = GoogleSignIn.getClient(this, gso)
-            googleSignInClient.signOut().addOnCompleteListener {
-                googleSignInLauncher.launch(googleSignInClient.signInIntent)
+            if (lastSignedInAccount != null && lastSignedInAccount.grantedScopes.contains(driveScope)) {
+                performAutomaticBackup(lastSignedInAccount)
+                true
+            } else {
+                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestEmail()
+                    .requestScopes(driveScope)
+                    .build()
+                val googleSignInClient = GoogleSignIn.getClient(this, gso)
+                googleSignInClient.signOut().addOnCompleteListener {
+                    googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                }
+                true // Yedekleme başlatıldı (kullanıcı oturum açması bekleniyor)
             }
+        } catch (e: Exception) {
+            // HATA YÖNETİMİ: Yedekleme başlatma hatası
+            Toast.makeText(this, getString(R.string.backup_trigger_failed, e.message), Toast.LENGTH_LONG).show()
+            false
         }
     }
 
