@@ -246,25 +246,56 @@ class NoteActivity : AppCompatActivity() {
             return
         }
 
-        setResult(Activity.RESULT_OK)
+        try {
+            setResult(Activity.RESULT_OK)
 
-        val noteTextHtml = if (noteContentText != null && !noteContentText.toString().isBlank()) {
-            Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
-        } else {
-            ""
+            val noteTextHtml = if (noteContentText != null && !noteContentText.toString().isBlank()) {
+                Html.toHtml(noteContentText, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
+            } else {
+                ""
+            }
+
+            // GÜVENLİK: Dosya yolları mevcut mu kontrol et
+            val validatedAudioPath = audioPath?.let { path ->
+                if (File(path).exists()) path else {
+                    Log.w("NoteActivity", "Audio file not found: $path")
+                    null
+                }
+            }
+
+            val validatedImagePath = imagePath?.let { path ->
+                val file = try {
+                    File(Uri.parse(path).path ?: path)
+                } catch (e: Exception) {
+                    Log.w("NoteActivity", "Invalid image path: $path")
+                    null
+                }
+                if (file?.exists() == true) path else {
+                    Log.w("NoteActivity", "Image file not found: $path")
+                    null
+                }
+            }
+
+            viewModel.saveOrUpdateNote(
+                currentNoteId = currentNoteId,
+                title = titleText,
+                contentHtml = noteTextHtml,
+                checklistItems = checklistItems,
+                color = selectedColor,
+                audioPath = validatedAudioPath,
+                imagePath = validatedImagePath,
+                isFromWidget = isFromWidget
+            )
+            updateAllWidgets()
+            
+        } catch (e: Exception) {
+            // HATA YÖNETİMİ: Kayıt işlemi sırasında oluşan hatalar
+            Log.e("NoteActivity", "Save operation failed: ${e.message}", e)
+            Toast.makeText(this, getString(R.string.save_failed_detailed, e.message), Toast.LENGTH_LONG).show()
+            
+            // Kritik hata durumunda kullanıcıya seçenek sun
+            showSaveErrorDialog(e)
         }
-
-        viewModel.saveOrUpdateNote(
-            currentNoteId = currentNoteId,
-            title = titleText,
-            contentHtml = noteTextHtml,
-            checklistItems = checklistItems,
-            color = selectedColor,
-            audioPath = audioPath,
-            imagePath = imagePath,
-            isFromWidget = isFromWidget
-        )
-        updateAllWidgets()
     }
 
     private fun takePicture() {
@@ -316,9 +347,13 @@ class NoteActivity : AppCompatActivity() {
             }
             isRecording = true
             binding.btnRecordAudio.setIconResource(R.drawable.ic_stop_24) // İkonu değiştir
-            Toast.makeText(this, "Kayıt başladı...", Toast.LENGTH_SHORT).show()
-        } catch (_: IOException) { // DÜZELTİLDİ
-            Toast.makeText(this, "Kayıt başlatılamadı.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.recording_started), Toast.LENGTH_SHORT).show()
+        } catch (e: IOException) {
+            Log.e("NoteActivity", "Recording start failed: ${e.message}", e)
+            Toast.makeText(this, getString(R.string.recording_start_failed, e.message), Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Log.e("NoteActivity", "Recording start unexpected error: ${e.message}", e)
+            Toast.makeText(this, getString(R.string.recording_start_unexpected_error), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -758,6 +793,25 @@ class NoteActivity : AppCompatActivity() {
 
     private fun formatDate(timestamp: Long, format: String): String =
         SimpleDateFormat(format, Locale.getDefault()).format(Date(timestamp))
+
+    /**
+     * GÜVENLİK: Kayıt hatası durumunda kullanıcıya seçenek sunar
+     */
+    private fun showSaveErrorDialog(error: Exception) {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.save_error_title))
+            .setMessage(getString(R.string.save_error_message, error.message))
+            .setPositiveButton(getString(R.string.try_again)) { _, _ ->
+                // Tekrar deneme
+                performSave()
+            }
+            .setNegativeButton(getString(R.string.exit_without_saving)) { _, _ ->
+                // Kaydetmeden çık
+                finish()
+            }
+            .setNeutralButton(getString(R.string.stay_in_editor), null)
+            .show()
+    }
 
     private fun prepareMediaPlayer() {
         releaseMediaPlayer()

@@ -13,8 +13,11 @@ import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import android.util.Log
 
 class NoteWidgetItemFactory(
     private val context: Context
@@ -23,23 +26,58 @@ class NoteWidgetItemFactory(
     private var notes: List<Note> = emptyList()
     private val noteDao = NoteDatabase.getDatabase(context).noteDao()
     private val gson = Gson()
-    private val job = CoroutineScope(Dispatchers.IO)
+    
+    // PERFORMANS: Blocking operations yerine süspend fonksiyon kullanımı
+    @Volatile
+    private var isDataLoading = false
 
     override fun onCreate() {
         // Bu metod başlangıçta bir kez çalışır.
     }
 
     override fun onDataSetChanged() {
-        // DÜZELTME: Veritabanı işlemi, ana iş parçacığını bloklamamak için
-        // runBlocking yerine asenkron bir coroutine içinde çalıştırılıyor.
-        // Bu, widget güncellemeleri sırasında oluşabilecek ANR (Application Not Responding)
-        // hatalarını önler.
-        runBlocking(job.coroutineContext) {
-            try {
-                notes = noteDao.getNotesForWidget()
-            } catch (e: Exception) {
-                notes = emptyList()
+        // PERFORMANS İYİLEŞTİRMESİ: runBlocking yerine asenkron yaklaşım
+        // Widget güncellemeleri sırasında oluşabilecek ANR (Application Not Responding)
+        // hatalarını önlemek için özel bir yaklaşım kullanıyoruz.
+        
+        if (isDataLoading) {
+            // Eğer zaten bir yükleme işlemi devam ediyorsa, bekle
+            return
+        }
+        
+        isDataLoading = true
+        
+        try {
+            // SINCHRONIZATION: Thread-safe veri yükleme
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            
+            // Timeout ile güvenli veri yükleme
+            val job = scope.launch {
+                try {
+                    val loadedNotes = noteDao.getNotesForWidget()
+                    notes = loadedNotes
+                } catch (e: Exception) {
+                    Log.e("NoteWidgetItemFactory", "Failed to load notes for widget: ${e.message}", e)
+                    notes = emptyList()
+                }
             }
+            
+            // PERFORMANS: Maksimum 5 saniye bekleme süresi
+            runBlocking {
+                withTimeoutOrNull(5000L) {
+                    job.join()
+                } ?: run {
+                    Log.w("NoteWidgetItemFactory", "Widget data loading timed out, using cached data")
+                    job.cancel()
+                }
+            }
+            
+        } catch (e: Exception) {
+            Log.e("NoteWidgetItemFactory", "Widget data update failed: ${e.message}", e)
+            // Hata durumunda boş liste kullan
+            notes = emptyList()
+        } finally {
+            isDataLoading = false
         }
     }
 
@@ -52,7 +90,11 @@ class NoteWidgetItemFactory(
     override fun getViewAt(position: Int): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_note_item)
 
-        if (position >= notes.size) {
+        // GÜVENLİK: Pozisyon kontrolü
+        if (position >= notes.size || position < 0) {
+            Log.w("NoteWidgetItemFactory", "Invalid position: $position, notes size: ${notes.size}")
+            views.setTextViewText(R.id.tv_widget_item_title, "")
+            views.setTextViewText(R.id.tv_widget_item_content, context.getString(R.string.widget_item_error))
             return views
         }
 
@@ -88,6 +130,7 @@ class NoteWidgetItemFactory(
                     textPart + checklistPart
                 }
             } catch (e: JsonSyntaxException) {
+                Log.w("NoteWidgetItemFactory", "Failed to parse note content for position $position: ${e.message}")
                 Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY).toString()
             }
 
@@ -101,6 +144,7 @@ class NoteWidgetItemFactory(
             try {
                 views.setInt(R.id.widget_item_container, "setBackgroundColor", note.color.toColorInt())
             } catch (e: Exception) {
+                Log.w("NoteWidgetItemFactory", "Failed to set background color for position $position: ${e.message}")
                 views.setInt(R.id.widget_item_container, "setBackgroundColor", Color.WHITE)
             }
 
@@ -114,14 +158,24 @@ class NoteWidgetItemFactory(
 
             return views
         } catch (e: Exception) {
+            Log.e("NoteWidgetItemFactory", "Error creating widget view at position $position: ${e.message}", e)
             views.setTextViewText(R.id.tv_widget_item_title, "")
-            views.setTextViewText(R.id.tv_widget_item_content, "Not yüklenirken hata oluştu")
+            views.setTextViewText(R.id.tv_widget_item_content, context.getString(R.string.widget_item_load_error))
             return views
         }
     }
 
     override fun getLoadingView(): RemoteViews? = null
     override fun getViewTypeCount(): Int = 1
-    override fun getItemId(position: Int): Long = notes[position].id.toLong()
+    override fun getItemId(position: Int): Long = try {
+        if (position < notes.size && position >= 0) {
+            notes[position].id.toLong()
+        } else {
+            position.toLong()
+        }
+    } catch (e: Exception) {
+        Log.w("NoteWidgetItemFactory", "Error getting item ID for position $position: ${e.message}")
+        position.toLong()
+    }
     override fun hasStableIds(): Boolean = true
 }

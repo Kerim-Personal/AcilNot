@@ -58,9 +58,17 @@ interface NoteDao {
     @Query("DELETE FROM notes WHERE isDeleted = 1 AND deletedAt IS NOT NULL AND deletedAt < :thirtyDaysAgoTimestamp")
     suspend fun deleteOldTrashedNotes(thirtyDaysAgoTimestamp: Long)
 
+    // GÜVENLİK: Temizlik işlemi öncesi silinecek kayıt sayısını kontrol et
+    @Query("SELECT COUNT(*) FROM notes WHERE isDeleted = 1 AND deletedAt IS NOT NULL AND deletedAt < :thirtyDaysAgoTimestamp")
+    suspend fun countOldTrashedNotes(thirtyDaysAgoTimestamp: Long): Int
+
     // YENİ: Geri yükleme işlemi için tüm notları temizler
     @Query("DELETE FROM notes")
     suspend fun deleteAllNotes()
+
+    // GÜVENLİK: Toplam not sayısını kontrol et
+    @Query("SELECT COUNT(*) FROM notes")
+    suspend fun getTotalNotesCount(): Int
 
     // YENİ: Geri yüklenen notları veritabanına toplu halde ekler
     @Insert(onConflict = OnConflictStrategy.REPLACE)

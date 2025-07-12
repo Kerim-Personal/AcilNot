@@ -86,20 +86,27 @@ class TrashActivity : AppCompatActivity() {
     private fun observeDeletedNotes() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                noteDao.getDeletedNotes().collect { notes ->
-                    deletedNoteAdapter.updateNotes(notes)
-                    if (notes.isEmpty()) {
-                        binding.tvEmptyTrash.visibility = View.VISIBLE
-                        binding.rvDeletedNotes.visibility = View.GONE
-                    } else {
-                        binding.tvEmptyTrash.visibility = View.GONE
-                        binding.rvDeletedNotes.visibility = View.VISIBLE
-                    }
-                    invalidateOptionsMenu()
+                try {
+                    noteDao.getDeletedNotes().collect { notes ->
+                        deletedNoteAdapter.updateNotes(notes)
+                        if (notes.isEmpty()) {
+                            binding.tvEmptyTrash.visibility = View.VISIBLE
+                            binding.rvDeletedNotes.visibility = View.GONE
+                        } else {
+                            binding.tvEmptyTrash.visibility = View.GONE
+                            binding.rvDeletedNotes.visibility = View.VISIBLE
+                        }
+                        invalidateOptionsMenu()
 
-                    if (notes.isEmpty() && isSelectionMode) {
-                        exitSelectionMode()
+                        if (notes.isEmpty() && isSelectionMode) {
+                            exitSelectionMode()
+                        }
                     }
+                } catch (e: Exception) {
+                    // HATA YÖNETİMİ: Veritabanı erişim hatası durumunda kullanıcıyı bilgilendir
+                    Toast.makeText(this@TrashActivity, "Çöp kutusundaki notlar yüklenirken hata oluştu: ${e.message}", Toast.LENGTH_LONG).show()
+                    binding.tvEmptyTrash.visibility = View.VISIBLE
+                    binding.rvDeletedNotes.visibility = View.GONE
                 }
             }
         }
@@ -213,14 +220,25 @@ class TrashActivity : AppCompatActivity() {
                 true
             }
             R.id.action_select_all -> {
-                deletedNoteAdapter.selectAll()
-                val count = deletedNoteAdapter.itemCount
-                supportActionBar?.title = resources.getQuantityString(R.plurals.selection_title, count, count)
-                invalidateOptionsMenu()
+                // GÜVENLİK: Seçim yapılacak öğe var mı kontrol et
+                val itemCount = deletedNoteAdapter.itemCount
+                if (itemCount > 0) {
+                    deletedNoteAdapter.selectAll()
+                    supportActionBar?.title = resources.getQuantityString(R.plurals.selection_title, itemCount, itemCount)
+                    invalidateOptionsMenu()
+                } else {
+                    Toast.makeText(this, getString(R.string.no_items_to_select), Toast.LENGTH_SHORT).show()
+                }
                 true
             }
             R.id.action_delete_selected -> {
-                showPermanentDeleteConfirmationDialog(deletedNoteAdapter.getSelectedNotes())
+                val selectedNotes = deletedNoteAdapter.getSelectedNotes()
+                // GÜVENLİK: Seçilmiş öğe var mı kontrol et
+                if (selectedNotes.isNotEmpty()) {
+                    showPermanentDeleteConfirmationDialog(selectedNotes)
+                } else {
+                    Toast.makeText(this, getString(R.string.no_items_selected), Toast.LENGTH_SHORT).show()
+                }
                 true
             }
             else -> super.onOptionsItemSelected(item)

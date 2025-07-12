@@ -261,4 +261,31 @@
     <string name="launcher_does_not_support_feature">Your launcher (home screen app) does not support this feature.</string>
     <string name="feature_requires_android_oreo">This feature is available on Android 8.0 (Oreo) and above.</string>
     <string name="an_error_occurred_during_backup_simple">An error occurred during backup.</string>
+    
+    <!-- New improved error messages -->
+    <string name="current_password_incorrect_detailed">Current password is incorrect. Please check your password and try again.</string>
+    <string name="password_fields_empty_detailed">New password and confirmation fields cannot be empty. Please enter a valid password.</string>
+    <string name="password_too_short_detailed">Password must be at least 4 characters long. Please choose a longer password.</string>
+    <string name="password_mismatch_detailed">New password and confirmation do not match. Please verify both fields are identical.</string>
+    <string name="password_set_success_backup_starting">Password has been set successfully. Starting automatic backup...</string>
+    <string name="password_set_but_backup_failed">Password was set but automatic backup failed. You can try backing up manually later.</string>
+    <string name="password_set_failed">Failed to set password: %s. Please try again.</string>
+    <string name="current_password_incorrect_disable_detailed">Current password is incorrect. Please enter the correct password to disable security.</string>
+    <string name="password_disabled_backup_starting">Password has been disabled successfully. Starting automatic backup...</string>
+    <string name="password_disabled_but_backup_failed">Password was disabled but automatic backup failed. You can try backing up manually later.</string>
+    <string name="password_disable_failed">Failed to disable password: %s. Please try again.</string>
+    <string name="backup_trigger_failed">Failed to start backup process: %s</string>
+    <string name="no_items_to_select">No items available to select.</string>
+    <string name="no_items_selected">No items are currently selected.</string>
+    <string name="save_failed_detailed">Failed to save note: %s. Please try again.</string>
+    <string name="save_error_title">Save Error</string>
+    <string name="save_error_message">An error occurred while saving your note:\n\n%s\n\nWhat would you like to do?</string>
+    <string name="try_again">Try Again</string>
+    <string name="exit_without_saving">Exit Without Saving</string>
+    <string name="stay_in_editor">Stay in Editor</string>
+    <string name="recording_started">Recording started...</string>
+    <string name="recording_start_failed">Failed to start recording: %s</string>
+    <string name="recording_start_unexpected_error">An unexpected error occurred while starting recording. Please try again.</string>
+    <string name="widget_item_error">Error loading note</string>
+    <string name="widget_item_load_error">Failed to load note content</string>
 </resources>

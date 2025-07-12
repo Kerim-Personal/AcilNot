@@ -33,6 +33,12 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
 
     suspend fun uploadJsonBackup(fileName: String, content: String): Boolean = withContext(Dispatchers.IO) {
         try {
+            // GÜVENLİK: İçerik boş mu kontrol et
+            if (content.isBlank()) {
+                Log.w("GoogleDriveManager", "uploadJsonBackup failed: empty content")
+                return@withContext false
+            }
+
             val fileMetadata = File().apply {
                 name = fileName
             }
@@ -40,14 +46,21 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
             val contentStream = ByteArrayContent("application/json", content.toByteArray())
 
             if (existingFile != null) {
+                // Mevcut dosyayı güncelle
                 drive.files().update(existingFile.id, fileMetadata, contentStream).execute()
+                Log.i("GoogleDriveManager", "uploadJsonBackup: existing file updated successfully")
             } else {
+                // Yeni dosya oluştur
                 fileMetadata.parents = listOf(appDataFolderSpace)
                 drive.files().create(fileMetadata, contentStream).setFields("id").execute()
+                Log.i("GoogleDriveManager", "uploadJsonBackup: new file created successfully")
             }
             return@withContext true
         } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "uploadJsonBackup failed", e)
+            Log.e("GoogleDriveManager", "uploadJsonBackup failed: ${e.message}", e)
+            return@withContext false
+        } catch (e: Exception) {
+            Log.e("GoogleDriveManager", "uploadJsonBackup unexpected error: ${e.message}", e)
             return@withContext false
         }
     }
@@ -127,16 +140,52 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
      */
     suspend fun deleteFile(fileName: String): Boolean = withContext(Dispatchers.IO) {
         try {
+            // GÜVENLİK: Dosya adı boş mu kontrol et
+            if (fileName.isBlank()) {
+                Log.w("GoogleDriveManager", "deleteFile failed: empty filename")
+                return@withContext false
+            }
+
             val fileToDelete = findFile(fileName)
             if (fileToDelete != null) {
                 drive.files().delete(fileToDelete.id).execute()
+                Log.i("GoogleDriveManager", "deleteFile: file '$fileName' deleted successfully")
+                return@withContext true
+            } else {
+                Log.i("GoogleDriveManager", "deleteFile: file '$fileName' not found, considering operation successful")
                 return@withContext true
             }
-            // Dosya zaten yoksa, işlemi başarılı kabul et.
-            return@withContext true
         } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "deleteFile failed for $fileName", e)
+            Log.e("GoogleDriveManager", "deleteFile failed for '$fileName': ${e.message}", e)
+            return@withContext false
+        } catch (e: Exception) {
+            Log.e("GoogleDriveManager", "deleteFile unexpected error for '$fileName': ${e.message}", e)
             return@withContext false
         }
+    }
+
+    /**
+     * YENİ: Yeniden deneme mekanizması ile dosya yükleme
+     * @param localFile Yüklenecek yerel dosya
+     * @param mimeType MIME tipi
+     * @param maxRetries Maksimum deneme sayısı
+     * @return Başarılıysa dosya ID'si, değilse null
+     */
+    suspend fun uploadMediaFileWithRetry(localFile: java.io.File, mimeType: String, maxRetries: Int = 3): String? = withContext(Dispatchers.IO) {
+        repeat(maxRetries) { attempt ->
+            try {
+                val result = uploadMediaFile(localFile, mimeType)
+                if (result != null) {
+                    Log.i("GoogleDriveManager", "uploadMediaFileWithRetry: success on attempt ${attempt + 1}")
+                    return@withContext result
+                }
+            } catch (e: Exception) {
+                Log.w("GoogleDriveManager", "uploadMediaFileWithRetry: attempt ${attempt + 1} failed: ${e.message}")
+                if (attempt == maxRetries - 1) {
+                    Log.e("GoogleDriveManager", "uploadMediaFileWithRetry: all attempts failed")
+                }
+            }
+        }
+        return@withContext null
     }
 }
