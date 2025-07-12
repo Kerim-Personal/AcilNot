@@ -1,5 +1,3 @@
-// kerim-personal/acilnot/AcilNot-90a5b80a56420cb5716c86163cb8b3609f8218b8/app/src/main/java/com/codenzi/snapnote/PasswordManager.kt
-
 package com.codenzi.snapnote
 
 import android.content.Context
@@ -8,14 +6,15 @@ import android.util.Base64
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.io.File
 import java.security.MessageDigest
 import java.security.SecureRandom
 
 /**
  * Uygulama parolalarını güvenli bir şekilde yönetmek için yardımcı sınıf.
  * Bu sınıf, MyApplication'da oluşturulan tek bir EncryptedSharedPreferences örneğini kullanır.
- * Bu, hem "deprecated" uyarılarını çözer hem de çökme riskini ortadan kaldırır.
  */
+@Suppress("DEPRECATION") // Kütüphanenin eski olmasından kaynaklı uyarıları gizle
 object PasswordManager {
 
     private const val PREFS_NAME = "AppSecurityPrefs"
@@ -47,8 +46,6 @@ object PasswordManager {
         }
     }
 
-    // Güvenli SharedPreferences örneğini döndüren metod.
-    // Bu metod çağrılmadan önce initialize'ın çağrılmış olması gerekir.
     private fun getSharedPreferences(): SharedPreferences {
         return encryptedPrefsInstance ?: throw IllegalStateException(
             "PasswordManager must be initialized in Application.onCreate()"
@@ -70,7 +67,8 @@ object PasswordManager {
         return salt
     }
 
-    fun setPassword(context: Context, newPassword: String) {
+    // DÜZELTME: Gereksiz 'context' parametresi kaldırıldı.
+    fun setPassword(newPassword: String) {
         val salt = generateSalt()
         val hashedPassword = hashPassword(newPassword, salt)
         getSharedPreferences().edit(commit = true) {
@@ -80,7 +78,8 @@ object PasswordManager {
         }
     }
 
-    fun checkPassword(context: Context, enteredPassword: String): Boolean {
+    // DÜZELTME: Gereksiz 'context' parametresi kaldırıldı.
+    fun checkPassword(enteredPassword: String): Boolean {
         val prefs = getSharedPreferences()
         val storedHash = prefs.getString(KEY_PASSWORD_HASH, null)
         val storedSaltString = prefs.getString(KEY_SALT, null)
@@ -94,20 +93,22 @@ object PasswordManager {
         return storedHash == enteredPasswordHashed
     }
 
-    // Yedekten geri yükleme için kullanılan harici kontrol metodu
+    // Yedekten geri yükleme için kullanılan harici kontrol metodu (context'e ihtiyacı yok)
     fun checkPassword(enteredPassword: String, saltBase64: String, hash: String): Boolean {
         val salt = Base64.decode(saltBase64, Base64.NO_WRAP)
         val enteredPasswordHashed = hashPassword(enteredPassword, salt)
         return hash == enteredPasswordHashed
     }
 
-    fun isPasswordSet(context: Context): Boolean {
+    // DÜZELTME: Gereksiz 'context' parametresi kaldırıldı.
+    fun isPasswordSet(): Boolean {
         val prefs = getSharedPreferences()
         return prefs.getBoolean(KEY_IS_PASSWORD_ENABLED, false) &&
                 prefs.getString(KEY_PASSWORD_HASH, null) != null
     }
 
-    fun disablePassword(context: Context) {
+    // DÜZELTME: Gereksiz 'context' parametresi kaldırıldı.
+    fun disablePassword() {
         getSharedPreferences().edit(commit = true) {
             remove(KEY_PASSWORD_HASH)
             remove(KEY_SALT)
@@ -115,15 +116,28 @@ object PasswordManager {
         }
     }
 
-    fun getPasswordHash(context: Context): String? {
+    // DÜZELTME: Gereksiz 'context' parametresi kaldırıldı.
+    fun getPasswordHash(): String? {
         return getSharedPreferences().getString(KEY_PASSWORD_HASH, null)
     }
 
-    fun getSalt(context: Context): String? {
+    // DÜZELTME: Gereksiz 'context' parametresi kaldırıldı.
+    fun getSalt(): String? {
         return getSharedPreferences().getString(KEY_SALT, null)
     }
 
-    fun restorePassword(context: Context, hash: String, salt: String) {
+    // DÜZELTME: Gereksiz 'context' parametresi kaldırıldı.
+    fun resetForRestore(contextForFileOp: Context) {
+        val prefsFile = File(contextForFileOp.filesDir.parent, "shared_prefs/$PREFS_NAME.xml")
+        if (prefsFile.exists()) {
+            prefsFile.delete()
+        }
+        encryptedPrefsInstance = null
+        initialize(contextForFileOp)
+    }
+
+    // DÜZELTME: Gereksiz 'context' parametresi kaldırıldı.
+    fun restorePassword(hash: String, salt: String) {
         getSharedPreferences().edit(commit = true) {
             putString(KEY_PASSWORD_HASH, hash)
             putString(KEY_SALT, salt)

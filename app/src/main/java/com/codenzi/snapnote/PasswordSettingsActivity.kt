@@ -39,7 +39,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPasswordSettingsBinding
     private val gson = Gson()
 
-    // YENİ: İlerleme diyaloğu için değişkenler
     private var progressDialog: AlertDialog? = null
     private var progressBar: ProgressBar? = null
     private var progressTitle: TextView? = null
@@ -79,7 +78,8 @@ class PasswordSettingsActivity : AppCompatActivity() {
     }
 
     private fun updateUI() {
-        if (PasswordManager.isPasswordSet(this)) {
+        // DÜZELTME: 'this' parametresi kaldırıldı.
+        if (PasswordManager.isPasswordSet()) {
             binding.tilCurrentPassword.visibility = View.VISIBLE
             binding.btnDisablePassword.visibility = View.VISIBLE
         } else {
@@ -88,13 +88,13 @@ class PasswordSettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ... (savePassword ve diğer üstteki fonksiyonlar aynı kalacak) ...
     private fun savePassword() {
         val currentPassword = binding.etCurrentPassword.text.toString()
         val newPassword = binding.etNewPassword.text.toString()
         val confirmPassword = binding.etConfirmPassword.text.toString()
 
-        if (PasswordManager.isPasswordSet(this) && !PasswordManager.checkPassword(this, currentPassword)) {
+        // DÜZELTME: 'this' parametreleri kaldırıldı.
+        if (PasswordManager.isPasswordSet() && !PasswordManager.checkPassword(currentPassword)) {
             Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
             return
         }
@@ -111,7 +111,8 @@ class PasswordSettingsActivity : AppCompatActivity() {
             return
         }
 
-        PasswordManager.setPassword(this, newPassword)
+        // DÜZELTME: 'this' parametresi kaldırıldı.
+        PasswordManager.setPassword(newPassword)
         Toast.makeText(this, "Parola ayarlandı. Otomatik yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
         triggerAutomaticBackup()
     }
@@ -127,12 +128,14 @@ class PasswordSettingsActivity : AppCompatActivity() {
 
     private fun disablePassword() {
         val currentPassword = binding.etCurrentPassword.text.toString()
-        if (!PasswordManager.checkPassword(this, currentPassword)) {
+        // DÜZELTME: 'this' parametresi kaldırıldı.
+        if (!PasswordManager.checkPassword(currentPassword)) {
             Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
             return
         }
 
-        PasswordManager.disablePassword(this)
+        // DÜZELTME: 'this' parametresi kaldırıldı.
+        PasswordManager.disablePassword()
         Toast.makeText(this, "Parola kaldırıldı. Otomatik yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
         triggerAutomaticBackup()
     }
@@ -167,7 +170,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
         }
     }
 
-    // YENİ: İlerleme diyaloğunu gösteren fonksiyon
     private fun showProgressDialog() {
         val builder = AlertDialog.Builder(this)
         val inflater = this.layoutInflater
@@ -185,13 +187,11 @@ class PasswordSettingsActivity : AppCompatActivity() {
         progressDialog?.show()
     }
 
-    // YENİ: İlerleme diyaloğunu güncelleyen fonksiyon
     private fun updateProgress(progress: Int) {
         progressBar?.progress = progress
         progressPercentage?.text = "$progress%"
     }
 
-    // YENİ: İlerleme diyaloğunu kapatan fonksiyon
     private fun dismissProgressDialog() {
         progressDialog?.dismiss()
         progressDialog = null
@@ -219,7 +219,7 @@ class PasswordSettingsActivity : AppCompatActivity() {
 
     private suspend fun proceedWithFullBackup(googleDriveManager: GoogleDriveManager, notesToBackup: List<Note>) {
         withContext(Dispatchers.Main) {
-            showProgressDialog() // Diyaloğu göster
+            showProgressDialog()
         }
 
         try {
@@ -230,11 +230,12 @@ class PasswordSettingsActivity : AppCompatActivity() {
                 widgetBackgroundSelection = sharedPrefs.getString("widget_background_selection", "widget_background")
             )
 
-            val passwordHash = PasswordManager.getPasswordHash(this)
-            val salt = PasswordManager.getSalt(this)
+            // DÜZELTME: 'this' parametreleri kaldırıldı.
+            val passwordHash = PasswordManager.getPasswordHash()
+            val salt = PasswordManager.getSalt()
 
             val notesForBackup = mutableListOf<Note>()
-            val totalSteps = notesToBackup.size + 1 // Notlar + son JSON yüklemesi
+            val totalSteps = notesToBackup.size + 1
 
             for ((index, note) in notesToBackup.withIndex()) {
                 val content = gson.fromJson(note.content, NoteContent::class.java)
@@ -256,7 +257,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
                 val newContent = content.copy(imagePath = imageDriveId, audioFilePath = audioDriveId)
                 notesForBackup.add(note.copy(content = gson.toJson(newContent)))
 
-                // İlerlemeyi güncelle
                 val progress = ((index + 1) * 100) / totalSteps
                 withContext(Dispatchers.Main) {
                     updateProgress(progress)
@@ -274,8 +274,8 @@ class PasswordSettingsActivity : AppCompatActivity() {
             val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", backupJson)
 
             withContext(Dispatchers.Main) {
-                updateProgress(100) // Son ilerlemeyi güncelle
-                dismissProgressDialog() // Diyaloğu kapat
+                updateProgress(100)
+                dismissProgressDialog()
                 if (success) {
                     Toast.makeText(this@PasswordSettingsActivity, "Parola değişikliği Google Drive yedeğine başarıyla yansıtıldı.", Toast.LENGTH_LONG).show()
                 } else {
@@ -285,13 +285,12 @@ class PasswordSettingsActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                dismissProgressDialog() // Hata durumunda diyaloğu kapat
+                dismissProgressDialog()
                 Toast.makeText(this@PasswordSettingsActivity, "Yedekleme başarısız: ${e.message}", Toast.LENGTH_LONG).show()
                 finish()
             }
         }
     }
-
 
     private fun showSecurityInfoDialog() {
         AlertDialog.Builder(this)

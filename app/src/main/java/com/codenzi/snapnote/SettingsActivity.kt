@@ -234,7 +234,8 @@ class SettingsActivity : AppCompatActivity() {
                 noteDao.deleteAllNotes()
                 withContext(Dispatchers.Main) { updateProgress(70) }
 
-                PasswordManager.disablePassword(requireContext())
+                // DÜZELTME: 'requireContext()' parametresi kaldırıldı.
+                PasswordManager.disablePassword()
                 withContext(Dispatchers.Main) { updateProgress(85) }
 
                 clearAllSharedPreferences()
@@ -308,7 +309,8 @@ class SettingsActivity : AppCompatActivity() {
                     noteDao.deleteAllNotes()
                     withContext(Dispatchers.Main) { updateProgress(70) }
 
-                    PasswordManager.disablePassword(requireContext())
+                    // DÜZELTME: 'requireContext()' parametresi kaldırıldı.
+                    PasswordManager.disablePassword()
                     withContext(Dispatchers.Main) { updateProgress(85) }
 
                     clearAllSharedPreferences()
@@ -471,8 +473,9 @@ class SettingsActivity : AppCompatActivity() {
                     widgetBackgroundSelection = sharedPrefs.getString("widget_background_selection", "widget_background")
                 )
 
-                val passwordHash = if (PasswordManager.isPasswordSet(requireContext())) PasswordManager.getPasswordHash(requireContext()) else null
-                val salt = if (PasswordManager.isPasswordSet(requireContext())) PasswordManager.getSalt(requireContext()) else null
+                // DÜZELTME: 'requireContext()' parametreleri kaldırıldı.
+                val passwordHash = if (PasswordManager.isPasswordSet()) PasswordManager.getPasswordHash() else null
+                val salt = if (PasswordManager.isPasswordSet()) PasswordManager.getSalt() else null
 
                 val notesForBackup = mutableListOf<Note>()
                 val totalSteps = notesToBackup.size + 1
@@ -630,13 +633,10 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             try {
-                // DÜZELTME: Veri kaybını önlemek için, tüm veriler indirilip hazırlanana kadar
-                // mevcut veritabanı silinmiyor. İşlem, yalnızca tüm adımlar başarılı olursa
-                // en sonda gerçekleştirilir.
                 val notesFromBackup = backupData.notes
                 val restoredNotes = mutableListOf<Note>()
-                val tempFiles = mutableListOf<File>() // İndirilen geçici dosyaları takip et
-                val totalSteps = notesFromBackup.size + 1 // Notlar + son DB işlemi
+                val tempFiles = mutableListOf<File>()
+                val totalSteps = notesFromBackup.size + 1
 
                 var isDownloadSuccessful = true
 
@@ -667,25 +667,25 @@ class SettingsActivity : AppCompatActivity() {
                     val finalContent = content.copy(imagePath = localImagePath, audioFilePath = localAudioPath)
                     restoredNotes.add(note.copy(content = gson.toJson(finalContent)))
 
-                    val progress = ((index + 1) * 95) / totalSteps // %95'e kadar ilerlet
+                    val progress = ((index + 1) * 95) / totalSteps
                     withContext(Dispatchers.Main) {
                         updateProgress(progress)
                     }
                 }
 
                 if (isDownloadSuccessful) {
-                    // Tüm veriler başarıyla indirildiyse, veritabanını güncelle
                     noteDao.deleteAllNotes()
                     noteDao.insertAll(restoredNotes)
 
-                    // Ayarları ve şifreyi uygula
                     PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
                         putString("theme_selection", backupData.settings.themeSelection)
                         putString("color_selection", backupData.settings.colorSelection)
                         putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
                     }
                     if (backupData.passwordHash != null && backupData.salt != null) {
-                        PasswordManager.restorePassword(requireContext(), backupData.passwordHash, backupData.salt)
+                        // DÜZELTME: 'requireContext()' parametreleri kaldırıldı.
+                        PasswordManager.resetForRestore(requireContext())
+                        PasswordManager.restorePassword(backupData.passwordHash, backupData.salt)
                     }
 
                     withContext(Dispatchers.Main) {
@@ -695,7 +695,6 @@ class SettingsActivity : AppCompatActivity() {
                         activity?.recreate()
                     }
                 } else {
-                    // İndirme başarısız olduysa, geçici dosyaları temizle ve hata göster
                     tempFiles.forEach { it.delete() }
                     throw IOException("Medya dosyası indirilemedi, işlem iptal edildi.")
                 }
