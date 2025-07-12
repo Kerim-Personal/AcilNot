@@ -54,11 +54,23 @@ interface NoteDao {
     @Query("UPDATE notes SET showOnWidget = :isPinned WHERE id IN (:noteIds)")
     suspend fun setPinnedStatus(noteIds: List<Int>, isPinned: Boolean)
 
+    // 30 günden eski notları kalıcı olarak silmeden önce doğrulama yapar
+    @Query("SELECT COUNT(*) FROM notes WHERE isDeleted = 1 AND deletedAt IS NOT NULL AND deletedAt < :thirtyDaysAgoTimestamp")
+    suspend fun countOldTrashedNotes(thirtyDaysAgoTimestamp: Long): Int
+    
+    // Doğrulama için: silinecek notları listeler
+    @Query("SELECT * FROM notes WHERE isDeleted = 1 AND deletedAt IS NOT NULL AND deletedAt < :thirtyDaysAgoTimestamp")
+    suspend fun getOldTrashedNotes(thirtyDaysAgoTimestamp: Long): List<Note>
+    
     // 30 günden eski notları kalıcı olarak siler
     @Query("DELETE FROM notes WHERE isDeleted = 1 AND deletedAt IS NOT NULL AND deletedAt < :thirtyDaysAgoTimestamp")
     suspend fun deleteOldTrashedNotes(thirtyDaysAgoTimestamp: Long)
 
-    // YENİ: Geri yükleme işlemi için tüm notları temizler
+    // Tüm notları sayar (güvenlik doğrulaması için)
+    @Query("SELECT COUNT(*) FROM notes")
+    suspend fun getAllNotesCount(): Int
+    
+    // Tüm notları siler - GÜVENLİ KULLANIM İÇİN REPOSITORY KATMANI ÜZERİNDEN ÇAĞRILIN
     @Query("DELETE FROM notes")
     suspend fun deleteAllNotes()
 
