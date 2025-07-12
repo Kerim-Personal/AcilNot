@@ -317,7 +317,7 @@ class NoteActivity : AppCompatActivity() {
             isRecording = true
             binding.btnRecordAudio.setIconResource(R.drawable.ic_stop_24) // İkonu değiştir
             Toast.makeText(this, "Kayıt başladı...", Toast.LENGTH_SHORT).show()
-        } catch (e: IOException) {
+        } catch (_: IOException) { // DÜZELTİLDİ
             Toast.makeText(this, "Kayıt başlatılamadı.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -446,7 +446,7 @@ class NoteActivity : AppCompatActivity() {
             if (isListening) {
                 try {
                     speechRecognizer.startListening(speechRecognizerIntent)
-                } catch (e: Exception) {
+                } catch (_: Exception) { // DÜZELTİLDİ
                     stopListening()
                 }
             }
@@ -618,7 +618,7 @@ class NoteActivity : AppCompatActivity() {
                 ContextCompat.getColor(this, R.color.black)
             else
                 ContextCompat.getColor(this, R.color.white)
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) { // DÜZELTİLDİ
             ContextCompat.getColor(this, R.color.black)
         }
     }
@@ -628,7 +628,7 @@ class NoteActivity : AppCompatActivity() {
             val color = selectedColor.toColorInt()
             window.setBackgroundDrawable(color.toDrawable())
             binding.root.setBackgroundColor(color)
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) { // DÜZELTİLDİ
             val defaultColor = Color.WHITE
             window.setBackgroundDrawable(defaultColor.toDrawable())
             binding.root.setBackgroundColor(defaultColor)
@@ -696,7 +696,7 @@ class NoteActivity : AppCompatActivity() {
                 binding.ivImagePreview.visibility = View.GONE
             }
 
-        } catch (e: JsonSyntaxException) {
+        } catch (_: JsonSyntaxException) { // DÜZELTİLDİ
             binding.etNoteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
             val oldSize = checklistItems.size
             checklistItems.clear()
@@ -708,7 +708,7 @@ class NoteActivity : AppCompatActivity() {
         }
         selectedColor = note.color
         updateWindowBackground()
-        val colorInt = try { note.color.toColorInt() } catch (e: Exception) { Color.WHITE }
+        val colorInt = try { note.color.toColorInt() } catch (_: Exception) { Color.WHITE } // DÜZELTİLDİ
         val viewToSelect = colorPickers.getOrNull(
             when (colorInt) {
                 ContextCompat.getColor(this@NoteActivity, R.color.note_color_yellow) -> 1
