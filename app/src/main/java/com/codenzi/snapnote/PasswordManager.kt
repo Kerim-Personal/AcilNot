@@ -1,3 +1,5 @@
+// kerim-personal/acilnot/AcilNot-90a5b80a56420cb5716c86163cb8b3609f8218b8/app/src/main/java/com/codenzi/snapnote/PasswordManager.kt
+
 package com.codenzi.snapnote
 
 import android.content.Context
@@ -11,8 +13,8 @@ import java.security.SecureRandom
 
 /**
  * Uygulama parolalarını güvenli bir şekilde yönetmek için yardımcı sınıf.
- * Parolalar, SHA-256 ile hash'lenip tuzlandıktan sonra,
- * anahtar ve değerleri şifrelenmiş olan EncryptedSharedPreferences'ta saklanır.
+ * Bu sınıf, MyApplication'da oluşturulan tek bir EncryptedSharedPreferences örneğini kullanır.
+ * Bu, hem "deprecated" uyarılarını çözer hem de çökme riskini ortadan kaldırır.
  */
 object PasswordManager {
 
@@ -21,12 +23,10 @@ object PasswordManager {
     private const val KEY_SALT = "salt"
     private const val KEY_IS_PASSWORD_ENABLED = "is_password_enabled"
 
-    // Volatile field to hold the singleton EncryptedSharedPreferences instance
     @Volatile
     private var encryptedPrefsInstance: SharedPreferences? = null
 
-    // Method to initialize the EncryptedSharedPreferences instance
-    // This should be called once, preferably in Application.onCreate()
+    // Sadece MyApplication tarafından çağrılacak olan başlatma metodu.
     fun initialize(context: Context) {
         if (encryptedPrefsInstance == null) {
             synchronized(this) {
@@ -47,25 +47,20 @@ object PasswordManager {
         }
     }
 
-    // Helper to get the initialized SharedPreferences instance
-    private fun getSharedPreferences(context: Context): SharedPreferences {
-        // If it hasn't been initialized (e.g., due to direct access before MyApplication.onCreate()),
-        // initialize it here as a fallback. This might still block the main thread the very first time
-        // if called unexpectedly early. The primary initialization point should be MyApplication.onCreate().
-        if (encryptedPrefsInstance == null) {
-            initialize(context)
-        }
-        return encryptedPrefsInstance!!
+    // Güvenli SharedPreferences örneğini döndüren metod.
+    // Bu metod çağrılmadan önce initialize'ın çağrılmış olması gerekir.
+    private fun getSharedPreferences(): SharedPreferences {
+        return encryptedPrefsInstance ?: throw IllegalStateException(
+            "PasswordManager must be initialized in Application.onCreate()"
+        )
     }
 
-    private fun hashPassword(password: String, salt: ByteArray): Pair<String, ByteArray> {
+    private fun hashPassword(password: String, salt: ByteArray): String {
         val passwordBytes = password.toByteArray(Charsets.UTF_8)
         val combinedBytes = salt + passwordBytes
-
         val digest = MessageDigest.getInstance("SHA-256")
         val hashedBytes = digest.digest(combinedBytes)
-
-        return Base64.encodeToString(hashedBytes, Base64.NO_WRAP) to salt
+        return Base64.encodeToString(hashedBytes, Base64.NO_WRAP)
     }
 
     private fun generateSalt(): ByteArray {
@@ -77,9 +72,8 @@ object PasswordManager {
 
     fun setPassword(context: Context, newPassword: String) {
         val salt = generateSalt()
-        val (hashedPassword, _) = hashPassword(newPassword, salt)
-        // DÜZELTME: İşlemin hemen diske yazılmasını garantilemek için 'commit = true' kullanılıyor.
-        getSharedPreferences(context).edit(commit = true) {
+        val hashedPassword = hashPassword(newPassword, salt)
+        getSharedPreferences().edit(commit = true) {
             putString(KEY_PASSWORD_HASH, hashedPassword)
             putString(KEY_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
             putBoolean(KEY_IS_PASSWORD_ENABLED, true)
@@ -87,7 +81,7 @@ object PasswordManager {
     }
 
     fun checkPassword(context: Context, enteredPassword: String): Boolean {
-        val prefs = getSharedPreferences(context)
+        val prefs = getSharedPreferences()
         val storedHash = prefs.getString(KEY_PASSWORD_HASH, null)
         val storedSaltString = prefs.getString(KEY_SALT, null)
 
@@ -96,25 +90,25 @@ object PasswordManager {
         }
 
         val storedSalt = Base64.decode(storedSaltString, Base64.NO_WRAP)
-        val (enteredPasswordHashed, _) = hashPassword(enteredPassword, storedSalt)
-
+        val enteredPasswordHashed = hashPassword(enteredPassword, storedSalt)
         return storedHash == enteredPasswordHashed
     }
 
+    // Yedekten geri yükleme için kullanılan harici kontrol metodu
     fun checkPassword(enteredPassword: String, saltBase64: String, hash: String): Boolean {
         val salt = Base64.decode(saltBase64, Base64.NO_WRAP)
-        val (enteredPasswordHashed, _) = hashPassword(enteredPassword, salt)
+        val enteredPasswordHashed = hashPassword(enteredPassword, salt)
         return hash == enteredPasswordHashed
     }
 
     fun isPasswordSet(context: Context): Boolean {
-        return getSharedPreferences(context).getBoolean(KEY_IS_PASSWORD_ENABLED, false) &&
-                getSharedPreferences(context).getString(KEY_PASSWORD_HASH, null) != null
+        val prefs = getSharedPreferences()
+        return prefs.getBoolean(KEY_IS_PASSWORD_ENABLED, false) &&
+                prefs.getString(KEY_PASSWORD_HASH, null) != null
     }
 
     fun disablePassword(context: Context) {
-        // DÜZELTME: İşlemin hemen diske yazılmasını garantilemek için 'commit = true' kullanılıyor.
-        getSharedPreferences(context).edit(commit = true) {
+        getSharedPreferences().edit(commit = true) {
             remove(KEY_PASSWORD_HASH)
             remove(KEY_SALT)
             putBoolean(KEY_IS_PASSWORD_ENABLED, false)
@@ -122,19 +116,15 @@ object PasswordManager {
     }
 
     fun getPasswordHash(context: Context): String? {
-        return getSharedPreferences(context).getString(KEY_PASSWORD_HASH, null)
+        return getSharedPreferences().getString(KEY_PASSWORD_HASH, null)
     }
 
     fun getSalt(context: Context): String? {
-        return getSharedPreferences(context).getString(KEY_SALT, null)
+        return getSharedPreferences().getString(KEY_SALT, null)
     }
 
-    /**
-     * Yedekten geri yüklenen parola bilgilerini güvenli bir şekilde kaydeder.
-     */
     fun restorePassword(context: Context, hash: String, salt: String) {
-        // DÜZELTME: İşlemin hemen diske yazılmasını garantilemek için 'commit = true' kullanılıyor.
-        getSharedPreferences(context).edit(commit = true) {
+        getSharedPreferences().edit(commit = true) {
             putString(KEY_PASSWORD_HASH, hash)
             putString(KEY_SALT, salt)
             putBoolean(KEY_IS_PASSWORD_ENABLED, true)

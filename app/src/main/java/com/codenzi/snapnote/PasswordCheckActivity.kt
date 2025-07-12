@@ -3,8 +3,6 @@ package com.codenzi.snapnote
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -22,17 +20,16 @@ class PasswordCheckActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPasswordCheckBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // DİNAMİK RENK TEMASINI UYGULA
+        // Dinamik renk temasını uygula
         ThemeManager.applyTheme(this)
 
         // Mevcut Açık/Koyu tema ayarını uygula
         applySavedTheme()
         super.onCreate(savedInstanceState)
 
+        // Eğer şifre belirlenmemişse, doğrudan ana aktiviteye git
         if (!PasswordManager.isPasswordSet(this)) {
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-            finish()
+            navigateToMain()
             return
         }
 
@@ -51,6 +48,7 @@ class PasswordCheckActivity : AppCompatActivity() {
             return@setOnEditorActionListener false
         }
 
+        // Geri tuşuna basıldığında uygulamayı tamamen kapatmak için
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 finishAffinity()
@@ -75,12 +73,22 @@ class PasswordCheckActivity : AppCompatActivity() {
         val enteredPassword = binding.etUnlockPassword.text.toString()
 
         if (PasswordManager.checkPassword(this, enteredPassword)) {
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-            finish()
+            navigateToMain()
         } else {
             Toast.makeText(this, R.string.incorrect_password_error, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun navigateToMain() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            // Bu bayraklar, MainActivity'yi yeni bir görevde başlatır ve
+            // mevcut görevi (şifre ekranını içeren) temizler.
+            // Bu, kullanıcı geri tuşuna bastığında şifre ekranına dönmesini engeller
+            // ve aktivite geçişi sırasında uygulamanın kapanması sorununu çözer.
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun hideKeyboard() {

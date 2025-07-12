@@ -1,3 +1,5 @@
+// kerim-personal/acilnot/AcilNot-90a5b80a56420cb5716c86163cb8b3609f8218b8/app/src/main/java/com/codenzi/snapnote/MyApplication.kt
+
 package com.codenzi.snapnote
 
 import android.app.Application
@@ -10,29 +12,25 @@ class MyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Initialize PasswordManager here to ensure EncryptedSharedPreferences is created once
+        // PasswordManager'ı uygulama başlatılırken YALNIZCA BİR KEZ başlat.
+        // Bu, çökme sorununu engelleyen en kritik adımdır.
         PasswordManager.initialize(applicationContext)
-        // Uygulama ilk açıldığında periyodik temizleme görevini başlat
         scheduleTrashCleanup()
     }
 
     private fun scheduleTrashCleanup() {
-        // Görevin çalışma koşullarını belirle (örn: internet gerekmesin)
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
             .setRequiresCharging(false)
             .build()
 
-        // Günde bir kez çalışacak şekilde periyodik bir istek oluştur
         val repeatingRequest = PeriodicWorkRequestBuilder<TrashCleanupWorker>(1, TimeUnit.DAYS)
             .setConstraints(constraints)
             .build()
 
-        // WorkManager'a bu görevi "benzersiz" bir isimle kaydet
-        // Bu, görevin birden fazla kez programlanmasını engeller
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
             "trashCleanupWork",
-            ExistingPeriodicWorkPolicy.KEEP, // Eğer görev zaten varsa, eskisini koru ve yenisini ekleme
+            ExistingPeriodicWorkPolicy.KEEP,
             repeatingRequest
         )
     }
