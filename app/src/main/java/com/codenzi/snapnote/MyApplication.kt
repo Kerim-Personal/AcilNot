@@ -1,5 +1,3 @@
-// kerim-personal/acilnot/AcilNot-90a5b80a56420cb5716c86163cb8b3609f8218b8/app/src/main/java/com/codenzi/snapnote/MyApplication.kt
-
 package com.codenzi.snapnote
 
 import android.app.Application
