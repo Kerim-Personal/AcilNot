@@ -93,6 +93,9 @@ class SettingsActivity : AppCompatActivity() {
 
         @Inject
         lateinit var noteDao: NoteDao
+        
+        @Inject
+        lateinit var noteRepository: NoteRepository
         private val gson = Gson()
 
         private var requestedAction: Action? = null
@@ -226,28 +229,37 @@ class SettingsActivity : AppCompatActivity() {
 
         private fun performLocalAccountDeletion() {
             lifecycleScope.launch(Dispatchers.IO) {
-                withContext(Dispatchers.Main) {
-                    showProgressDialog(R.string.delete_in_progress)
-                    updateProgress(10)
-                }
+                try {
+                    withContext(Dispatchers.Main) {
+                        showProgressDialog(R.string.delete_in_progress)
+                        updateProgress(10)
+                    }
 
-                noteDao.deleteAllNotes()
-                withContext(Dispatchers.Main) { updateProgress(70) }
+                    val deletedCount = noteRepository.deleteAllNotesSafely("CONFIRM_DELETE_ALL_NOTES")
+                    android.util.Log.i("SettingsActivity", "Hesap silme işleminde $deletedCount not silindi.")
+                    withContext(Dispatchers.Main) { updateProgress(70) }
 
-                // DÜZELTME: 'requireContext()' parametresi kaldırıldı.
-                PasswordManager.disablePassword()
-                withContext(Dispatchers.Main) { updateProgress(85) }
+                    // DÜZELTME: 'requireContext()' parametresi kaldırıldı.
+                    PasswordManager.disablePassword()
+                    withContext(Dispatchers.Main) { updateProgress(85) }
 
-                clearAllSharedPreferences()
-                withContext(Dispatchers.Main) { updateProgress(100) }
+                    clearAllSharedPreferences()
+                    withContext(Dispatchers.Main) { updateProgress(100) }
 
-                withContext(Dispatchers.Main) {
-                    dismissProgressDialog()
-                    Toast.makeText(requireContext(), R.string.account_deleted_successfully, Toast.LENGTH_LONG).show()
-                    val intent = Intent(requireActivity(), OnboardingActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    requireActivity().finish()
+                    withContext(Dispatchers.Main) {
+                        dismissProgressDialog()
+                        Toast.makeText(requireContext(), R.string.account_deleted_successfully, Toast.LENGTH_LONG).show()
+                        val intent = Intent(requireActivity(), OnboardingActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                        requireActivity().finish()
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SettingsActivity", "Hesap silme hatası: ${e.message}", e)
+                    withContext(Dispatchers.Main) {
+                        dismissProgressDialog()
+                        Toast.makeText(requireContext(), "Hesap silme işleminde hata: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }
@@ -306,7 +318,8 @@ class SettingsActivity : AppCompatActivity() {
                     googleSignInClient.revokeAccess().await()
                     withContext(Dispatchers.Main) { updateProgress(50) }
 
-                    noteDao.deleteAllNotes()
+                    val deletedCount = noteRepository.deleteAllNotesSafely("CONFIRM_DELETE_ALL_NOTES")
+                    android.util.Log.i("SettingsActivity", "Google hesap silme işleminde $deletedCount not silindi.")
                     withContext(Dispatchers.Main) { updateProgress(70) }
 
                     // DÜZELTME: 'requireContext()' parametresi kaldırıldı.
@@ -674,7 +687,8 @@ class SettingsActivity : AppCompatActivity() {
                 }
 
                 if (isDownloadSuccessful) {
-                    noteDao.deleteAllNotes()
+                    val deletedCount = noteRepository.deleteAllNotesSafely("CONFIRM_DELETE_ALL_NOTES")
+                    android.util.Log.i("SettingsActivity", "Yedek geri yükleme için $deletedCount mevcut not silindi.")
                     noteDao.insertAll(restoredNotes)
 
                     PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
