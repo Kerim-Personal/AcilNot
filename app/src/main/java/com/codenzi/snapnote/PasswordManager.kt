@@ -21,18 +21,41 @@ object PasswordManager {
     private const val KEY_SALT = "salt"
     private const val KEY_IS_PASSWORD_ENABLED = "is_password_enabled"
 
-    private fun getSharedPreferences(context: Context): SharedPreferences {
-        val masterKey = MasterKey.Builder(context.applicationContext)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+    // Volatile field to hold the singleton EncryptedSharedPreferences instance
+    @Volatile
+    private var encryptedPrefsInstance: SharedPreferences? = null
 
-        return EncryptedSharedPreferences.create(
-            context.applicationContext,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+    // Method to initialize the EncryptedSharedPreferences instance
+    // This should be called once, preferably in Application.onCreate()
+    fun initialize(context: Context) {
+        if (encryptedPrefsInstance == null) {
+            synchronized(this) {
+                if (encryptedPrefsInstance == null) {
+                    val masterKey = MasterKey.Builder(context.applicationContext)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+
+                    encryptedPrefsInstance = EncryptedSharedPreferences.create(
+                        context.applicationContext,
+                        PREFS_NAME,
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    )
+                }
+            }
+        }
+    }
+
+    // Helper to get the initialized SharedPreferences instance
+    private fun getSharedPreferences(context: Context): SharedPreferences {
+        // If it hasn't been initialized (e.g., due to direct access before MyApplication.onCreate()),
+        // initialize it here as a fallback. This might still block the main thread the very first time
+        // if called unexpectedly early. The primary initialization point should be MyApplication.onCreate().
+        if (encryptedPrefsInstance == null) {
+            initialize(context)
+        }
+        return encryptedPrefsInstance!!
     }
 
     private fun hashPassword(password: String, salt: ByteArray): Pair<String, ByteArray> {

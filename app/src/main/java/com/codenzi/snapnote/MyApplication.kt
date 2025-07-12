@@ -2,14 +2,16 @@ package com.codenzi.snapnote
 
 import android.app.Application
 import androidx.work.*
-import dagger.hilt.android.HiltAndroidApp // Bu satırı ekleyin
+import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
 
-@HiltAndroidApp // Hilt'i etkinleştirmek için bu anotasyonu ekliyoruz
+@HiltAndroidApp
 class MyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Initialize PasswordManager here to ensure EncryptedSharedPreferences is created once
+        PasswordManager.initialize(applicationContext)
         // Uygulama ilk açıldığında periyodik temizleme görevini başlat
         scheduleTrashCleanup()
     }
