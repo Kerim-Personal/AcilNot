@@ -253,4 +253,5 @@
     <string name="launcher_does_not_support_feature">Başlatıcınız (ana ekran uygulaması) bu özelliği desteklemiyor.</string>
     <string name="feature_requires_android_oreo">Bu özellik Android 8.0 (Oreo) ve üzeri sürümlerde mevcuttur.</string>
     <string name="an_error_occurred_during_backup_simple">Yedekleme sırasında bir hata oluştu.</string>
+    <string name="progress_percentage_format" translatable="false">%d%%</string>
 </resources>

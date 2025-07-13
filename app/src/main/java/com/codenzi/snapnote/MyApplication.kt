@@ -11,8 +11,14 @@ class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         // PasswordManager'ı uygulama başlatılırken YALNIZCA BİR KEZ başlat.
-        // Bu, çökme sorununu engelleyen en kritik adımdır.
         PasswordManager.initialize(applicationContext)
+
+        // --- DÜZELTME BAŞLANGICI ---
+        // Uygulama her açıldığında, önceki oturumlardan kalmış
+        // olabilecek sahipsiz geçici resim dosyalarını temizle.
+        ImageManager.cleanUpTemporaryFiles(applicationContext)
+        // --- DÜZELTME SONU ---
+
         scheduleTrashCleanup()
     }
 

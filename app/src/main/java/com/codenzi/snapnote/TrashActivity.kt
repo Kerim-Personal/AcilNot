@@ -1,6 +1,7 @@
 package com.codenzi.snapnote
 
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -14,8 +15,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.codenzi.snapnote.databinding.ActivityTrashBinding
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -41,9 +45,7 @@ class TrashActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbarTrash)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        // DÜZELTME: Geri/Kapat butonu için tıklama dinleyicisi buraya taşındı.
         binding.toolbarTrash.setNavigationOnClickListener {
-            // isSelectionMode true ise seçimden çık, değilse aktiviteyi bitir.
             if (isSelectionMode) {
                 exitSelectionMode()
             } else {
@@ -108,7 +110,6 @@ class TrashActivity : AppCompatActivity() {
     private fun enterSelectionMode() {
         isSelectionMode = true
         invalidateOptionsMenu()
-        // Geri okunu, kapat (çarpı) ikonuyla değiştir
         binding.toolbarTrash.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_close)
     }
 
@@ -117,7 +118,6 @@ class TrashActivity : AppCompatActivity() {
         deletedNoteAdapter.clearSelections()
         invalidateOptionsMenu()
         supportActionBar?.title = getString(R.string.trash_title)
-        // Kapat (çarpı) ikonunu tekrar geri okuna çevir
         binding.toolbarTrash.navigationIcon = AppCompatResources.getDrawable(this, R.drawable.ic_arrow_back)
     }
 
@@ -173,6 +173,28 @@ class TrashActivity : AppCompatActivity() {
 
     private fun permanentDeleteNotes(notes: List<Note>) {
         lifecycleScope.launch {
+            val gson = Gson()
+            for (note in notes) {
+                try {
+                    val content = gson.fromJson(note.content, NoteContent::class.java)
+
+                    content.imagePath?.let { path ->
+                        val imageFile = File(path)
+                        if (imageFile.exists()) {
+                            imageFile.delete()
+                        }
+                    }
+                    content.audioFilePath?.let { path ->
+                        val audioFile = File(path)
+                        if (audioFile.exists()) {
+                            audioFile.delete()
+                        }
+                    }
+                } catch (e: JsonSyntaxException) {
+                    Log.e("TrashActivity", "Error parsing note content while deleting", e)
+                }
+            }
+
             val noteIds = notes.map { it.id }
             noteDao.hardDeleteByIds(noteIds)
             Toast.makeText(applicationContext, resources.getQuantityString(R.plurals.notes_deleted_toast, notes.size, notes.size), Toast.LENGTH_SHORT).show()
@@ -206,7 +228,6 @@ class TrashActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // DÜZELTME: android.R.id.home olayı kaldırıldı çünkü artık toolbar'ın kendi dinleyicisi var.
         return when (item.itemId) {
             R.id.action_trash_info -> {
                 showTrashInfoDialog()

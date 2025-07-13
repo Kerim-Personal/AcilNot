@@ -261,4 +261,5 @@
     <string name="launcher_does_not_support_feature">Your launcher (home screen app) does not support this feature.</string>
     <string name="feature_requires_android_oreo">This feature is available on Android 8.0 (Oreo) and above.</string>
     <string name="an_error_occurred_during_backup_simple">An error occurred during backup.</string>
+    <string name="progress_percentage_format" translatable="false">%d%%</string>
 </resources>

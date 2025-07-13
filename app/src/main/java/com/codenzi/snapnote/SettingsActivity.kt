@@ -5,11 +5,11 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.util.Log
+import android.view.View
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -19,7 +19,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
@@ -43,7 +42,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -176,6 +174,7 @@ class SettingsActivity : AppCompatActivity() {
                 try {
                     startActivity(intent)
                 } catch (e: Exception) {
+                    Log.e("SettingsFragment", "Could not open browser for privacy policy", e)
                     Toast.makeText(requireContext(), getString(R.string.toast_no_browser_found), Toast.LENGTH_SHORT).show()
                 }
                 true
@@ -190,6 +189,7 @@ class SettingsActivity : AppCompatActivity() {
                 try {
                     startActivity(intent)
                 } catch (e: Exception) {
+                    Log.e("SettingsFragment", "Could not open email client", e)
                     Toast.makeText(requireContext(), getString(R.string.toast_no_email_app_found), Toast.LENGTH_SHORT).show()
                 }
                 true
@@ -214,7 +214,8 @@ class SettingsActivity : AppCompatActivity() {
                 .setPositiveButton(getString(R.string.final_delete_confirm_button)) { _, _ ->
                     val lastSignedInAccount = GoogleSignIn.getLastSignedInAccount(requireContext())
                     if (lastSignedInAccount == null) {
-                        performLocalAccountDeletion()
+                        showProgressDialog(R.string.delete_in_progress)
+                        DataWipeManager.wipeAllData(requireContext())
                     } else {
                         requestedAction = Action.DELETE
                         signInToGoogle()
@@ -222,33 +223,6 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 .setNegativeButton(getString(R.string.dialog_cancel), null)
                 .show()
-        }
-
-        private fun performLocalAccountDeletion() {
-            lifecycleScope.launch(Dispatchers.IO) {
-                withContext(Dispatchers.Main) {
-                    showProgressDialog(R.string.delete_in_progress)
-                    updateProgress(10)
-                }
-
-                noteDao.deleteAllNotes()
-                withContext(Dispatchers.Main) { updateProgress(70) }
-
-                PasswordManager.disablePassword()
-                withContext(Dispatchers.Main) { updateProgress(85) }
-
-                clearAllSharedPreferences()
-                withContext(Dispatchers.Main) { updateProgress(100) }
-
-                withContext(Dispatchers.Main) {
-                    dismissProgressDialog()
-                    Toast.makeText(requireContext(), R.string.account_deleted_successfully, Toast.LENGTH_LONG).show()
-                    val intent = Intent(requireActivity(), OnboardingActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    requireActivity().finish()
-                }
-            }
         }
 
         @Suppress("DEPRECATION")
@@ -259,12 +233,9 @@ class SettingsActivity : AppCompatActivity() {
                 .build()
 
             val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
-            // --- DÜZELTME BAŞLANGICI ---
-            // Her seferinde hesap seçim ekranını göstermek için önce oturumu kapat.
             googleSignInClient.signOut().addOnCompleteListener {
                 googleSignInLauncher.launch(googleSignInClient.signInIntent)
             }
-            // --- DÜZELTME SONU ---
         }
 
         @Suppress("DEPRECATION")
@@ -297,33 +268,19 @@ class SettingsActivity : AppCompatActivity() {
                 try {
                     withContext(Dispatchers.Main) {
                         showProgressDialog(R.string.delete_in_progress)
-                        updateProgress(10)
                     }
 
                     googleDriveManager.deleteFile("snapnote_backup.json")
-                    withContext(Dispatchers.Main) { updateProgress(30) }
 
                     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
                     val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
                     googleSignInClient.revokeAccess().await()
-                    withContext(Dispatchers.Main) { updateProgress(50) }
-
-                    noteDao.deleteAllNotes()
-                    withContext(Dispatchers.Main) { updateProgress(70) }
-
-                    PasswordManager.disablePassword()
-                    withContext(Dispatchers.Main) { updateProgress(85) }
-
-                    clearAllSharedPreferences()
-                    withContext(Dispatchers.Main) { updateProgress(100) }
 
                     withContext(Dispatchers.Main) {
-                        dismissProgressDialog()
-                        Toast.makeText(requireContext(), R.string.account_deleted_successfully, Toast.LENGTH_LONG).show()
-                        val intent = Intent(requireActivity(), OnboardingActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        startActivity(intent)
-                        requireActivity().finish()
+                        if (!DataWipeManager.wipeAllData(requireContext())) {
+                            dismissProgressDialog()
+                            Toast.makeText(requireContext(), "Hesap silinemedi.", Toast.LENGTH_LONG).show()
+                        }
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
@@ -333,12 +290,6 @@ class SettingsActivity : AppCompatActivity() {
                     Log.e("SettingsFragment", "Account deletion failed", e)
                 }
             }
-        }
-
-        private fun clearAllSharedPreferences() {
-            PreferenceManager.getDefaultSharedPreferences(requireContext()).edit { clear() }
-            requireActivity().getSharedPreferences("onboarding_prefs", Context.MODE_PRIVATE).edit { clear() }
-            requireActivity().getSharedPreferences("voice_memo_widget_prefs", Context.MODE_PRIVATE).edit { clear() }
         }
 
         private fun showAddWidgetDialog() {
@@ -416,6 +367,9 @@ class SettingsActivity : AppCompatActivity() {
             progressPercentage = dialogView.findViewById(R.id.tv_progress_percentage)
 
             progressTitle?.text = getString(titleResId)
+            progressBar?.isIndeterminate = true
+            progressPercentage?.visibility = View.GONE
+
 
             builder.setView(dialogView)
             builder.setCancelable(false)
@@ -425,7 +379,7 @@ class SettingsActivity : AppCompatActivity() {
 
         private fun updateProgress(progress: Int) {
             progressBar?.progress = progress
-            progressPercentage?.text = "$progress%"
+            progressPercentage?.text = getString(R.string.progress_percentage_format, progress)
         }
 
         private fun dismissProgressDialog() {
@@ -464,6 +418,8 @@ class SettingsActivity : AppCompatActivity() {
         private suspend fun proceedWithBackup(googleDriveManager: GoogleDriveManager, notesToBackup: List<Note>) {
             withContext(Dispatchers.Main) {
                 showProgressDialog(R.string.backup_in_progress)
+                progressPercentage?.visibility = View.VISIBLE
+                progressBar?.isIndeterminate = false
             }
 
             try {
@@ -612,6 +568,8 @@ class SettingsActivity : AppCompatActivity() {
         private suspend fun proceedWithRestore(googleDriveManager: GoogleDriveManager, backupData: BackupData) {
             withContext(Dispatchers.Main) {
                 showProgressDialog(R.string.restore_in_progress)
+                progressPercentage?.visibility = View.VISIBLE
+                progressBar?.isIndeterminate = false
             }
 
             try {
@@ -659,11 +617,13 @@ class SettingsActivity : AppCompatActivity() {
                     noteDao.deleteAllNotes()
                     noteDao.insertAll(restoredNotes)
 
-                    PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
-                        putString("theme_selection", backupData.settings.themeSelection)
-                        putString("color_selection", backupData.settings.colorSelection)
-                        putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
-                    }
+                    // Düzeltme: SharedPreferences edit bloğu daha güvenli hale getirildi.
+                    val prefsEditor = PreferenceManager.getDefaultSharedPreferences(requireContext()).edit()
+                    prefsEditor.putString("theme_selection", backupData.settings.themeSelection)
+                    prefsEditor.putString("color_selection", backupData.settings.colorSelection)
+                    prefsEditor.putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
+                    prefsEditor.apply()
+
                     if (backupData.passwordHash != null && backupData.salt != null) {
                         PasswordManager.resetForRestore(requireContext())
                         PasswordManager.restorePassword(backupData.passwordHash, backupData.salt)
