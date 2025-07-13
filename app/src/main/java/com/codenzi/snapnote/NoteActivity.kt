@@ -694,7 +694,7 @@ class NoteActivity : AppCompatActivity() {
         displayEditHistory(note)
         try {
             val content = gson.fromJson(note.content, NoteContent::class.java)
-            binding.etNoteInput.setText(Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY))
+            binding.etNoteInput.setText(Html.fromHtml(content.text ?: "", Html.FROM_HTML_MODE_LEGACY))
 
             val oldSize = checklistItems.size
             checklistItems.clear()
@@ -727,7 +727,7 @@ class NoteActivity : AppCompatActivity() {
             }
 
         } catch (_: JsonSyntaxException) {
-            binding.etNoteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
+            binding.etNoteInput.setText(Html.fromHtml(note.content ?: "", Html.FROM_HTML_MODE_LEGACY))
             val oldSize = checklistItems.size
             checklistItems.clear()
             if (oldSize > 0) checklistAdapter.notifyItemRangeRemoved(0, oldSize)

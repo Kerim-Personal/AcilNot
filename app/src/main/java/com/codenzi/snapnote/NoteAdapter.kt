@@ -81,7 +81,8 @@ class NoteAdapter(
 
             try {
                 val content = gson.fromJson(note.content, NoteContent::class.java)
-                val textPreview: Spanned = Html.fromHtml(content.text, Html.FROM_HTML_MODE_LEGACY)
+                // DÜZELTME: Null kontrolü eklendi.
+                val textPreview: Spanned = Html.fromHtml(content.text ?: "", Html.FROM_HTML_MODE_LEGACY)
 
                 val hasText = textPreview.isNotBlank()
                 val hasChecklist = content.checklist.isNotEmpty()
@@ -121,7 +122,8 @@ class NoteAdapter(
                 }
 
             } catch (e: JsonSyntaxException) {
-                val preview: Spanned = Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY)
+                // DÜZELTME: Null kontrolü eklendi.
+                val preview: Spanned = Html.fromHtml(note.content ?: "", Html.FROM_HTML_MODE_LEGACY)
                 noteContent.text = preview
                 noteContent.isVisible = preview.isNotBlank()
                 noteImage.visibility = View.GONE

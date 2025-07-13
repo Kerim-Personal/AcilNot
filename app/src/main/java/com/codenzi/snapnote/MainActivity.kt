@@ -315,8 +315,8 @@ class MainActivity : AppCompatActivity() {
         }
         try {
             val noteContent = gson.fromJson(this.content, NoteContent::class.java)
-            if (noteContent.text.isNotBlank()) {
-                val plainText = Html.fromHtml(noteContent.text, Html.FROM_HTML_MODE_LEGACY).toString().trim()
+            if (!noteContent.text.isNullOrBlank()) {
+                val plainText = Html.fromHtml(noteContent.text ?: "", Html.FROM_HTML_MODE_LEGACY).toString().trim()
                 builder.append(plainText).append("\n\n")
             }
             if (noteContent.checklist.isNotEmpty()) {
@@ -327,7 +327,7 @@ class MainActivity : AppCompatActivity() {
                 builder.append("\n")
             }
         } catch (_: JsonSyntaxException) {
-            val plainText = Html.fromHtml(this.content, Html.FROM_HTML_MODE_LEGACY).toString().trim()
+            val plainText = Html.fromHtml(this.content ?: "", Html.FROM_HTML_MODE_LEGACY).toString().trim()
             builder.append(plainText)
         }
         return builder.toString().trim()
