@@ -234,7 +234,6 @@ class SettingsActivity : AppCompatActivity() {
                 noteDao.deleteAllNotes()
                 withContext(Dispatchers.Main) { updateProgress(70) }
 
-                // DÜZELTME: 'requireContext()' parametresi kaldırıldı.
                 PasswordManager.disablePassword()
                 withContext(Dispatchers.Main) { updateProgress(85) }
 
@@ -260,9 +259,8 @@ class SettingsActivity : AppCompatActivity() {
                 .build()
 
             val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
-            googleSignInClient.signOut().addOnCompleteListener {
-                googleSignInLauncher.launch(googleSignInClient.signInIntent)
-            }
+            // KESİN ÇÖZÜM: Hatalı olan ve işlemi iptal eden signOut() çağrısı buradan kaldırıldı.
+            googleSignInLauncher.launch(googleSignInClient.signInIntent)
         }
 
         @Suppress("DEPRECATION")
@@ -309,7 +307,6 @@ class SettingsActivity : AppCompatActivity() {
                     noteDao.deleteAllNotes()
                     withContext(Dispatchers.Main) { updateProgress(70) }
 
-                    // DÜZELTME: 'requireContext()' parametresi kaldırıldı.
                     PasswordManager.disablePassword()
                     withContext(Dispatchers.Main) { updateProgress(85) }
 
@@ -473,7 +470,6 @@ class SettingsActivity : AppCompatActivity() {
                     widgetBackgroundSelection = sharedPrefs.getString("widget_background_selection", "widget_background")
                 )
 
-                // DÜZELTME: 'requireContext()' parametreleri kaldırıldı.
                 val passwordHash = if (PasswordManager.isPasswordSet()) PasswordManager.getPasswordHash() else null
                 val salt = if (PasswordManager.isPasswordSet()) PasswordManager.getSalt() else null
 
@@ -683,7 +679,6 @@ class SettingsActivity : AppCompatActivity() {
                         putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
                     }
                     if (backupData.passwordHash != null && backupData.salt != null) {
-                        // DÜZELTME: 'requireContext()' parametreleri kaldırıldı.
                         PasswordManager.resetForRestore(requireContext())
                         PasswordManager.restorePassword(backupData.passwordHash, backupData.salt)
                     }
