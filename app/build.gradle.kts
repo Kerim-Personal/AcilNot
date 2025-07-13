@@ -21,7 +21,7 @@ android {
     namespace = "com.codenzi.snapnote"
     compileSdk = 36
 
-    // DÜZELTME: İmza yapılandırması (signingConfigs) buraya eklendi.
+    // İmza yapılandırması (signingConfigs) buraya eklendi.
     signingConfigs {
         create("release") {
             // Bilgiler artık güvenli bir şekilde local.properties'den okunuyor.
@@ -52,7 +52,7 @@ android {
             // Release derlemesi için imza yapılandırması atanıyor.
             signingConfig = signingConfigs.getByName("release")
         }
-        // DÜZELTME: Debug derlemesine de release imzası atanıyor.
+        // Debug derlemesine de release imzası atanıyor.
         // Bu, Play Store sürümünün üzerine güncelleme yapmanızı sağlar.
         debug {
             signingConfig = signingConfigs.getByName("release")

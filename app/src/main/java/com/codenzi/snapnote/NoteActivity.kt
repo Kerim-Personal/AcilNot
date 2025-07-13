@@ -76,16 +76,19 @@ class NoteActivity : AppCompatActivity() {
     private var utteranceStartPosition = 0
     private val restartHandler = Handler(Looper.getMainLooper())
 
-    // Dosya Yolları
+    // --- DOSYA SIZINTISI İÇİN GÜNCELLEME ---
+    // Dosya yolları ve URI'ler
     private var audioPath: String? = null
-    private var imagePath: String? = null
-    private var tempPhotoUri: Uri? = null
+    private var imagePath: String? = null // Hem geçici hem kalıcı yolu tutacak
+    private var tempPhotoUri: Uri? = null // Yalnızca kameranın kullanacağı geçici URI
 
     private var isFromWidget = false
 
     companion object {
-        private const val KEY_TEMP_PHOTO_URI = "KEY_TEMP_PHOTO_URI"
+        // `tempPhotoUri` yerine geçici dosyanın yolunu saklayacağız.
+        private const val KEY_TEMP_PHOTO_PATH = "KEY_TEMP_PHOTO_PATH"
     }
+    // --- BİTİŞ ---
 
     // İzin ve Aktivite Sonuçları için Launcher'lar
     private val requestCameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -101,10 +104,14 @@ class NoteActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.microphone_permission_needed), Toast.LENGTH_SHORT).show()
         }
     }
+
+    // --- DOSYA SIZINTISI İÇİN GÜNCELLEME ---
     private val takePictureLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         val capturedUri = tempPhotoUri
         if (success && capturedUri != null) {
-            imagePath = capturedUri.toString()
+            // imagePath artık geçici dosyanın yolunu tutuyor.
+            // Bu yol, performSave içinde kalıcı hale getirilecek.
+            // Bu noktada imagePath'in set edildiğinden eminiz çünkü takePicture() içinde yapıyoruz.
             binding.ivImagePreview.visibility = View.VISIBLE
             binding.ivImagePreview.load(capturedUri)
 
@@ -112,22 +119,29 @@ class NoteActivity : AppCompatActivity() {
                 val titleWithTimestamp = "${getString(R.string.photo_note_title)} - ${formatDate(System.currentTimeMillis(), "dd/MM/yyyy HH:mm")}"
                 binding.etNoteTitle.setText(titleWithTimestamp)
             }
+        } else {
+            // Başarısızlık durumunda yolları temizle
+            imagePath = null
+            tempPhotoUri = null
         }
     }
+    // --- BİTİŞ ---
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeManager.applyTheme(this)
         super.onCreate(savedInstanceState)
 
+        // --- DOSYA SIZINTISI İÇİN GÜNCELLEME ---
+        // Ekran döndürme gibi durumlarda geçici resim yolunu kurtar
         if (savedInstanceState != null) {
-            tempPhotoUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                savedInstanceState.getParcelable(KEY_TEMP_PHOTO_URI, Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                savedInstanceState.getParcelable(KEY_TEMP_PHOTO_URI)
+            savedInstanceState.getString(KEY_TEMP_PHOTO_PATH)?.let { path ->
+                imagePath = path
+                // Eğer yol varsa, URI'sini de oluştur.
+                tempPhotoUri = FileProvider.getUriForFile(this, "${packageName}.provider", File(path))
             }
         }
+        // --- BİTİŞ ---
 
         binding = ActivityNoteBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -149,10 +163,15 @@ class NoteActivity : AppCompatActivity() {
         })
     }
 
+    // --- DOSYA SIZINTISI İÇİN GÜNCELLEME ---
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putParcelable(KEY_TEMP_PHOTO_URI, tempPhotoUri)
+        // Yalnızca geçici bir dosya varsa yolunu kaydet
+        if (imagePath != null && imagePath!!.contains(ImageManager.TEMP_IMAGE_PREFIX)) {
+            outState.putString(KEY_TEMP_PHOTO_PATH, imagePath)
+        }
     }
+    // --- BİTİŞ ---
 
     private fun getColorFromAttr(attrResId: Int): Int {
         val typedValue = android.util.TypedValue()
@@ -231,17 +250,19 @@ class NoteActivity : AppCompatActivity() {
             }
         }
 
-        // DEĞİŞİKLİK: Buton dinleyicileri güncellendi
         binding.btnAddPhoto.setOnClickListener { takePicture() }
         binding.btnRecordAudio.setOnClickListener { toggleRecording() }
         binding.btnVoiceNote.setOnClickListener { toggleSpeechToText() }
     }
 
+    // --- DOSYA SIZINTISI İÇİN GÜNCELLEME ---
     private fun performSave() {
         val titleText = binding.etNoteTitle.text.toString().trim()
         val noteContentText = binding.etNoteInput.text
 
         if (titleText.isBlank() && noteContentText.isNullOrBlank() && checklistItems.all { it.text.isBlank() } && imagePath == null && audioPath == null) {
+            // Boş not kaydedilmeyeceği için, oluşturulmuş geçici dosyalar
+            // uygulama açılışındaki temizlik mekanizmasıyla silinecek.
             finish()
             return
         }
@@ -254,6 +275,15 @@ class NoteActivity : AppCompatActivity() {
             ""
         }
 
+        // Geçici resmi kalıcı hale getir
+        var permanentImagePath: String? = imagePath
+        if (imagePath != null && imagePath!!.contains(ImageManager.TEMP_IMAGE_PREFIX)) {
+            permanentImagePath = ImageManager.makeImagePermanent(this, imagePath!!)
+            if (permanentImagePath == null) {
+                Toast.makeText(this, "Resim kaydedilirken bir hata oluştu.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         viewModel.saveOrUpdateNote(
             currentNoteId = currentNoteId,
             title = titleText,
@@ -261,26 +291,26 @@ class NoteActivity : AppCompatActivity() {
             checklistItems = checklistItems,
             color = selectedColor,
             audioPath = audioPath,
-            imagePath = imagePath,
+            imagePath = permanentImagePath, // Kalıcı veya mevcut yolu gönder
             isFromWidget = isFromWidget
         )
         updateAllWidgets()
     }
+    // --- BİTİŞ ---
 
+    // --- DOSYA SIZINTISI İÇİN GÜNCELLEME ---
     private fun takePicture() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            tempPhotoUri = createImageFileUri()
-            takePictureLauncher.launch(tempPhotoUri!!)
+            // ImageManager'dan geçici dosya ve URI'sini al.
+            val (tempFile, tempUri) = ImageManager.createTempImageFile(this)
+            this.imagePath = tempFile.absolutePath // Geçici yolu sakla
+            this.tempPhotoUri = tempUri // Kameranın kullanacağı URI'yi sakla
+            takePictureLauncher.launch(tempUri)
         } else {
             requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
-
-    private fun createImageFileUri(): Uri {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val imageFile = File.createTempFile("JPEG_${timeStamp}_", ".jpg", getExternalFilesDir(null))
-        return FileProvider.getUriForFile(this, "${packageName}.provider", imageFile)
-    }
+    // --- BİTİŞ ---
 
     private fun toggleRecording() {
         if (isRecording) {
@@ -315,9 +345,9 @@ class NoteActivity : AppCompatActivity() {
                 start()
             }
             isRecording = true
-            binding.btnRecordAudio.setIconResource(R.drawable.ic_stop_24) // İkonu değiştir
+            binding.btnRecordAudio.setIconResource(R.drawable.ic_stop_24)
             Toast.makeText(this, "Kayıt başladı...", Toast.LENGTH_SHORT).show()
-        } catch (_: IOException) { // DÜZELTİLDİ
+        } catch (_: IOException) {
             Toast.makeText(this, "Kayıt başlatılamadı.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -327,7 +357,7 @@ class NoteActivity : AppCompatActivity() {
         mediaRecorder?.release()
         mediaRecorder = null
         isRecording = false
-        binding.btnRecordAudio.setIconResource(R.drawable.ic_mic) // İkonu eski haline getir
+        binding.btnRecordAudio.setIconResource(R.drawable.ic_mic)
         Toast.makeText(this, "Kayıt tamamlandı.", Toast.LENGTH_SHORT).show()
 
         binding.llAudioPlayer.visibility = View.VISIBLE
@@ -446,7 +476,7 @@ class NoteActivity : AppCompatActivity() {
             if (isListening) {
                 try {
                     speechRecognizer.startListening(speechRecognizerIntent)
-                } catch (_: Exception) { // DÜZELTİLDİ
+                } catch (_: Exception) {
                     stopListening()
                 }
             }
@@ -618,7 +648,7 @@ class NoteActivity : AppCompatActivity() {
                 ContextCompat.getColor(this, R.color.black)
             else
                 ContextCompat.getColor(this, R.color.white)
-        } catch (_: IllegalArgumentException) { // DÜZELTİLDİ
+        } catch (_: IllegalArgumentException) {
             ContextCompat.getColor(this, R.color.black)
         }
     }
@@ -628,7 +658,7 @@ class NoteActivity : AppCompatActivity() {
             val color = selectedColor.toColorInt()
             window.setBackgroundDrawable(color.toDrawable())
             binding.root.setBackgroundColor(color)
-        } catch (_: IllegalArgumentException) { // DÜZELTİLDİ
+        } catch (_: IllegalArgumentException) {
             val defaultColor = Color.WHITE
             window.setBackgroundDrawable(defaultColor.toDrawable())
             binding.root.setBackgroundColor(defaultColor)
@@ -696,7 +726,7 @@ class NoteActivity : AppCompatActivity() {
                 binding.ivImagePreview.visibility = View.GONE
             }
 
-        } catch (_: JsonSyntaxException) { // DÜZELTİLDİ
+        } catch (_: JsonSyntaxException) {
             binding.etNoteInput.setText(Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY))
             val oldSize = checklistItems.size
             checklistItems.clear()
@@ -708,7 +738,7 @@ class NoteActivity : AppCompatActivity() {
         }
         selectedColor = note.color
         updateWindowBackground()
-        val colorInt = try { note.color.toColorInt() } catch (_: Exception) { Color.WHITE } // DÜZELTİLDİ
+        val colorInt = try { note.color.toColorInt() } catch (_: Exception) { Color.WHITE }
         val viewToSelect = colorPickers.getOrNull(
             when (colorInt) {
                 ContextCompat.getColor(this@NoteActivity, R.color.note_color_yellow) -> 1

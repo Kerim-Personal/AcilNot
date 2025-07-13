@@ -67,17 +67,24 @@ class CameraNoteActivity : AppCompatActivity() {
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
+                    Toast.makeText(baseContext, "Fotoğraf çekilemedi.", Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    // --- DOĞRU VE GÜVENLİ YÖNTEM ---
+                    // Yetki adı artık `packageName` üzerinden dinamik olarak alınıyor.
+                    val authority = "${this@CameraNoteActivity.packageName}.provider"
                     val savedUri = FileProvider.getUriForFile(
                         this@CameraNoteActivity,
-                        "com.codenzi.snapnote.provider", // DÜZELTME: BuildConfig.APPLICATION_ID yerine doğrudan paket adı kullanıldı.
+                        authority,
                         photoFile
                     )
+                    // --- BİTİŞ ---
+
                     val msg = "Photo capture succeeded: $savedUri"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
+
                     viewModel.savePhotoNote(savedUri.toString(), getString(R.string.photo_note_title))
                     finish()
                 }
@@ -98,7 +105,6 @@ class CameraNoteActivity : AppCompatActivity() {
                 }
 
             imageCapture = ImageCapture.Builder().build()
-
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {

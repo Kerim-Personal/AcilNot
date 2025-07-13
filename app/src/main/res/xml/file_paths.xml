@@ -2,7 +2,7 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
 
     <external-files-path
-        name="audio_notes"
+        name="my_files"
         path="." />
 
     <external-media-path
@@ -10,7 +10,11 @@
         path="." />
 
     <cache-path
-        name="shared_images"
-        path="images/" />
+        name="my_cache"
+        path="." />
+
+    <files-path
+        name="my_internal_files"
+        path="." />
 
 </paths>

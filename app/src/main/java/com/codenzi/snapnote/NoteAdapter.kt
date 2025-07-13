@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
@@ -55,7 +56,6 @@ class NoteAdapter(
 
     fun getSelectedItemCount(): Int = selectedItems.size
 
-    // YENİ FONKSİYON: Tüm notları seçer.
     fun selectAll() {
         if (notes.isEmpty()) return
         val allNoteIds = notes.map { it.id }
@@ -70,6 +70,8 @@ class NoteAdapter(
         private val cardContainer: MaterialCardView = itemView.findViewById(R.id.note_card_container)
         private val pinnedIcon: ImageView = itemView.findViewById(R.id.iv_pinned_icon)
         private val noteImage: ImageView = itemView.findViewById(R.id.iv_note_item_image)
+        private val audioPlayerPreview: LinearLayout = itemView.findViewById(R.id.ll_audio_player_preview)
+        private val audioTitlePreview: TextView = itemView.findViewById(R.id.tv_audio_title_preview)
 
         fun bind(note: Note) {
             noteTitle.isVisible = note.title.isNotBlank()
@@ -102,21 +104,20 @@ class NoteAdapter(
                     noteContent.append(checklistSummary.toString())
                 }
 
+                noteImage.isVisible = content.imagePath != null
                 if (content.imagePath != null) {
-                    noteImage.visibility = View.VISIBLE
                     val path = content.imagePath
-                    val dataToLoad: Any = if (path.startsWith("content://")) {
-                        Uri.parse(path)
-                    } else {
-                        File(path)
-                    }
+                    val dataToLoad: Any = if (path.startsWith("content://")) Uri.parse(path) else File(path)
                     noteImage.load(dataToLoad) {
                         crossfade(true)
                         placeholder(R.drawable.ic_image_24)
                         error(R.drawable.ic_image_24)
                     }
-                } else {
-                    noteImage.visibility = View.GONE
+                }
+
+                audioPlayerPreview.isVisible = content.audioFilePath != null
+                if (content.audioFilePath != null) {
+                    audioTitlePreview.text = note.title.ifBlank { itemView.context.getString(R.string.voice_recording_title) }
                 }
 
             } catch (e: JsonSyntaxException) {
@@ -124,6 +125,7 @@ class NoteAdapter(
                 noteContent.text = preview
                 noteContent.isVisible = preview.isNotBlank()
                 noteImage.visibility = View.GONE
+                audioPlayerPreview.visibility = View.GONE
             }
 
             if (selectedItems.contains(note.id)) {
