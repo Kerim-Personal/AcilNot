@@ -115,7 +115,6 @@ class VoiceMemoWidgetProvider : AppWidgetProvider() {
             context.sendBroadcast(intent)
         }
 
-        // DÜZENLEME: Bu fonksiyon 'internal' yapıldı
         internal fun getBackgroundResource(name: String?): Int {
             return when (name) {
                 "widget_background" -> R.drawable.widget_background

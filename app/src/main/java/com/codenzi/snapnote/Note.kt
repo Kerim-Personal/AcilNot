@@ -1,10 +1,12 @@
 package com.codenzi.snapnote
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 
-@Entity(tableName = "notes")
+// DÜZELTME: Widget sorgusunu hızlandırmak için indeks eklendi.
+@Entity(tableName = "notes", indices = [Index(value = ["isDeleted", "showOnWidget"])])
 @TypeConverters(Converters::class)
 data class Note(
     @PrimaryKey(autoGenerate = true)
@@ -13,8 +15,8 @@ data class Note(
     val content: String,
     val createdAt: Long,
     val modifiedAt: List<Long> = emptyList(),
-    val color: String = "#FFECEFF1", // Varsayılan renk pastel gri
-    val isDeleted: Boolean = false, // Notun çöp kutusunda olup olmadığını belirtir
-    val deletedAt: Long? = null, // Notun çöp kutusuna taşındığı zamanı tutar
-    val showOnWidget: Boolean = false // YENİ: Notun widget'ta gösterilip gösterilmeyeceği
+    val color: String = "#FFECEFF1",
+    val isDeleted: Boolean = false,
+    val deletedAt: Long? = null,
+    val showOnWidget: Boolean = false
 )

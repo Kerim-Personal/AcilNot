@@ -14,6 +14,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.text.Html
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
@@ -293,7 +294,7 @@ class MainActivity : AppCompatActivity() {
             appWidgetManager.getAppWidgetIds(componentName).forEach { appWidgetId ->
                 NoteWidgetProvider.updateAppWidget(applicationContext, appWidgetManager, appWidgetId)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(applicationContext, "An error occurred while updating the widget.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -326,7 +327,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 builder.append("\n")
             }
-        } catch (e: JsonSyntaxException) {
+        } catch (_: JsonSyntaxException) {
             val plainText = Html.fromHtml(this.content, Html.FROM_HTML_MODE_LEGACY).toString().trim()
             builder.append(plainText)
         }
@@ -406,7 +407,7 @@ class MainActivity : AppCompatActivity() {
 
             val backgroundColor = try {
                 note.color.toColorInt()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Color.WHITE
             }
             view.setBackgroundColor(backgroundColor)
@@ -436,7 +437,7 @@ class MainActivity : AppCompatActivity() {
                     inputStream?.close()
                 } catch (e: Exception) {
                     imageView.visibility = View.GONE
-                    e.printStackTrace()
+                    Log.e("MainActivity", "Error loading image for sharing", e)
                 }
             } else {
                 imageView.visibility = View.GONE
@@ -471,7 +472,7 @@ class MainActivity : AppCompatActivity() {
 
             view.drawToBitmap()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("MainActivity", "Error creating bitmap from note", e)
             null
         }
     }
@@ -491,7 +492,7 @@ class MainActivity : AppCompatActivity() {
             stream.close()
             file
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("MainActivity", "Error saving bitmap to cache", e)
             null
         }
     }
@@ -546,8 +547,8 @@ class MainActivity : AppCompatActivity() {
             intent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
             intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
             applicationContext.sendBroadcast(intent)
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
+            // Hata durumunda kullanıcıyı rahatsız etmemek için sessiz kal
         }
     }
 }

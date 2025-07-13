@@ -8,8 +8,8 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-
-@Database(entities = [Note::class], version = 7, exportSchema = false)
+// KRİTİK DÜZELTME: Veritabanı versiyonu 8'e yükseltildi.
+@Database(entities = [Note::class], version = 8, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
 
@@ -19,14 +19,19 @@ abstract class NoteDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: NoteDatabase? = null
 
-        // DÜZELTME: Veritabanı sürüm 6'dan 7'ye geçerken 'showOnWidget' sütununu ekleyen
-        // Migration nesnesini tanımlıyoruz. Bu, kullanıcı verilerinin korunmasını sağlar.
         private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // 'notes' tablosuna 'showOnWidget' adında, boş olamayan (NOT NULL),
-                // varsayılan değeri 0 (false) olan bir INTEGER sütunu ekliyoruz.
-                // Room, Boolean tipi için INTEGER kullanır (0=false, 1=true).
                 db.execSQL("ALTER TABLE notes ADD COLUMN showOnWidget INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        // KRİTİK DÜZELTME: Yeni versiyon için migrasyon kodu eklendi.
+        // Bu kod, 'notes' tablosuna yeni indeksi ekler.
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Notlar tablosundaki isDeleted ve showOnWidget sütunları için bir indeks oluştur.
+                // Bu, bu sütunları kullanan sorguları önemli ölçüde hızlandırır.
+                db.execSQL("CREATE INDEX `index_notes_isDeleted_showOnWidget` ON `notes` (`isDeleted`, `showOnWidget`)")
             }
         }
 
@@ -37,11 +42,8 @@ abstract class NoteDatabase : RoomDatabase() {
                     NoteDatabase::class.java,
                     "note_database"
                 )
-                    // DÜZELTME: Veri kaybına neden olan .fallbackToDestructiveMigration() kaldırıldı.
-                    // .fallbackToDestructiveMigration()
-
-                    // DÜZELTME: Tanımladığımız Migration nesnesi veritabanına eklendi.
-                    .addMigrations(MIGRATION_6_7)
+                    // KRİTİK DÜZELTME: Yeni migrasyon veritabanına eklendi.
+                    .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
                     .build()
                 INSTANCE = instance
                 instance

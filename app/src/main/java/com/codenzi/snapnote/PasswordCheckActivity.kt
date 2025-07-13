@@ -24,7 +24,8 @@ class PasswordCheckActivity : AppCompatActivity() {
         applySavedTheme()
         super.onCreate(savedInstanceState)
 
-        // DÜZELTME: 'this' parametresi kaldırıldı.
+        // DÜZELTME: 'this' parametresi kaldırıldı. PasswordManager artık uygulama
+        // genelinde tek bir yerden yönetiliyor.
         if (!PasswordManager.isPasswordSet()) {
             navigateToMain()
             return
@@ -45,6 +46,7 @@ class PasswordCheckActivity : AppCompatActivity() {
             return@setOnEditorActionListener false
         }
 
+        // Geri tuşuna basıldığında uygulamanın tamamen kapanmasını sağlar.
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 finishAffinity()

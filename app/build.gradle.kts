@@ -1,3 +1,7 @@
+// local.properties dosyasını okumak için bu kod bloğu en üste eklenir.
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,9 +10,27 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
 }
 
+// local.properties dosyasındaki anahtar bilgilerini yüklemek için bu bölüm eklendi.
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
 android {
     namespace = "com.codenzi.snapnote"
     compileSdk = 36
+
+    // DÜZELTME: İmza yapılandırması (signingConfigs) buraya eklendi.
+    signingConfigs {
+        create("release") {
+            // Bilgiler artık güvenli bir şekilde local.properties'den okunuyor.
+            storeFile = file(localProperties.getProperty("KEYSTORE_PATH", ""))
+            storePassword = localProperties.getProperty("KEYSTORE_PASSWORD", "")
+            keyAlias = localProperties.getProperty("KEY_ALIAS", "")
+            keyPassword = localProperties.getProperty("KEY_PASSWORD", "")
+        }
+    }
 
     defaultConfig {
         applicationId = "com.codenzi.snapnote"
@@ -21,16 +43,22 @@ android {
 
     buildTypes {
         release {
-            // UYGULAMA BOYUTUNU KÜÇÜLTMEK İÇİN EKLENDİ
-            isMinifyEnabled = true      // Kullanılmayan kodları kaldırır.
-            isShrinkResources = true  // Kullanılmayan kaynakları (resim, layout vb.) kaldırır.
-
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Release derlemesi için imza yapılandırması atanıyor.
+            signingConfig = signingConfigs.getByName("release")
+        }
+        // DÜZELTME: Debug derlemesine de release imzası atanıyor.
+        // Bu, Play Store sürümünün üzerine güncelleme yapmanızı sağlar.
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8

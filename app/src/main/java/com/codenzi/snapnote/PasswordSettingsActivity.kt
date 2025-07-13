@@ -78,7 +78,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
     }
 
     private fun updateUI() {
-        // DÜZELTME: 'this' parametresi kaldırıldı.
         if (PasswordManager.isPasswordSet()) {
             binding.tilCurrentPassword.visibility = View.VISIBLE
             binding.btnDisablePassword.visibility = View.VISIBLE
@@ -93,7 +92,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
         val newPassword = binding.etNewPassword.text.toString()
         val confirmPassword = binding.etConfirmPassword.text.toString()
 
-        // DÜZELTME: 'this' parametreleri kaldırıldı.
         if (PasswordManager.isPasswordSet() && !PasswordManager.checkPassword(currentPassword)) {
             Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
             return
@@ -111,7 +109,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
             return
         }
 
-        // DÜZELTME: 'this' parametresi kaldırıldı.
         PasswordManager.setPassword(newPassword)
         Toast.makeText(this, "Parola ayarlandı. Otomatik yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
         triggerAutomaticBackup()
@@ -128,13 +125,11 @@ class PasswordSettingsActivity : AppCompatActivity() {
 
     private fun disablePassword() {
         val currentPassword = binding.etCurrentPassword.text.toString()
-        // DÜZELTME: 'this' parametresi kaldırıldı.
         if (!PasswordManager.checkPassword(currentPassword)) {
             Toast.makeText(this, R.string.current_password_incorrect_error, Toast.LENGTH_SHORT).show()
             return
         }
 
-        // DÜZELTME: 'this' parametresi kaldırıldı.
         PasswordManager.disablePassword()
         Toast.makeText(this, "Parola kaldırıldı. Otomatik yedekleme başlatılıyor...", Toast.LENGTH_SHORT).show()
         triggerAutomaticBackup()
@@ -230,7 +225,6 @@ class PasswordSettingsActivity : AppCompatActivity() {
                 widgetBackgroundSelection = sharedPrefs.getString("widget_background_selection", "widget_background")
             )
 
-            // DÜZELTME: 'this' parametreleri kaldırıldı.
             val passwordHash = PasswordManager.getPasswordHash()
             val salt = PasswordManager.getSalt()
 

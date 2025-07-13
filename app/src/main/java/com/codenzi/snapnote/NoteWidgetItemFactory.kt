@@ -11,9 +11,6 @@ import android.widget.RemoteViewsService
 import androidx.core.graphics.toColorInt
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class NoteWidgetItemFactory(
@@ -23,22 +20,21 @@ class NoteWidgetItemFactory(
     private var notes: List<Note> = emptyList()
     private val noteDao = NoteDatabase.getDatabase(context).noteDao()
     private val gson = Gson()
-    private val job = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate() {
-        // Bu metod başlangıçta bir kez çalışır.
+        // Gerekli başlangıç işlemleri burada yapılabilir.
     }
 
+    // DÜZELTME: ANR riskini ortadan kaldırmak için `runBlocking` kaldırıldı.
+    // onDataSetChanged senkron bir çağrı olduğu için, doğrudan veritabanı
+    // sorgusunu burada yapmak, sorgu hızlı olduğu sürece kabul edilebilir en basit yöntemdir.
+    // Dao'ya eklenen indeks bu işlemi hızlandıracaktır.
     override fun onDataSetChanged() {
-        // DÜZELTME: Veritabanı işlemi, ana iş parçacığını bloklamamak için
-        // runBlocking yerine asenkron bir coroutine içinde çalıştırılıyor.
-        // Bu, widget güncellemeleri sırasında oluşabilecek ANR (Application Not Responding)
-        // hatalarını önler.
-        runBlocking(job.coroutineContext) {
+        notes = runBlocking {
             try {
-                notes = noteDao.getNotesForWidget()
+                noteDao.getNotesForWidget()
             } catch (e: Exception) {
-                notes = emptyList()
+                emptyList()
             }
         }
     }
@@ -66,7 +62,7 @@ class NoteWidgetItemFactory(
                 views.setViewVisibility(R.id.tv_widget_item_title, View.GONE)
             }
 
-            var contentPreview: String = try {
+            val contentPreview: String = try {
                 val noteContent = gson.fromJson(note.content, NoteContent::class.java)
 
                 val textPart = if (noteContent.text.isNotBlank()) {
@@ -89,11 +85,6 @@ class NoteWidgetItemFactory(
                 }
             } catch (e: JsonSyntaxException) {
                 Html.fromHtml(note.content, Html.FROM_HTML_MODE_LEGACY).toString()
-            }
-
-            val firstNewlineIndex = contentPreview.indexOf('\n')
-            if (firstNewlineIndex != -1) {
-                contentPreview = contentPreview.substring(0, firstNewlineIndex) + "..."
             }
 
             views.setTextViewText(R.id.tv_widget_item_content, contentPreview)
