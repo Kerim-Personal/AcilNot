@@ -480,13 +480,14 @@ class SettingsActivity : AppCompatActivity() {
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     var imageDriveId: String? = null
 
+                    // --- DÜZELTME BAŞLANGICI ---
                     content.imagePath?.let { path ->
-                        val imageFile = createTempFileForUpload(path.toUri())
-                        if (imageFile != null) {
+                        val imageFile = File(path)
+                        if (imageFile.exists()) {
                             imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
-                            imageFile.delete()
                         }
                     }
+                    // --- DÜZELTME SONU ---
 
                     var audioDriveId: String? = null
                     content.audioFilePath?.let { path ->
