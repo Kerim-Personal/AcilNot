@@ -73,6 +73,7 @@
                     android:layout_height="48dp"
                     android:contentDescription="@string/tooltip_bold"
                     app:icon="@drawable/ic_format_bold_24"
+                    app:iconTint="?attr/colorPrimary"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
                     app:strokeWidth="0dp" />
@@ -83,6 +84,7 @@
                     android:layout_height="48dp"
                     android:contentDescription="@string/tooltip_italic"
                     app:icon="@drawable/ic_format_italic_24"
+                    app:iconTint="?attr/colorPrimary"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
                     app:strokeWidth="0dp" />
@@ -93,6 +95,7 @@
                     android:layout_height="48dp"
                     android:contentDescription="@string/tooltip_strikethrough"
                     app:icon="@drawable/ic_format_strikethrough_24"
+                    app:iconTint="?attr/colorPrimary"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
                     app:strokeWidth="0dp" />
@@ -103,6 +106,7 @@
                     android:layout_height="48dp"
                     android:contentDescription="Fotoğraf Ekle"
                     app:icon="@drawable/outline_photo_camera_24"
+                    app:iconTint="?attr/colorPrimary"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
                     app:strokeWidth="0dp" />
@@ -113,6 +117,7 @@
                     android:layout_height="48dp"
                     android:contentDescription="Ses Kaydı Yap"
                     app:icon="@drawable/ic_mic"
+                    app:iconTint="?attr/colorPrimary"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
                     app:strokeWidth="0dp" />
@@ -123,6 +128,7 @@
                     android:layout_height="48dp"
                     android:contentDescription="@string/tooltip_voice_note"
                     app:icon="@drawable/ic_microphone_24"
+                    app:iconTint="?attr/colorPrimary"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
                     app:strokeWidth="0dp" />
