@@ -262,4 +262,6 @@
     <string name="feature_requires_android_oreo">This feature is available on Android 8.0 (Oreo) and above.</string>
     <string name="an_error_occurred_during_backup_simple">An error occurred during backup.</string>
     <string name="progress_percentage_format" translatable="false">%d%%</string>
+    <string name="no_notes_to_backup">There are no notes to back up.</string>
+
 </resources>

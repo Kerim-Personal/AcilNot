@@ -254,4 +254,5 @@
     <string name="feature_requires_android_oreo">Bu özellik Android 8.0 (Oreo) ve üzeri sürümlerde mevcuttur.</string>
     <string name="an_error_occurred_during_backup_simple">Yedekleme sırasında bir hata oluştu.</string>
     <string name="progress_percentage_format" translatable="false">%d%%</string>
+    <string name="no_notes_to_backup">Yedeklenecek not bulunmuyor.</string>
 </resources>

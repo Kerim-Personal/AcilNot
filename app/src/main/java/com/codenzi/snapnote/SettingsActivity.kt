@@ -390,8 +390,16 @@ class SettingsActivity : AppCompatActivity() {
         private fun backupNotes(googleDriveManager: GoogleDriveManager) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
-                    val existingBackup = googleDriveManager.getBackupFiles()?.firstOrNull()
                     val localNotes = noteDao.getAllNotes().first()
+
+                    if (localNotes.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(requireContext(), getString(R.string.no_notes_to_backup), Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
+
+                    val existingBackup = googleDriveManager.getBackupFiles()?.firstOrNull()
 
                     withContext(Dispatchers.Main) {
                         if (existingBackup != null) {
@@ -410,7 +418,7 @@ class SettingsActivity : AppCompatActivity() {
                         }
                     }
                 } catch (e: Exception) {
-                    showError("Error during backup", e)
+                    showError("Error during backup check", e)
                 }
             }
         }
@@ -490,29 +498,47 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // *** YENİ DÜZENLENMİŞ FONKSİYON ***
         private fun restoreNotes(googleDriveManager: GoogleDriveManager) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), getString(R.string.searching_for_backups), Toast.LENGTH_SHORT).show()
+                        showProgressDialog(R.string.searching_for_backups)
                     }
 
                     val backupFile = googleDriveManager.getBackupFiles()?.firstOrNull()
                     if (backupFile == null) {
-                        withContext(Dispatchers.Main) { Toast.makeText(requireContext(), getString(R.string.backup_not_found), Toast.LENGTH_LONG).show() }
+                        withContext(Dispatchers.Main) {
+                            dismissProgressDialog()
+                            Toast.makeText(requireContext(), getString(R.string.backup_not_found), Toast.LENGTH_LONG).show()
+                        }
                         return@launch
                     }
 
                     val jsonContent = googleDriveManager.downloadJsonBackup(backupFile.id)
                     if (jsonContent.isNullOrBlank()) {
-                        withContext(Dispatchers.Main) { Toast.makeText(requireContext(), getString(R.string.backup_file_empty_or_corrupt), Toast.LENGTH_LONG).show() }
+                        withContext(Dispatchers.Main) {
+                            dismissProgressDialog()
+                            Toast.makeText(requireContext(), getString(R.string.backup_file_empty_or_corrupt), Toast.LENGTH_LONG).show()
+                        }
                         return@launch
                     }
 
                     val type = object : TypeToken<BackupData>() {}.type
                     val backupData: BackupData = gson.fromJson(jsonContent, type)
 
+                    // YEDEĞİN İÇİ BOŞ MU KONTROL ET
+                    if (backupData.notes.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            dismissProgressDialog()
+                            Toast.makeText(requireContext(), "Yedek dosyası bulundu ancak içerisinde geri yüklenecek not yok.", Toast.LENGTH_LONG).show()
+                        }
+                        return@launch
+                    }
+
+                    // İçi doluysa normal işleme devam et
                     withContext(Dispatchers.Main) {
+                        dismissProgressDialog()
                         if (backupData.passwordHash != null && backupData.salt != null) {
                             showPasswordPromptForRestore(googleDriveManager, backupData)
                         } else {
@@ -521,6 +547,9 @@ class SettingsActivity : AppCompatActivity() {
                     }
 
                 } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        dismissProgressDialog()
+                    }
                     showError(getString(R.string.restore_failed), e)
                 }
             }
@@ -617,7 +646,6 @@ class SettingsActivity : AppCompatActivity() {
                     noteDao.deleteAllNotes()
                     noteDao.insertAll(restoredNotes)
 
-                    // Düzeltme: SharedPreferences edit bloğu daha güvenli hale getirildi.
                     val prefsEditor = PreferenceManager.getDefaultSharedPreferences(requireContext()).edit()
                     prefsEditor.putString("theme_selection", backupData.settings.themeSelection)
                     prefsEditor.putString("color_selection", backupData.settings.colorSelection)

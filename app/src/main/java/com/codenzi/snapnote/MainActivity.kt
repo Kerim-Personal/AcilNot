@@ -35,7 +35,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.toColorInt
-import androidx.core.net.toUri
 import androidx.core.view.drawToBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -399,7 +398,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun createBitmapFromNote(note: Note): Bitmap? {
-        return try {
+        try {
             val view = LayoutInflater.from(this).inflate(R.layout.note_render_layout, FrameLayout(this), false)
             val titleView = view.findViewById<TextView>(R.id.render_note_title)
             val contentView = view.findViewById<TextView>(R.id.render_note_content)
@@ -427,14 +426,33 @@ class MainActivity : AppCompatActivity() {
                 titleView.visibility = View.GONE
             }
 
+            // *** DÜZELTME BAŞLANGICI ***
             if (noteContent.imagePath != null) {
                 try {
-                    val imageUri = noteContent.imagePath.toUri()
-                    val inputStream = contentResolver.openInputStream(imageUri)
-                    val imageBitmap = BitmapFactory.decodeStream(inputStream)
-                    imageView.setImageBitmap(imageBitmap)
-                    imageView.visibility = View.VISIBLE
-                    inputStream?.close()
+                    val path = noteContent.imagePath
+                    val imageBitmap: Bitmap?
+
+                    // URI veya dosya yolu olmasına göre farklı yükleme yöntemleri kullan
+                    if (path.startsWith("content://")) {
+                        val imageUri = Uri.parse(path)
+                        val inputStream = contentResolver.openInputStream(imageUri)
+                        imageBitmap = BitmapFactory.decodeStream(inputStream)
+                        inputStream?.close()
+                    } else {
+                        val imageFile = File(path)
+                        imageBitmap = if (imageFile.exists()) {
+                            BitmapFactory.decodeFile(imageFile.absolutePath)
+                        } else {
+                            null
+                        }
+                    }
+
+                    if (imageBitmap != null) {
+                        imageView.setImageBitmap(imageBitmap)
+                        imageView.visibility = View.VISIBLE
+                    } else {
+                        imageView.visibility = View.GONE
+                    }
                 } catch (e: Exception) {
                     imageView.visibility = View.GONE
                     Log.e("MainActivity", "Error loading image for sharing", e)
@@ -442,6 +460,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 imageView.visibility = View.GONE
             }
+            // *** DÜZELTME SONU ***
 
             val contentBuilder = StringBuilder()
             if (noteContent.text.isNotBlank()) {
@@ -470,10 +489,10 @@ class MainActivity : AppCompatActivity() {
             }
             view.layout(0, 0, view.measuredWidth, view.measuredHeight)
 
-            view.drawToBitmap()
+            return view.drawToBitmap()
         } catch (e: Exception) {
             Log.e("MainActivity", "Error creating bitmap from note", e)
-            null
+            return null
         }
     }
 
