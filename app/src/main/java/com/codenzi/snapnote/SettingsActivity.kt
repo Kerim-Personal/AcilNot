@@ -259,8 +259,12 @@ class SettingsActivity : AppCompatActivity() {
                 .build()
 
             val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
-            // KESİN ÇÖZÜM: Hatalı olan ve işlemi iptal eden signOut() çağrısı buradan kaldırıldı.
-            googleSignInLauncher.launch(googleSignInClient.signInIntent)
+            // --- DÜZELTME BAŞLANGICI ---
+            // Her seferinde hesap seçim ekranını göstermek için önce oturumu kapat.
+            googleSignInClient.signOut().addOnCompleteListener {
+                googleSignInLauncher.launch(googleSignInClient.signInIntent)
+            }
+            // --- DÜZELTME SONU ---
         }
 
         @Suppress("DEPRECATION")
@@ -480,14 +484,12 @@ class SettingsActivity : AppCompatActivity() {
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     var imageDriveId: String? = null
 
-                    // --- DÜZELTME BAŞLANGICI ---
                     content.imagePath?.let { path ->
                         val imageFile = File(path)
                         if (imageFile.exists()) {
                             imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
                         }
                     }
-                    // --- DÜZELTME SONU ---
 
                     var audioDriveId: String? = null
                     content.audioFilePath?.let { path ->
@@ -529,23 +531,6 @@ class SettingsActivity : AppCompatActivity() {
                     dismissProgressDialog()
                 }
                 showError("Backup failed", e)
-            }
-        }
-
-        @Throws(IOException::class)
-        private fun createTempFileForUpload(uri: Uri): File? {
-            val context = requireContext()
-            return try {
-                val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-                val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
-                FileOutputStream(tempFile).use { outputStream ->
-                    inputStream?.copyTo(outputStream)
-                }
-                inputStream?.close()
-                tempFile
-            } catch (e: Exception) {
-                Log.e("SettingsFragment", "Error creating temp file from URI", e)
-                null
             }
         }
 
