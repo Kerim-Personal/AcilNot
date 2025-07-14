@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-// KRİTİK DÜZELTME: Veritabanı versiyonu 8'e yükseltildi.
+// Veritabanı versiyonunun 8 olduğundan emin olun
 @Database(entities = [Note::class], version = 8, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
@@ -19,18 +19,17 @@ abstract class NoteDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: NoteDatabase? = null
 
+        // Bu migration, versiyon 6'dan 7'ye geçiş içindi, bu kalmalı.
         private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE notes ADD COLUMN showOnWidget INTEGER NOT NULL DEFAULT 0")
             }
         }
 
-        // KRİTİK DÜZELTME: Yeni versiyon için migrasyon kodu eklendi.
-        // Bu kod, 'notes' tablosuna yeni indeksi ekler.
+        // BU, YAZMANIZ GEREKEN YENİ VE KRİTİK MIGRATION PLANIDIR
         private val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Notlar tablosundaki isDeleted ve showOnWidget sütunları için bir indeks oluştur.
-                // Bu, bu sütunları kullanan sorguları önemli ölçüde hızlandırır.
+                // Veritabanına yeni Index'i eklemesi için SQL komutu
                 db.execSQL("CREATE INDEX `index_notes_isDeleted_showOnWidget` ON `notes` (`isDeleted`, `showOnWidget`)")
             }
         }
@@ -42,7 +41,8 @@ abstract class NoteDatabase : RoomDatabase() {
                     NoteDatabase::class.java,
                     "note_database"
                 )
-                    // KRİTİK DÜZELTME: Yeni migrasyon veritabanına eklendi.
+                    // Room'a hem eski hem de yeni taşıma planını veriyoruz.
+                    // O, hangi kullanıcının hangi versiyonda olduğuna bakıp doğru olanı seçecektir.
                     .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
                     .build()
                 INSTANCE = instance
