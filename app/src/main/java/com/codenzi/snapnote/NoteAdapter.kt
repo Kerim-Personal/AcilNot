@@ -81,11 +81,12 @@ class NoteAdapter(
 
             try {
                 val content = gson.fromJson(note.content, NoteContent::class.java)
-                // DÜZELTME: Null kontrolü eklendi.
                 val textPreview: Spanned = Html.fromHtml(content.text ?: "", Html.FROM_HTML_MODE_LEGACY)
 
                 val hasText = textPreview.isNotBlank()
-                val hasChecklist = content.checklist.isNotEmpty()
+                // --- ÇÖKMEYİ ENGELLEYEN DÜZELTME 1 ---
+                // 'checklist' null olabileceğinden, ?. ile güvenli kontrol yapılıyor.
+                val hasChecklist = content.checklist?.isNotEmpty() == true
 
                 noteContent.isVisible = hasText || hasChecklist
 
@@ -100,8 +101,11 @@ class NoteAdapter(
                     if (hasText) {
                         checklistSummary.append("\n\n")
                     }
-                    val checkedCount = content.checklist.count { it.isChecked }
-                    checklistSummary.append(itemView.context.getString(R.string.checklist_summary_preview, checkedCount, content.checklist.size))
+                    // --- ÇÖKMEYİ ENGELLEYEN DÜZELTME 2 ---
+                    // 'checklist' null ise, sayım işlemleri için 0 değeri kullanılıyor.
+                    val checkedCount = content.checklist?.count { it.isChecked } ?: 0
+                    val totalCount = content.checklist?.size ?: 0
+                    checklistSummary.append(itemView.context.getString(R.string.checklist_summary_preview, checkedCount, totalCount))
                     noteContent.append(checklistSummary.toString())
                 }
 
@@ -122,7 +126,7 @@ class NoteAdapter(
                 }
 
             } catch (e: JsonSyntaxException) {
-                // DÜZELTME: Null kontrolü eklendi.
+                // 'content' alanı eski bir formattaysa (JSON değilse) burası çalışır.
                 val preview: Spanned = Html.fromHtml(note.content ?: "", Html.FROM_HTML_MODE_LEGACY)
                 noteContent.text = preview
                 noteContent.isVisible = preview.isNotBlank()

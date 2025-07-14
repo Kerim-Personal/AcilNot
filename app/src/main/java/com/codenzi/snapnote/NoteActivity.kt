@@ -700,8 +700,15 @@ class NoteActivity : AppCompatActivity() {
             checklistItems.clear()
             if (oldSize > 0) checklistAdapter.notifyItemRangeRemoved(0, oldSize)
 
-            checklistItems.addAll(content.checklist)
-            if(checklistItems.isNotEmpty()) checklistAdapter.notifyItemRangeInserted(0, checklistItems.size)
+            // --- BU BLOK GÜNCELLENDİ ---
+            // 'content.checklist' null değilse elemanları ekle.
+            if (content.checklist != null) {
+                checklistItems.addAll(content.checklist)
+                if (checklistItems.isNotEmpty()) {
+                    checklistAdapter.notifyItemRangeInserted(0, checklistItems.size)
+                }
+            }
+            // --- GÜNCELLEME SONU ---
 
             if (content.audioFilePath != null) {
                 audioPath = content.audioFilePath
