@@ -11,6 +11,7 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
 import kotlinx.coroutines.Dispatchers
+import delay
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
@@ -23,44 +24,117 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
             NetHttpTransport(),
             GsonFactory.getDefaultInstance(),
             credential
-        ).setApplicationName("SnapNote").build()
+        ).setApplicationName("SnapNote")
+         .build()
     }
 
     private val driveApiFilesFields = "files(id, name, modifiedTime)"
     private val appDataFolderSpace = "appDataFolder"
-
-    // ... (Mevcut diğer fonksiyonlar aynı kalacak)
-
-    suspend fun uploadJsonBackup(fileName: String, content: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val fileMetadata = File().apply {
-                name = fileName
-            }
-            val existingFile = findFile(fileName)
-            val contentStream = ByteArrayContent("application/json", content.toByteArray())
-
-            if (existingFile != null) {
-                drive.files().update(existingFile.id, fileMetadata, contentStream).execute()
-            } else {
-                fileMetadata.parents = listOf(appDataFolderSpace)
-                drive.files().create(fileMetadata, contentStream).setFields("id").execute()
-            }
-            return@withContext true
-        } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "uploadJsonBackup failed", e)
-            return@withContext false
-        }
+    
+    companion object {
+        private const val TAG = "GoogleDriveManager"
+        private const val MAX_RETRY_ATTEMPTS = 3
+        private const val RETRY_DELAY_MS = 2000L
     }
 
-    suspend fun downloadJsonBackup(fileId: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val outputStream = ByteArrayOutputStream()
-            drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
-            return@withContext outputStream.toString("UTF-8")
-        } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "downloadJsonBackup failed", e)
-            return@withContext null
+    /**
+     * Data class to hold upload result with integrity information
+     */
+    data class UploadResult(
+        val success: Boolean,
+        val fileId: String? = null,
+        val sha256Hash: String? = null,
+        val errorMessage: String? = null
+    )
+
+    /**
+     * Data class to hold download result with integrity information
+     */
+    data class DownloadResult(
+        val success: Boolean,
+        val content: String? = null,
+        val sha256Hash: String? = null,
+        val errorMessage: String? = null
+    )
+
+    /**
+     * Uploads JSON backup with retry mechanism and integrity verification
+     */
+    suspend fun uploadJsonBackupWithIntegrity(fileName: String, content: String): UploadResult = withContext(Dispatchers.IO) {
+        val contentHash = FileIntegrityUtils.calculateSHA256(content)
+        if (contentHash == null) {
+            return@withContext UploadResult(false, errorMessage = "Failed to calculate content hash")
         }
+
+        repeat(MAX_RETRY_ATTEMPTS) { attempt ->
+            try {
+                val fileMetadata = File().apply {
+                    name = fileName
+                    description = "SHA256:$contentHash" // Store hash in file description
+                }
+                
+                val existingFile = findFile(fileName)
+                val contentStream = ByteArrayContent("application/json", content.toByteArray())
+
+                val uploadedFile = if (existingFile != null) {
+                    drive.files().update(existingFile.id, fileMetadata, contentStream).execute()
+                } else {
+                    fileMetadata.parents = listOf(appDataFolderSpace)
+                    drive.files().create(fileMetadata, contentStream).setFields("id").execute()
+                }
+
+                Log.i(TAG, "JSON backup uploaded successfully with hash: $contentHash")
+                return@withContext UploadResult(true, uploadedFile.id, contentHash)
+                
+            } catch (e: IOException) {
+                Log.w(TAG, "Upload attempt ${attempt + 1} failed", e)
+                if (attempt == MAX_RETRY_ATTEMPTS - 1) {
+                    Log.e(TAG, "uploadJsonBackupWithIntegrity failed after $MAX_RETRY_ATTEMPTS attempts", e)
+                    return@withContext UploadResult(false, errorMessage = e.message)
+                }
+                delay(RETRY_DELAY_MS)
+            }
+        }
+        return@withContext UploadResult(false, errorMessage = "Max retry attempts exceeded")
+    }
+
+    /**
+     * Downloads JSON backup with integrity verification
+     */
+    suspend fun downloadJsonBackupWithIntegrity(fileId: String): DownloadResult = withContext(Dispatchers.IO) {
+        repeat(MAX_RETRY_ATTEMPTS) { attempt ->
+            try {
+                // First get file metadata to extract hash
+                val fileMetadata = drive.files().get(fileId).setFields("description").execute()
+                val expectedHash = fileMetadata.description?.let { desc ->
+                    if (desc.startsWith("SHA256:")) desc.substring(7) else null
+                }
+
+                val outputStream = ByteArrayOutputStream()
+                drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
+                val content = outputStream.toString("UTF-8")
+
+                // Verify integrity if hash is available
+                if (expectedHash != null) {
+                    if (!FileIntegrityUtils.verifyContentIntegrity(content, expectedHash)) {
+                        Log.e(TAG, "Downloaded backup file integrity check failed")
+                        return@withContext DownloadResult(false, errorMessage = "File integrity verification failed")
+                    }
+                    Log.i(TAG, "Downloaded backup file integrity verified successfully")
+                }
+
+                return@withContext DownloadResult(true, content, expectedHash)
+                
+            } catch (e: IOException) {
+                Log.w(TAG, "Download attempt ${attempt + 1} failed", e)
+                if (attempt == MAX_RETRY_ATTEMPTS - 1) {
+                    Log.e(TAG, "downloadJsonBackupWithIntegrity failed after $MAX_RETRY_ATTEMPTS attempts", e)
+                    return@withContext DownloadResult(false, errorMessage = e.message)
+                }
+                delay(RETRY_DELAY_MS)
+            }
+        }
+        return@withContext DownloadResult(false, errorMessage = "Max retry attempts exceeded")
     }
 
     private suspend fun findFile(fileName: String): File? = withContext(Dispatchers.IO) {
@@ -92,32 +166,89 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
         }
     }
 
-    suspend fun uploadMediaFile(localFile: java.io.File, mimeType: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val fileMetadata = File().apply {
-                name = localFile.name
-                parents = listOf(appDataFolderSpace)
-            }
-            val mediaContent = FileContent(mimeType, localFile)
-            val file = drive.files().create(fileMetadata, mediaContent).setFields("id").execute()
-            return@withContext file.id
-        } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "uploadMediaFile failed for ${localFile.name}", e)
-            return@withContext null
+    /**
+     * Uploads media file with integrity verification and retry mechanism
+     */
+    suspend fun uploadMediaFileWithIntegrity(localFile: java.io.File, mimeType: String): UploadResult = withContext(Dispatchers.IO) {
+        if (!localFile.exists() || !localFile.canRead()) {
+            return@withContext UploadResult(false, errorMessage = "Local file does not exist or cannot be read")
         }
+
+        val fileHash = FileIntegrityUtils.calculateSHA256(localFile)
+        if (fileHash == null) {
+            return@withContext UploadResult(false, errorMessage = "Failed to calculate file hash")
+        }
+
+        repeat(MAX_RETRY_ATTEMPTS) { attempt ->
+            try {
+                val fileMetadata = File().apply {
+                    name = localFile.name
+                    parents = listOf(appDataFolderSpace)
+                    description = "SHA256:$fileHash" // Store hash in file description
+                }
+                
+                val mediaContent = FileContent(mimeType, localFile)
+                val file = drive.files().create(fileMetadata, mediaContent).setFields("id").execute()
+                
+                Log.i(TAG, "Media file uploaded successfully: ${localFile.name} with hash: $fileHash")
+                return@withContext UploadResult(true, file.id, fileHash)
+                
+            } catch (e: IOException) {
+                Log.w(TAG, "Upload attempt ${attempt + 1} failed for ${localFile.name}", e)
+                if (attempt == MAX_RETRY_ATTEMPTS - 1) {
+                    Log.e(TAG, "uploadMediaFileWithIntegrity failed for ${localFile.name} after $MAX_RETRY_ATTEMPTS attempts", e)
+                    return@withContext UploadResult(false, errorMessage = e.message)
+                }
+                delay(RETRY_DELAY_MS)
+            }
+        }
+        return@withContext UploadResult(false, errorMessage = "Max retry attempts exceeded")
     }
 
-    suspend fun downloadMediaFile(fileId: String, destinationFile: java.io.File): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val outputStream = FileOutputStream(destinationFile)
-            drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
-            outputStream.close()
-            return@withContext destinationFile.length() > 0
-        } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "downloadMediaFile failed for id $fileId", e)
-            destinationFile.delete() // Başarısız olursa yarım dosyayı sil
-            return@withContext false
+    /**
+     * Downloads media file with integrity verification and retry mechanism
+     */
+    suspend fun downloadMediaFileWithIntegrity(fileId: String, destinationFile: java.io.File): DownloadResult = withContext(Dispatchers.IO) {
+        repeat(MAX_RETRY_ATTEMPTS) { attempt ->
+            try {
+                // First get file metadata to extract expected hash
+                val fileMetadata = drive.files().get(fileId).setFields("description").execute()
+                val expectedHash = fileMetadata.description?.let { desc ->
+                    if (desc.startsWith("SHA256:")) desc.substring(7) else null
+                }
+
+                val outputStream = FileOutputStream(destinationFile)
+                drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
+                outputStream.close()
+
+                if (destinationFile.length() == 0L) {
+                    destinationFile.delete()
+                    return@withContext DownloadResult(false, errorMessage = "Downloaded file is empty")
+                }
+
+                // Verify integrity if hash is available
+                if (expectedHash != null) {
+                    if (!FileIntegrityUtils.verifyFileIntegrity(destinationFile, expectedHash)) {
+                        destinationFile.delete()
+                        Log.e(TAG, "Downloaded media file integrity check failed for $fileId")
+                        return@withContext DownloadResult(false, errorMessage = "File integrity verification failed")
+                    }
+                    Log.i(TAG, "Downloaded media file integrity verified successfully: $fileId")
+                }
+
+                return@withContext DownloadResult(true, sha256Hash = expectedHash)
+                
+            } catch (e: IOException) {
+                Log.w(TAG, "Download attempt ${attempt + 1} failed for file $fileId", e)
+                destinationFile.delete() // Clean up partial download
+                if (attempt == MAX_RETRY_ATTEMPTS - 1) {
+                    Log.e(TAG, "downloadMediaFileWithIntegrity failed for id $fileId after $MAX_RETRY_ATTEMPTS attempts", e)
+                    return@withContext DownloadResult(false, errorMessage = e.message)
+                }
+                delay(RETRY_DELAY_MS)
+            }
         }
+        return@withContext DownloadResult(false, errorMessage = "Max retry attempts exceeded")
     }
 
     /**
@@ -135,8 +266,37 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
             // Dosya zaten yoksa, işlemi başarılı kabul et.
             return@withContext true
         } catch (e: IOException) {
-            Log.e("GoogleDriveManager", "deleteFile failed for $fileName", e)
+            Log.e(TAG, "deleteFile failed for $fileName", e)
             return@withContext false
         }
     }
+
+    /**
+     * Deletes a file by its Drive file ID
+     * @param fileId The Drive file ID to delete
+     * @return true if successful, false otherwise
+     */
+    suspend fun deleteFileById(fileId: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            drive.files().delete(fileId).execute()
+            Log.i(TAG, "Successfully deleted file with ID: $fileId")
+            return@withContext true
+        } catch (e: IOException) {
+            Log.e(TAG, "deleteFileById failed for $fileId", e)
+            return@withContext false
+        }
+    }
+
+    // Legacy methods for backward compatibility
+    suspend fun uploadJsonBackup(fileName: String, content: String): Boolean = 
+        uploadJsonBackupWithIntegrity(fileName, content).success
+
+    suspend fun downloadJsonBackup(fileId: String): String? = 
+        downloadJsonBackupWithIntegrity(fileId).content
+
+    suspend fun uploadMediaFile(localFile: java.io.File, mimeType: String): String? = 
+        uploadMediaFileWithIntegrity(localFile, mimeType).fileId
+
+    suspend fun downloadMediaFile(fileId: String, destinationFile: java.io.File): Boolean = 
+        downloadMediaFileWithIntegrity(fileId, destinationFile).success
 }
