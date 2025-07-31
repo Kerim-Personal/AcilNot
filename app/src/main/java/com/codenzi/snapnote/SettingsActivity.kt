@@ -390,6 +390,14 @@ class SettingsActivity : AppCompatActivity() {
         private fun backupNotes(googleDriveManager: GoogleDriveManager) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
+                    // Check network connectivity first
+                    if (!NetworkUtils.isInternetAvailable(requireContext())) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(requireContext(), "İnternet bağlantısı yok. Lütfen bağlantınızı kontrol edin.", Toast.LENGTH_LONG).show()
+                        }
+                        return@launch
+                    }
+
                     val localNotes = noteDao.getAllNotes().first()
 
                     if (localNotes.isEmpty()) {
@@ -414,7 +422,9 @@ class SettingsActivity : AppCompatActivity() {
                                 .setNegativeButton(getString(R.string.dialog_cancel), null)
                                 .show()
                         } else {
-                            proceedWithBackup(googleDriveManager, localNotes)
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                proceedWithBackup(googleDriveManager, localNotes)
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -430,6 +440,8 @@ class SettingsActivity : AppCompatActivity() {
                 progressBar?.isIndeterminate = false
             }
 
+            var uploadedMediaFiles = mutableListOf<String>() // Track uploaded file IDs for cleanup on failure
+
             try {
                 val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
                 val appSettings = AppSettings(
@@ -444,6 +456,7 @@ class SettingsActivity : AppCompatActivity() {
                 val notesForBackup = mutableListOf<Note>()
                 val totalSteps = notesToBackup.size + 1
 
+                // Upload media files with better error handling
                 notesToBackup.forEachIndexed { index, note ->
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     var imageDriveId: String? = null
@@ -451,7 +464,14 @@ class SettingsActivity : AppCompatActivity() {
                     content.imagePath?.let { path ->
                         val imageFile = File(path)
                         if (imageFile.exists()) {
-                            imageDriveId = googleDriveManager.uploadMediaFile(imageFile, "image/jpeg")
+                            val uploadResult = googleDriveManager.uploadMediaFileWithIntegrity(imageFile, "image/jpeg")
+                            if (uploadResult.success) {
+                                imageDriveId = uploadResult.fileId
+                                uploadResult.fileId?.let { uploadedMediaFiles.add(it) }
+                                Log.i("SettingsFragment", "Image uploaded successfully with hash: ${uploadResult.sha256Hash}")
+                            } else {
+                                throw IOException("Failed to upload image file: ${uploadResult.errorMessage}")
+                            }
                         }
                     }
 
@@ -459,13 +479,21 @@ class SettingsActivity : AppCompatActivity() {
                     content.audioFilePath?.let { path ->
                         val audioFile = File(path)
                         if (audioFile.exists()) {
-                            audioDriveId = googleDriveManager.uploadMediaFile(audioFile, "audio/mp4")
+                            val uploadResult = googleDriveManager.uploadMediaFileWithIntegrity(audioFile, "audio/mp4")
+                            if (uploadResult.success) {
+                                audioDriveId = uploadResult.fileId
+                                uploadResult.fileId?.let { uploadedMediaFiles.add(it) }
+                                Log.i("SettingsFragment", "Audio uploaded successfully with hash: ${uploadResult.sha256Hash}")
+                            } else {
+                                throw IOException("Failed to upload audio file: ${uploadResult.errorMessage}")
+                            }
                         }
                     }
+
                     val newContent = content.copy(imagePath = imageDriveId, audioFilePath = audioDriveId)
                     notesForBackup.add(note.copy(content = gson.toJson(newContent)))
 
-                    val progress = ((index + 1) * 100) / totalSteps
+                    val progress = ((index + 1) * 95) / totalSteps
                     withContext(Dispatchers.Main) {
                         updateProgress(progress)
                     }
@@ -479,18 +507,33 @@ class SettingsActivity : AppCompatActivity() {
                 )
                 val backupJson = gson.toJson(backupData)
 
-                val success = googleDriveManager.uploadJsonBackup("snapnote_backup.json", backupJson)
+                val uploadResult = googleDriveManager.uploadJsonBackupWithIntegrity("snapnote_backup.json", backupJson)
 
                 withContext(Dispatchers.Main) {
                     updateProgress(100)
                     dismissProgressDialog()
-                    if (success) {
+                    if (uploadResult.success) {
+                        Log.i("SettingsFragment", "Backup completed successfully with hash: ${uploadResult.sha256Hash}")
                         Toast.makeText(requireContext(), getString(R.string.backup_successful), Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(requireContext(), getString(R.string.an_error_occurred_during_backup_simple), Toast.LENGTH_SHORT).show()
+                        throw IOException("Failed to upload backup JSON: ${uploadResult.errorMessage}")
                     }
                 }
             } catch (e: Exception) {
+                // Clean up uploaded media files if backup failed
+                try {
+                    uploadedMediaFiles.forEach { fileId ->
+                        try {
+                            googleDriveManager.deleteFileById(fileId)
+                            Log.i("SettingsFragment", "Cleaned up uploaded file: $fileId")
+                        } catch (cleanupError: Exception) {
+                            Log.e("SettingsFragment", "Failed to clean up uploaded file: $fileId", cleanupError)
+                        }
+                    }
+                } catch (cleanupError: Exception) {
+                    Log.e("SettingsFragment", "Error during cleanup", cleanupError)
+                }
+
                 withContext(Dispatchers.Main) {
                     dismissProgressDialog()
                 }
@@ -502,6 +545,14 @@ class SettingsActivity : AppCompatActivity() {
         private fun restoreNotes(googleDriveManager: GoogleDriveManager) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
+                    // Check network connectivity first
+                    if (!NetworkUtils.isInternetAvailable(requireContext())) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(requireContext(), "İnternet bağlantısı yok. Lütfen bağlantınızı kontrol edin.", Toast.LENGTH_LONG).show()
+                        }
+                        return@launch
+                    }
+
                     withContext(Dispatchers.Main) {
                         showProgressDialog(R.string.searching_for_backups)
                     }
@@ -515,17 +566,20 @@ class SettingsActivity : AppCompatActivity() {
                         return@launch
                     }
 
-                    val jsonContent = googleDriveManager.downloadJsonBackup(backupFile.id)
-                    if (jsonContent.isNullOrBlank()) {
+                    val downloadResult = googleDriveManager.downloadJsonBackupWithIntegrity(backupFile.id)
+                    if (!downloadResult.success || downloadResult.content.isNullOrBlank()) {
                         withContext(Dispatchers.Main) {
                             dismissProgressDialog()
-                            Toast.makeText(requireContext(), getString(R.string.backup_file_empty_or_corrupt), Toast.LENGTH_LONG).show()
+                            val errorMsg = downloadResult.errorMessage ?: "Backup file empty or corrupt"
+                            Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_LONG).show()
                         }
                         return@launch
                     }
 
+                    Log.i("SettingsFragment", "Backup downloaded successfully with hash verification: ${downloadResult.sha256Hash}")
+
                     val type = object : TypeToken<BackupData>() {}.type
-                    val backupData: BackupData = gson.fromJson(jsonContent, type)
+                    val backupData: BackupData = gson.fromJson(downloadResult.content, type)
 
                     // YEDEĞİN İÇİ BOŞ MU KONTROL ET
                     if (backupData.notes.isEmpty()) {
@@ -607,32 +661,46 @@ class SettingsActivity : AppCompatActivity() {
                 val tempFiles = mutableListOf<File>()
                 val totalSteps = notesFromBackup.size + 1
 
-                var isDownloadSuccessful = true
+                var allDownloadsSuccessful = true
+                val failedDownloads = mutableListOf<String>()
 
                 notesFromBackup.forEachIndexed { index, note ->
-                    if (!isDownloadSuccessful) return@forEachIndexed
+                    if (!allDownloadsSuccessful) return@forEachIndexed
 
                     val content = gson.fromJson(note.content, NoteContent::class.java)
                     var localImagePath: String? = null
+                    
                     content.imagePath?.let { driveId ->
                         val imageFile = createImageFile()
-                        if (googleDriveManager.downloadMediaFile(driveId, imageFile)) {
+                        val downloadResult = googleDriveManager.downloadMediaFileWithIntegrity(driveId, imageFile)
+                        if (downloadResult.success) {
                             localImagePath = imageFile.absolutePath
                             tempFiles.add(imageFile)
+                            Log.i("SettingsFragment", "Image downloaded successfully with hash verification: ${downloadResult.sha256Hash}")
                         } else {
-                            isDownloadSuccessful = false
+                            Log.e("SettingsFragment", "Failed to download image: ${downloadResult.errorMessage}")
+                            failedDownloads.add("Image file for note: ${note.title}")
+                            allDownloadsSuccessful = false
+                            return@forEachIndexed
                         }
                     }
+                    
                     var localAudioPath: String? = null
                     content.audioFilePath?.let { driveId ->
                         val audioFile = createAudioFile()
-                        if (googleDriveManager.downloadMediaFile(driveId, audioFile)) {
+                        val downloadResult = googleDriveManager.downloadMediaFileWithIntegrity(driveId, audioFile)
+                        if (downloadResult.success) {
                             localAudioPath = audioFile.absolutePath
                             tempFiles.add(audioFile)
+                            Log.i("SettingsFragment", "Audio downloaded successfully with hash verification: ${downloadResult.sha256Hash}")
                         } else {
-                            isDownloadSuccessful = false
+                            Log.e("SettingsFragment", "Failed to download audio: ${downloadResult.errorMessage}")
+                            failedDownloads.add("Audio file for note: ${note.title}")
+                            allDownloadsSuccessful = false
+                            return@forEachIndexed
                         }
                     }
+                    
                     val finalContent = content.copy(imagePath = localImagePath, audioFilePath = localAudioPath)
                     restoredNotes.add(note.copy(content = gson.toJson(finalContent)))
 
@@ -642,36 +710,53 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
 
-                if (isDownloadSuccessful) {
-                    noteDao.deleteAllNotes()
-                    noteDao.insertAll(restoredNotes)
+                if (allDownloadsSuccessful) {
+                    // Use transaction-like approach for database restore
+                    try {
+                        noteDao.deleteAllNotes()
+                        noteDao.insertAll(restoredNotes)
 
-                    val prefsEditor = PreferenceManager.getDefaultSharedPreferences(requireContext()).edit()
-                    prefsEditor.putString("theme_selection", backupData.settings.themeSelection)
-                    prefsEditor.putString("color_selection", backupData.settings.colorSelection)
-                    prefsEditor.putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
-                    prefsEditor.apply()
+                        val prefsEditor = PreferenceManager.getDefaultSharedPreferences(requireContext()).edit()
+                        prefsEditor.putString("theme_selection", backupData.settings.themeSelection)
+                        prefsEditor.putString("color_selection", backupData.settings.colorSelection)
+                        prefsEditor.putString("widget_background_selection", backupData.settings.widgetBackgroundSelection)
+                        prefsEditor.apply()
 
-                    if (backupData.passwordHash != null && backupData.salt != null) {
-                        PasswordManager.resetForRestore(requireContext())
-                        PasswordManager.restorePassword(backupData.passwordHash, backupData.salt)
-                    }
+                        if (backupData.passwordHash != null && backupData.salt != null) {
+                            PasswordManager.resetForRestore(requireContext())
+                            PasswordManager.restorePassword(backupData.passwordHash, backupData.salt)
+                        }
 
-                    withContext(Dispatchers.Main) {
-                        updateProgress(100)
-                        dismissProgressDialog()
-                        Toast.makeText(requireContext(), getString(R.string.restore_success), Toast.LENGTH_LONG).show()
-                        activity?.recreate()
+                        withContext(Dispatchers.Main) {
+                            updateProgress(100)
+                            dismissProgressDialog()
+                            Toast.makeText(requireContext(), getString(R.string.restore_success), Toast.LENGTH_LONG).show()
+                            activity?.recreate()
+                        }
+                        
+                        Log.i("SettingsFragment", "Restore completed successfully")
+                        
+                    } catch (dbError: Exception) {
+                        // Database restore failed, clean up temp files
+                        tempFiles.forEach { it.delete() }
+                        throw IOException("Database restore failed: ${dbError.message}", dbError)
                     }
                 } else {
+                    // Clean up temp files from partial downloads
                     tempFiles.forEach { it.delete() }
-                    throw IOException("Medya dosyası indirilemedi, işlem iptal edildi.")
+                    val errorMessage = "Failed to download the following files:\n${failedDownloads.joinToString("\n")}"
+                    throw IOException(errorMessage)
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     dismissProgressDialog()
-                    showError(getString(R.string.restore_failed_with_error, e.message), e)
+                    val detailedError = if (e.message?.contains("Failed to download") == true) {
+                        "Geri yükleme işlemi başarısız: Bazı medya dosyaları indirilemedi. İnternet bağlantınızı kontrol edin ve tekrar deneyin."
+                    } else {
+                        getString(R.string.restore_failed_with_error, e.message)
+                    }
+                    showError(detailedError, e)
                 }
             }
         }

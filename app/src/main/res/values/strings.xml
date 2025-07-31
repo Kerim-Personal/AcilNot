@@ -263,5 +263,14 @@
     <string name="an_error_occurred_during_backup_simple">An error occurred during backup.</string>
     <string name="progress_percentage_format" translatable="false">%d%%</string>
     <string name="no_notes_to_backup">There are no notes to back up.</string>
+    
+    <!-- Network and integrity error messages -->
+    <string name="network_connection_required">Internet connection required. Please check your connection and try again.</string>
+    <string name="file_integrity_verification_failed">File integrity verification failed. The file may be corrupted.</string>
+    <string name="backup_upload_failed">Backup upload failed. Please try again.</string>
+    <string name="media_upload_failed">Failed to upload media file: %s</string>
+    <string name="media_download_failed">Failed to download media file: %s</string>
+    <string name="backup_corrupted_or_incomplete">Backup file is corrupted or incomplete.</string>
+    <string name="restore_partial_failure">Restore partially failed. Some files could not be downloaded.</string>
 
 </resources>

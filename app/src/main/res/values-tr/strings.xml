@@ -255,4 +255,13 @@
     <string name="an_error_occurred_during_backup_simple">Yedekleme sırasında bir hata oluştu.</string>
     <string name="progress_percentage_format" translatable="false">%d%%</string>
     <string name="no_notes_to_backup">Yedeklenecek not bulunmuyor.</string>
+    
+    <!-- Network and integrity error messages -->
+    <string name="network_connection_required">İnternet bağlantısı gerekli. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.</string>
+    <string name="file_integrity_verification_failed">Dosya bütünlüğü doğrulaması başarısız. Dosya bozuk olabilir.</string>
+    <string name="backup_upload_failed">Yedekleme yüklenemedi. Lütfen tekrar deneyin.</string>
+    <string name="media_upload_failed">Medya dosyası yüklenemedi: %s</string>
+    <string name="media_download_failed">Medya dosyası indirilemedi: %s</string>
+    <string name="backup_corrupted_or_incomplete">Yedek dosyası bozuk veya eksik.</string>
+    <string name="restore_partial_failure">Geri yükleme kısmen başarısız. Bazı dosyalar indirilemedi.</string>
 </resources>
