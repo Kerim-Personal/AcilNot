@@ -11,11 +11,11 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
 import kotlinx.coroutines.Dispatchers
+import delay
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 class GoogleDriveManager(private val credential: GoogleAccountCredential) {
 
@@ -92,7 +92,7 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
                     Log.e(TAG, "uploadJsonBackupWithIntegrity failed after $MAX_RETRY_ATTEMPTS attempts", e)
                     return@withContext UploadResult(false, errorMessage = e.message)
                 }
-                kotlinx.coroutines.delay(RETRY_DELAY_MS)
+                delay(RETRY_DELAY_MS)
             }
         }
         return@withContext UploadResult(false, errorMessage = "Max retry attempts exceeded")
@@ -131,7 +131,7 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
                     Log.e(TAG, "downloadJsonBackupWithIntegrity failed after $MAX_RETRY_ATTEMPTS attempts", e)
                     return@withContext DownloadResult(false, errorMessage = e.message)
                 }
-                kotlinx.coroutines.delay(RETRY_DELAY_MS)
+                delay(RETRY_DELAY_MS)
             }
         }
         return@withContext DownloadResult(false, errorMessage = "Max retry attempts exceeded")
@@ -199,7 +199,7 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
                     Log.e(TAG, "uploadMediaFileWithIntegrity failed for ${localFile.name} after $MAX_RETRY_ATTEMPTS attempts", e)
                     return@withContext UploadResult(false, errorMessage = e.message)
                 }
-                kotlinx.coroutines.delay(RETRY_DELAY_MS)
+                delay(RETRY_DELAY_MS)
             }
         }
         return@withContext UploadResult(false, errorMessage = "Max retry attempts exceeded")
@@ -245,7 +245,7 @@ class GoogleDriveManager(private val credential: GoogleAccountCredential) {
                     Log.e(TAG, "downloadMediaFileWithIntegrity failed for id $fileId after $MAX_RETRY_ATTEMPTS attempts", e)
                     return@withContext DownloadResult(false, errorMessage = e.message)
                 }
-                kotlinx.coroutines.delay(RETRY_DELAY_MS)
+                delay(RETRY_DELAY_MS)
             }
         }
         return@withContext DownloadResult(false, errorMessage = "Max retry attempts exceeded")
